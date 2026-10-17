@@ -1,0 +1,1963 @@
+{
+  "deviceList": {
+    "device_list": [
+      {
+        "nand_flash": false,
+        "owner_transfer": true,
+        "previous": "A8-42-A1-09-35-B6",
+        "parent_device_id": "C826E611642A09CDA051942A69D5B5736D7DDFB2",
+        "role": "slave",
+        "bssid_sta_5g": "C6-C9-E3-CB-D9-0A",
+        "support_plc": false,
+        "set_gateway_support": true,
+        "group_status": "connected",
+        "signal_level": {
+          "band5": "3",
+          "band2_4": "3"
+        },
+        "device_model": "M5",
+        "device_id": "881F4F71846E9FED4A9CCD795F80E5BA36FDF664",
+        "speed_get_support": true,
+        "device_type": "HOMEWIFISYSTEM",
+        "custom_nickname": "Sala",
+        "hardware_ver": "3.0",
+        "bssid_sta_2g": "C6-C9-E3-1A-3A-C4",
+        "software_ver": "1.9.5 Build 20260602 Rel. 25369",
+        "inet_status": "online",
+        "mac": "C0-C9-E3-E9-12-3F",
+        "inet_error_msg": "well",
+        "device_ip": "192.168.68.238",
+        "eth_bkhl_ports": {},
+        "connection_type": [
+          "wired"
+        ],
+        "nickname": "Sala",
+        "oem_id": "2B62328ADAF70E9CECF3CA6060B23CAB",
+        "bssid_2g": "C0-C9-E3-D1-3D-19",
+        "product_level": 200,
+        "oversized_firmware": false,
+        "hw_id": "8F22958D076F4CED8879145A4B9B6B85",
+        "bssid_5g": "C0-C9-E3-A6-C9-C9"
+      },
+      {
+        "nand_flash": false,
+        "owner_transfer": true,
+        "device_ip": "192.168.68.239",
+        "hardware_ver": "3.0",
+        "parent_device_id": "C826E611642A09CDA051942A69D5B5736D7DDFB2",
+        "bssid_2g": "C0-C9-E3-5A-DD-63",
+        "software_ver": "1.9.5 Build 20260602 Rel. 25369",
+        "role": "slave",
+        "bssid_sta_5g": "AE-42-A1-CA-70-83",
+        "previous": "A8-42-A1-09-35-B6",
+        "topology": {
+          "auto": true,
+          "device_id": ""
+        },
+        "oversized_firmware": false,
+        "bssid_sta_2g": "AE-42-A1-BA-FD-F6",
+        "inet_status": "online",
+        "mac": "C0-C9-E3-F0-A9-99",
+        "device_model": "M5",
+        "bssid_5g": "C0-C9-E3-35-3D-5D",
+        "set_gateway_support": true,
+        "inet_error_msg": "well",
+        "connection_type": [
+          "band2_4",
+          "band5"
+        ],
+        "nickname": "Escritório",
+        "support_plc": false,
+        "group_status": "connected",
+        "oem_id": "2B62328ADAF70E9CECF3CA6060B23CAB",
+        "signal_level": {
+          "band5": "1",
+          "band2_4": "2"
+        },
+        "product_level": 200,
+        "device_id": "B72349B6493EB843C3CD8F14593FDEBAFCE197A2",
+        "speed_get_support": true,
+        "hw_id": "8F22958D076F4CED8879145A4B9B6B85",
+        "device_type": "HOMEWIFISYSTEM"
+      },
+      {
+        "nand_flash": true,
+        "owner_transfer": true,
+        "previous": "A8-42-A1-09-35-B6",
+        "parent_device_id": "C826E611642A09CDA051942A69D5B5736D7DDFB2",
+        "role": "slave",
+        "bssid_sta_5g": "",
+        "nickname": "Quarto",
+        "set_gateway_support": true,
+        "connection_type": [
+          "wired"
+        ],
+        "wired_port_list": [
+          {
+            "mac": "00-11-32-86-9F-8B",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "00-11-32-86-9F-8B",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "00-17-88-81-18-E4",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "00-17-88-81-18-E4",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "00-E0-4C-DB-DD-F3",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "00-E0-4C-DB-DD-F3",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "02-AA-FB-C0-C8-6A",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "02-AA-FB-C0-C8-6A",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "04-58-5D-DD-B3-6B",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "04-58-5D-DD-B3-6B",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "06-1A-62-90-E1-5C",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "06-1A-62-90-E1-5C",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "20-E1-5D-9B-6A-71",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "20-E1-5D-9B-6A-71",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "30-95-87-D6-52-3C",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "30-95-87-D6-52-3C",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "32-91-71-2F-95-2E",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "32-91-71-2F-95-2E",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "54-F2-9F-5D-97-B5",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "54-F2-9F-5D-97-B5",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "60-83-E7-32-7E-E9",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "60-83-E7-32-7E-E9",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "60-83-E7-A0-13-B3",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "60-83-E7-A0-13-B3",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "A8-42-A1-09-35-B6",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "A8-42-A1-09-35-B6",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "A8-42-A1-15-DF-47",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "A8-42-A1-15-DF-47",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "B4-E8-42-43-9B-2E",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "B4-E8-42-43-9B-2E",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BA-D1-5A-D8-EE-08",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BA-D1-5A-D8-EE-08",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-8F-1D-63",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-8F-1D-63",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-7B-95-6C",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-7B-95-6C",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-DC-C9-DB",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-DC-C9-DB",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-58-2B-0A",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-58-2B-0A",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-E4-55-66",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-E4-55-66",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-C5-52-F2",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-C5-52-F2",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-AF-AD-4F",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-AF-AD-4F",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-6F-C6-08",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-6F-C6-08",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-B8-55-D5",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-B8-55-D5",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "C0-C9-E3-F0-A9-99",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "C0-C9-E3-F0-A9-99",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "C0-C9-E3-E9-12-3F",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "C0-C9-E3-E9-12-3F",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "C8-12-0B-84-79-81",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "C8-12-0B-84-79-81",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "C8-D0-83-3D-3A-F4",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "C8-D0-83-3D-3A-F4",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "D8-07-B6-24-B4-D5",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "D8-07-B6-24-B4-D5",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "DE-F9-6A-C7-E6-74",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "DE-F9-6A-C7-E6-74",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "EC-FA-BC-1D-7A-B1",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "EC-FA-BC-1D-7A-B1",
+            "port": "0",
+            "port_speed": "1000"
+          }
+        ],
+        "port_count": 3,
+        "signal_level": {
+          "band5": "3",
+          "band2_4": "3"
+        },
+        "device_model": "X50",
+        "device_id": "CBF40EBD57C75BEC9AC6F6E2BC526FC17BFD2585",
+        "speed_get_support": true,
+        "device_type": "HOMEWIFISYSTEM",
+        "signal_strength": {
+          "band5": -69
+        },
+        "hardware_ver": "1.30",
+        "device_ip": "192.168.68.237",
+        "default_ssid": "RGVjb18zREND",
+        "software_ver": "1.8.4 Build 26051413 Rel. 27460",
+        "bssid_2g": "3C-6A-D2-8D-3E-71",
+        "eth_bkhl_ports": [
+          2
+        ],
+        "easymesh_role": "agent",
+        "backhual_max_speed": "1000",
+        "inet_status": "online",
+        "mac": "3C-6A-D2-06-99-6F",
+        "rx_rate_list": {
+          "band5": 0,
+          "band2_4": 0
+        },
+        "support_plc": false,
+        "tx_rate_list": {
+          "band5": 0,
+          "band2_4": 0
+        },
+        "inet_error_msg": "well",
+        "bssid_5g": "3C-6A-D2-08-26-42",
+        "bssid_sta_2g": "",
+        "resource_support": true,
+        "group_status": "connected",
+        "oem_id": "CBC1B9DE5F2BE1A2AFF69B734794A57A",
+        "resource_interval": "10",
+        "product_level": 200,
+        "oversized_firmware": false,
+        "backhual_speed": "1000",
+        "hw_id": "5C588DD4BD0846866CB372B8C40ADD8E",
+        "support_easy_mesh": false
+      },
+      {
+        "nand_flash": false,
+        "owner_transfer": true,
+        "device_ip": "192.168.68.240",
+        "hardware_ver": "2.0",
+        "parent_device_id": "C826E611642A09CDA051942A69D5B5736D7DDFB2",
+        "bssid_2g": "D8-07-B6-AC-EC-20",
+        "software_ver": "1.8.2 Build 20251027 Rel. 36869",
+        "role": "slave",
+        "bssid_sta_5g": "AE-42-A1-CA-70-83",
+        "previous": "A8-42-A1-09-35-B6",
+        "topology": {
+          "auto": true,
+          "device_id": ""
+        },
+        "oversized_firmware": false,
+        "bssid_sta_2g": "AE-42-A1-BA-FD-F6",
+        "inet_status": "online",
+        "mac": "D8-07-B6-24-B4-D5",
+        "device_model": "M4R",
+        "bssid_5g": "D8-07-B6-90-FF-4D",
+        "set_gateway_support": false,
+        "inet_error_msg": "well",
+        "connection_type": [
+          "band2_4",
+          "band5"
+        ],
+        "nickname": "Cozinha",
+        "support_plc": false,
+        "group_status": "connected",
+        "oem_id": "690BEE52ABE894AD704835C4C3BF86E2",
+        "signal_level": {
+          "band5": "2",
+          "band2_4": "2"
+        },
+        "product_level": 100,
+        "device_id": "74E7963F9A436F995F53B8EB3C5BF2476CA2A972",
+        "speed_get_support": true,
+        "hw_id": "0D696E73D7AA7E144CF1C1C761E45F7A",
+        "device_type": "HOMEWIFISYSTEM"
+      },
+      {
+        "nand_flash": true,
+        "owner_transfer": true,
+        "previous": "A8-42-A1-09-35-B6",
+        "parent_device_id": "C826E611642A09CDA051942A69D5B5736D7DDFB2",
+        "role": "slave",
+        "bssid_sta_5g": "",
+        "nickname": "Garagem",
+        "set_gateway_support": true,
+        "eth_bkhl_ports": [
+          2
+        ],
+        "wired_port_list": [
+          {
+            "mac": "30-95-87-D6-52-3C",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "EC-FA-BC-1D-7A-B1",
+            "port": "2",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "00-11-32-86-9F-8B",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "00-17-88-81-18-E4",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "00-E0-4C-DB-DD-F3",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "02-AA-FB-C0-C8-6A",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "04-58-5D-DD-B3-6B",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "06-1A-62-90-E1-5C",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "20-E1-5D-9B-6A-71",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "3C-07-D7-46-A1-00",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "3C-6A-D2-06-99-6F",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "50-2E-91-AB-20-53",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "60-83-E7-32-7E-E9",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "60-83-E7-A0-13-B3",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "68-EF-DC-31-A3-24",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "80-E4-BA-4C-89-44",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "A8-42-A1-09-35-B6",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BA-D1-5A-D8-EE-08",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-8F-1D-63",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-7B-95-6C",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-DC-C9-DB",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-58-2B-0A",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-E4-55-66",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-C5-52-F2",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-AF-AD-4F",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-6F-C6-08",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "BC-24-11-B8-55-D5",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "C0-09-25-97-33-CB",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "C0-C9-E3-F0-A9-99",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "C0-C9-E3-E9-12-3F",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "C8-D0-83-3D-3A-F4",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "D8-07-B6-24-B4-D5",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "DE-F9-6A-C7-E6-74",
+            "port": "0",
+            "port_speed": "1000"
+          },
+          {
+            "mac": "F8-ED-FC-B4-93-40",
+            "port": "0",
+            "port_speed": "1000"
+          }
+        ],
+        "port_count": 3,
+        "signal_level": {
+          "band5": "3",
+          "band2_4": "3"
+        },
+        "device_model": "X50",
+        "bssid_5g": "A8-42-A1-C2-F8-7D",
+        "speed_get_support": true,
+        "device_type": "HOMEWIFISYSTEM",
+        "signal_strength": {
+          "band5": -86
+        },
+        "device_ip": "192.168.68.236",
+        "hardware_ver": "1.0",
+        "default_ssid": "RGVjb18xNjk0",
+        "bssid_sta_2g": "",
+        "software_ver": "1.11.1 Build 26081714 Rel. 32981",
+        "bssid_2g": "A8-42-A1-86-02-6F",
+        "backhual_speed": "1000",
+        "product_level": 200,
+        "support_plc": false,
+        "backhual_max_speed": "1000",
+        "inet_status": "online",
+        "mac": "A8-42-A1-15-DF-47",
+        "rx_rate_list": {
+          "band5": 0,
+          "band2_4": 0
+        },
+        "group_status": "connected",
+        "tx_rate_list": {
+          "band5": 0,
+          "band2_4": 0
+        },
+        "inet_error_msg": "well",
+        "device_id": "9A340365549967EA2196538D32DC6C09C2F81FF7",
+        "resource_support": true,
+        "third_party_account": true,
+        "oem_id": "F16648960DDB6F9A2DC0886CB6DFB9AF",
+        "resource_interval": "10",
+        "easymesh_role": "agent",
+        "oversized_firmware": false,
+        "connection_type": [
+          "wired"
+        ],
+        "hw_id": "5C592020CB58CC6F012058F14D9B34A2",
+        "support_easy_mesh": true
+      },
+      {
+        "nand_flash": true,
+        "hardware_ver": "1.0",
+        "bssid_sta_2g": "",
+        "software_ver": "1.11.1 Build 26081714 Rel. 32981",
+        "role": "master",
+        "bssid_sta_5g": "",
+        "previous": "",
+        "inet_status": "online",
+        "support_plc": false,
+        "oversized_firmware": false,
+        "bssid_5g": "AE-42-A1-CA-70-83",
+        "set_gateway_support": true,
+        "inet_error_msg": "well",
+        "group_status": "connected",
+        "nickname": "Varanda",
+        "bssid_2g": "AE-42-A1-BA-FD-F6",
+        "mac": "A8-42-A1-09-35-B6",
+        "oem_id": "F16648960DDB6F9A2DC0886CB6DFB9AF",
+        "signal_level": {
+          "band5": "0",
+          "band2_4": "0"
+        },
+        "product_level": 200,
+        "device_ip": "192.168.68.1",
+        "device_model": "X50",
+        "hw_id": "5C592020CB58CC6F012058F14D9B34A2",
+        "device_type": "HOMEWIFISYSTEM"
+      }
+    ]
+  },
+  "clientList": {
+    "client_list": [
+      {
+        "mac": "BC-24-11-58-2B-0A",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.29",
+        "online": true,
+        "name": "Computer 1",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Computer",
+        "interface": "main"
+      },
+      {
+        "mac": "60-83-E7-32-7E-E9",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band2_4",
+        "space_id": "1",
+        "ip": "192.168.68.30",
+        "client_mesh": true,
+        "online": true,
+        "name": "IP Camera 1",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "IP Camera",
+        "interface": "iot"
+      },
+      {
+        "mac": "3C-07-D7-46-A1-00",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band5",
+        "space_id": "1",
+        "ip": "192.168.68.32",
+        "client_mesh": true,
+        "online": true,
+        "name": "Tablet 1",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "00595E3F8",
+        "client_type": "Tablet",
+        "interface": "main"
+      },
+      {
+        "mac": "BA-D1-5A-D8-EE-08",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band5",
+        "space_id": "1",
+        "ip": "192.168.68.35",
+        "client_mesh": true,
+        "online": true,
+        "name": "Mobile 1",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Mobile",
+        "interface": "main"
+      },
+      {
+        "mac": "F8-ED-FC-B4-93-40",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band5",
+        "space_id": "1",
+        "ip": "192.168.68.93",
+        "client_mesh": true,
+        "online": true,
+        "name": "Printer 1",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Printer",
+        "interface": "main"
+      },
+      {
+        "mac": "B4-E8-42-43-9B-2E",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band2_4",
+        "space_id": "1",
+        "ip": "192.168.68.51",
+        "client_mesh": true,
+        "online": true,
+        "name": "Smart Light 1",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Smart Light",
+        "interface": "main"
+      },
+      {
+        "mac": "BC-24-11-6F-C6-08",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.27",
+        "online": true,
+        "name": "Desktop 1",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Desktop",
+        "interface": "main"
+      },
+      {
+        "mac": "04-58-5D-DD-B3-6B",
+        "up_speed": 5,
+        "down_speed": 11,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.10",
+        "online": true,
+        "name": "Computer 2",
+        "enable_priority": true,
+        "remain_time": -1,
+        "owner_id": "",
+        "client_type": "Computer",
+        "interface": "main"
+      },
+      {
+        "mac": "50-2E-91-AB-20-53",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band5",
+        "space_id": "1",
+        "ip": "192.168.68.39",
+        "client_mesh": true,
+        "online": true,
+        "name": "Computer 3",
+        "enable_priority": true,
+        "remain_time": -1,
+        "owner_id": "",
+        "client_type": "Computer",
+        "interface": "main"
+      },
+      {
+        "mac": "00-11-32-86-9F-8B",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.20",
+        "online": true,
+        "name": "Network 1",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Network",
+        "interface": "main"
+      },
+      {
+        "mac": "BC-24-11-7B-95-6C",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.22",
+        "online": true,
+        "name": "Computer 4",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Computer",
+        "interface": "main"
+      },
+      {
+        "mac": "30-95-87-D6-52-3C",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band2_4",
+        "space_id": "1",
+        "ip": "192.168.68.21",
+        "client_mesh": true,
+        "online": true,
+        "name": "Other 1",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Other",
+        "interface": "iot"
+      },
+      {
+        "mac": "C8-12-0B-84-79-81",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band5",
+        "space_id": "1",
+        "ip": "192.168.68.71",
+        "client_mesh": true,
+        "online": true,
+        "name": "Projector 1",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Projector",
+        "interface": "main"
+      },
+      {
+        "mac": "68-EF-DC-31-A3-24",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band5",
+        "space_id": "1",
+        "ip": "192.168.68.24",
+        "client_mesh": true,
+        "online": true,
+        "name": "Mobile 2",
+        "enable_priority": true,
+        "remain_time": -1,
+        "owner_id": "",
+        "client_type": "Mobile",
+        "interface": "main"
+      },
+      {
+        "mac": "BC-24-11-B8-55-D5",
+        "up_speed": 4,
+        "down_speed": 2,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.45",
+        "online": true,
+        "name": "Computer 5",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Computer",
+        "interface": "main"
+      },
+      {
+        "mac": "54-F2-9F-5D-97-B5",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band5",
+        "space_id": "1",
+        "ip": "192.168.68.38",
+        "client_mesh": true,
+        "online": true,
+        "name": "Audio & Video 1",
+        "enable_priority": true,
+        "remain_time": -1,
+        "owner_id": "",
+        "client_type": "Audio & Video",
+        "interface": "main"
+      },
+      {
+        "mac": "80-E4-BA-4C-89-44",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band5",
+        "space_id": "1",
+        "ip": "192.168.68.11",
+        "client_mesh": true,
+        "online": true,
+        "name": "Computer 6",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Computer",
+        "interface": "main"
+      },
+      {
+        "mac": "BC-24-11-C5-52-F2",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.28",
+        "online": true,
+        "name": "Computer 7",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Computer",
+        "interface": "main"
+      },
+      {
+        "mac": "BC-24-11-DC-C9-DB",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.33",
+        "online": true,
+        "name": "Desktop 2",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Desktop",
+        "interface": "main"
+      },
+      {
+        "mac": "BC-24-11-8F-1D-63",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.2",
+        "online": true,
+        "name": "Computer 8",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Computer",
+        "interface": "main"
+      },
+      {
+        "mac": "02-AA-FB-C0-C8-6A",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.25",
+        "online": true,
+        "name": "Computer 9",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Computer",
+        "interface": "main"
+      },
+      {
+        "mac": "EC-FA-BC-1D-7A-B1",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band2_4",
+        "space_id": "1",
+        "ip": "192.168.68.61",
+        "client_mesh": true,
+        "online": true,
+        "name": "Smart Plug 1",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Smart Plug",
+        "interface": "iot"
+      },
+      {
+        "mac": "C8-D0-83-3D-3A-F4",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.26",
+        "online": true,
+        "name": "Media Player 1",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Media Player",
+        "interface": "main"
+      },
+      {
+        "mac": "DE-F9-6A-C7-E6-74",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band5",
+        "space_id": "1",
+        "ip": "192.168.68.34",
+        "client_mesh": true,
+        "online": true,
+        "name": "Mobile 3",
+        "enable_priority": true,
+        "remain_time": -1,
+        "owner_id": "",
+        "client_type": "Mobile",
+        "interface": "main"
+      },
+      {
+        "mac": "00-E0-4C-DB-DD-F3",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.6",
+        "online": true,
+        "name": "Computer 10",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Computer",
+        "interface": "main"
+      },
+      {
+        "mac": "BC-24-11-E4-55-66",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wired",
+        "access_host": "1",
+        "connection_type": "wired",
+        "space_id": "1",
+        "ip": "192.168.68.31",
+        "online": true,
+        "name": "Computer 11",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Computer",
+        "interface": "main"
+      },
+      {
+        "mac": "32-91-71-2F-95-2E",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band5",
+        "space_id": "1",
+        "ip": "192.168.68.36",
+        "client_mesh": true,
+        "online": true,
+        "name": "Tablet 2",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Tablet",
+        "interface": "main"
+      },
+      {
+        "mac": "20-E1-5D-9B-6A-71",
+        "up_speed": 0,
+        "down_speed": 0,
+        "wire_type": "wireless",
+        "access_host": "1",
+        "connection_type": "band2_4",
+        "space_id": "1",
+        "ip": "192.168.68.23",
+        "client_mesh": true,
+        "online": true,
+        "name": "Smart Plug 2",
+        "enable_priority": false,
+        "remain_time": 0,
+        "owner_id": "",
+        "client_type": "Smart Plug",
+        "interface": "iot"
+      }
+    ]
+  },
+  "clientsByNode": {
+    "C0-C9-E3-E9-12-3F": {
+      "client_list": {}
+    },
+    "C0-C9-E3-F0-A9-99": {
+      "client_list": [
+        {
+          "mac": "60-83-E7-32-7E-E9",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band2_4",
+          "space_id": "1",
+          "ip": "192.168.68.30",
+          "client_mesh": true,
+          "online": true,
+          "name": "IP Camera 1",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "IP Camera",
+          "interface": "iot"
+        },
+        {
+          "mac": "BA-D1-5A-D8-EE-08",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band5",
+          "space_id": "1",
+          "ip": "192.168.68.35",
+          "client_mesh": true,
+          "online": true,
+          "name": "Mobile 1",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Mobile",
+          "interface": "main"
+        },
+        {
+          "mac": "30-95-87-D6-52-3C",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band2_4",
+          "space_id": "1",
+          "ip": "192.168.68.21",
+          "client_mesh": true,
+          "online": true,
+          "name": "Other 1",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Other",
+          "interface": "iot"
+        },
+        {
+          "mac": "20-E1-5D-9B-6A-71",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band2_4",
+          "space_id": "1",
+          "ip": "192.168.68.23",
+          "client_mesh": true,
+          "online": true,
+          "name": "Smart Plug 2",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Smart Plug",
+          "interface": "iot"
+        }
+      ]
+    },
+    "3C-6A-D2-06-99-6F": {
+      "client_list": [
+        {
+          "mac": "BC-24-11-58-2B-0A",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.29",
+          "online": true,
+          "name": "Computer 1",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Computer",
+          "interface": "main"
+        },
+        {
+          "mac": "F8-ED-FC-B4-93-40",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band5",
+          "space_id": "1",
+          "ip": "192.168.68.93",
+          "client_mesh": true,
+          "online": true,
+          "name": "Printer 1",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Printer",
+          "interface": "main"
+        },
+        {
+          "mac": "BC-24-11-6F-C6-08",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.27",
+          "online": true,
+          "name": "Desktop 1",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Desktop",
+          "interface": "main"
+        },
+        {
+          "mac": "04-58-5D-DD-B3-6B",
+          "up_speed": 2,
+          "down_speed": 2,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.10",
+          "online": true,
+          "name": "Computer 2",
+          "enable_priority": true,
+          "remain_time": -1,
+          "owner_id": "",
+          "client_type": "Computer",
+          "interface": "main"
+        },
+        {
+          "mac": "50-2E-91-AB-20-53",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band5",
+          "space_id": "1",
+          "ip": "192.168.68.39",
+          "client_mesh": true,
+          "online": true,
+          "name": "Computer 3",
+          "enable_priority": true,
+          "remain_time": -1,
+          "owner_id": "",
+          "client_type": "Computer",
+          "interface": "main"
+        },
+        {
+          "mac": "00-11-32-86-9F-8B",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.20",
+          "online": true,
+          "name": "Network 1",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Network",
+          "interface": "main"
+        },
+        {
+          "mac": "BC-24-11-7B-95-6C",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.22",
+          "online": true,
+          "name": "Computer 4",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Computer",
+          "interface": "main"
+        },
+        {
+          "mac": "68-EF-DC-31-A3-24",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band5",
+          "space_id": "1",
+          "ip": "192.168.68.24",
+          "client_mesh": true,
+          "online": true,
+          "name": "Mobile 2",
+          "enable_priority": true,
+          "remain_time": -1,
+          "owner_id": "",
+          "client_type": "Mobile",
+          "interface": "main"
+        },
+        {
+          "mac": "BC-24-11-B8-55-D5",
+          "up_speed": 4,
+          "down_speed": 2,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.45",
+          "online": true,
+          "name": "Computer 5",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Computer",
+          "interface": "main"
+        },
+        {
+          "mac": "80-E4-BA-4C-89-44",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band5",
+          "space_id": "1",
+          "ip": "192.168.68.11",
+          "client_mesh": true,
+          "online": true,
+          "name": "Computer 6",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Computer",
+          "interface": "main"
+        },
+        {
+          "mac": "BC-24-11-C5-52-F2",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.28",
+          "online": true,
+          "name": "Computer 7",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Computer",
+          "interface": "main"
+        },
+        {
+          "mac": "BC-24-11-DC-C9-DB",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.33",
+          "online": true,
+          "name": "Desktop 2",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Desktop",
+          "interface": "main"
+        },
+        {
+          "mac": "BC-24-11-8F-1D-63",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.2",
+          "online": true,
+          "name": "Computer 8",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Computer",
+          "interface": "main"
+        },
+        {
+          "mac": "02-AA-FB-C0-C8-6A",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.25",
+          "online": true,
+          "name": "Computer 9",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Computer",
+          "interface": "main"
+        },
+        {
+          "mac": "00-E0-4C-DB-DD-F3",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.6",
+          "online": true,
+          "name": "Computer 10",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Computer",
+          "interface": "main"
+        },
+        {
+          "mac": "BC-24-11-E4-55-66",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.31",
+          "online": true,
+          "name": "Computer 11",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Computer",
+          "interface": "main"
+        }
+      ]
+    },
+    "D8-07-B6-24-B4-D5": {
+      "client_list": [
+        {
+          "mac": "3C-07-D7-46-A1-00",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band5",
+          "space_id": "1",
+          "ip": "192.168.68.32",
+          "client_mesh": true,
+          "online": true,
+          "name": "Tablet 1",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "00595E3F8",
+          "client_type": "Tablet",
+          "interface": "main"
+        }
+      ]
+    },
+    "A8-42-A1-15-DF-47": {
+      "client_list": [
+        {
+          "mac": "B4-E8-42-43-9B-2E",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band2_4",
+          "space_id": "1",
+          "ip": "192.168.68.51",
+          "client_mesh": true,
+          "online": true,
+          "name": "Smart Light 1",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Smart Light",
+          "interface": "main"
+        },
+        {
+          "mac": "C8-12-0B-84-79-81",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band5",
+          "space_id": "1",
+          "ip": "192.168.68.71",
+          "client_mesh": true,
+          "online": true,
+          "name": "Projector 1",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Projector",
+          "interface": "main"
+        },
+        {
+          "mac": "54-F2-9F-5D-97-B5",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band5",
+          "space_id": "1",
+          "ip": "192.168.68.38",
+          "client_mesh": true,
+          "online": true,
+          "name": "Audio & Video 1",
+          "enable_priority": true,
+          "remain_time": -1,
+          "owner_id": "",
+          "client_type": "Audio & Video",
+          "interface": "main"
+        },
+        {
+          "mac": "EC-FA-BC-1D-7A-B1",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band2_4",
+          "space_id": "1",
+          "ip": "192.168.68.61",
+          "client_mesh": true,
+          "online": true,
+          "name": "Smart Plug 1",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Smart Plug",
+          "interface": "iot"
+        },
+        {
+          "mac": "DE-F9-6A-C7-E6-74",
+          "up_speed": 58,
+          "down_speed": 12435,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band5",
+          "space_id": "1",
+          "ip": "192.168.68.34",
+          "client_mesh": true,
+          "online": true,
+          "name": "Mobile 3",
+          "enable_priority": true,
+          "remain_time": -1,
+          "owner_id": "",
+          "client_type": "Mobile",
+          "interface": "main"
+        },
+        {
+          "mac": "32-91-71-2F-95-2E",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wireless",
+          "access_host": "1",
+          "connection_type": "band5",
+          "space_id": "1",
+          "ip": "192.168.68.36",
+          "client_mesh": true,
+          "online": true,
+          "name": "Tablet 2",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Tablet",
+          "interface": "main"
+        }
+      ]
+    },
+    "A8-42-A1-09-35-B6": {
+      "client_list": [
+        {
+          "mac": "C8-D0-83-3D-3A-F4",
+          "up_speed": 0,
+          "down_speed": 0,
+          "wire_type": "wired",
+          "access_host": "1",
+          "connection_type": "wired",
+          "space_id": "1",
+          "ip": "192.168.68.26",
+          "online": true,
+          "name": "Media Player 1",
+          "enable_priority": false,
+          "remain_time": 0,
+          "owner_id": "",
+          "client_type": "Media Player",
+          "interface": "main"
+        }
+      ]
+    }
+  },
+  "reservations": {
+    "reservation_list_max_count": 200,
+    "reservation_list": [
+      {
+        "mac": "00-17-88-81-18-E4",
+        "ip": "192.168.68.72"
+      },
+      {
+        "mac": "BC-24-11-58-2B-0A",
+        "ip": "192.168.68.29"
+      },
+      {
+        "mac": "B4-E8-42-43-9B-2E",
+        "ip": "192.168.68.51"
+      },
+      {
+        "mac": "EC-FA-BC-1D-7A-B1",
+        "ip": "192.168.68.61"
+      },
+      {
+        "mac": "3C-52-A1-F8-2E-88",
+        "ip": "192.168.68.50"
+      },
+      {
+        "mac": "60-83-E7-32-7E-E9",
+        "ip": "192.168.68.30"
+      },
+      {
+        "mac": "FC-EE-11-92-7C-CE",
+        "ip": "192.168.68.91"
+      },
+      {
+        "mac": "BC-24-11-DC-C9-DB",
+        "ip": "192.168.68.33"
+      },
+      {
+        "mac": "F8-ED-FC-B4-93-40",
+        "ip": "192.168.68.93"
+      },
+      {
+        "mac": "00-11-32-86-9F-8B",
+        "ip": "192.168.68.20"
+      },
+      {
+        "mac": "C8-12-0B-84-79-81",
+        "ip": "192.168.68.71"
+      },
+      {
+        "mac": "60-83-E7-A0-13-B3",
+        "ip": "192.168.68.60"
+      },
+      {
+        "mac": "BC-24-11-B8-55-D5",
+        "ip": "192.168.68.45"
+      },
+      {
+        "mac": "F8-D0-27-D5-0F-F4",
+        "ip": "192.168.68.90"
+      },
+      {
+        "mac": "BC-24-11-8F-1D-63",
+        "ip": "192.168.68.2"
+      },
+      {
+        "mac": "06-1A-62-90-E1-5C",
+        "ip": "192.168.68.3"
+      },
+      {
+        "mac": "00-E0-4C-DB-DD-F3",
+        "ip": "192.168.68.6"
+      },
+      {
+        "mac": "04-58-5D-DD-B3-6B",
+        "ip": "192.168.68.10"
+      },
+      {
+        "mac": "80-E4-BA-4C-89-44",
+        "ip": "192.168.68.11"
+      },
+      {
+        "mac": "BC-24-11-C5-52-F2",
+        "ip": "192.168.68.28"
+      }
+    ]
+  },
+  "internet": {
+    "ipv6": {
+      "connect_type": "unknown",
+      "auto_detect_type": "unknown",
+      "error_code": 1,
+      "inet_status": "offline",
+      "dial_status": "unknown"
+    },
+    "ipv4": {
+      "connect_type": "pppoe",
+      "auto_detect_type": "pppoe",
+      "error_code": 0,
+      "dial_status": "connected",
+      "inet_status": "online"
+    },
+    "link_status": "plugged"
+  },
+  "wan": {
+    "wan": {
+      "user_info": {
+        "username": "usuario@provedor"
+      },
+      "ip_info": {
+        "mac": "A8-42-A1-D5-CA-B5",
+        "dns2": "8.8.8.8",
+        "dns1": "1.1.1.1",
+        "mask": "255.255.255.255",
+        "gateway": "203.0.113.10",
+        "ip": "203.0.113.11"
+      },
+      "dial_type": "pppoe",
+      "info": {},
+      "enable_auto_dns": false
+    },
+    "lan": {
+      "ip_info": {
+        "mac": "A8-42-A1-09-35-B6",
+        "mask": "255.255.255.0",
+        "ip": "192.168.68.1"
+      }
+    }
+  },
+  "wlan": {
+    "band5_1": {
+      "backhaul": {
+        "channel": 44
+      },
+      "guest": {
+        "password": "[redacted - set DECO_REVEAL_SECRETS=1 to include]",
+        "ssid": "Casa_guest",
+        "vlan_id": 591,
+        "enable": false,
+        "need_set_vlan": true
+      },
+      "host": {
+        "password": "[redacted - set DECO_REVEAL_SECRETS=1 to include]",
+        "ssid": "Casa",
+        "channel": 44,
+        "enable": true,
+        "mode": "11ac",
+        "channel_width": "HT80",
+        "enable_hide_ssid": false
+      }
+    },
+    "is_eg": false,
+    "iot": {
+      "host": {
+        "password": "[redacted - set DECO_REVEAL_SECRETS=1 to include]",
+        "encryption_mode": "wpa2",
+        "ssid": "Casa",
+        "enable": true,
+        "enable_5g": false,
+        "enable_2g": true
+      }
+    },
+    "band2_4": {
+      "backhaul": {
+        "channel": 5
+      },
+      "guest": {
+        "password": "[redacted - set DECO_REVEAL_SECRETS=1 to include]",
+        "ssid": "Casa_guest",
+        "vlan_id": 591,
+        "enable": false,
+        "need_set_vlan": true
+      },
+      "host": {
+        "password": "[redacted - set DECO_REVEAL_SECRETS=1 to include]",
+        "ssid": "Casa",
+        "channel": 5,
+        "enable": true,
+        "mode": "11ng",
+        "channel_width": "HT40",
+        "enable_hide_ssid": false
+      }
+    }
+  },
+  "performance": {
+    "mem_usage": 0.58,
+    "cpu_usage": 0.19
+  }
+}
