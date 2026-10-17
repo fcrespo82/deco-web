@@ -91,6 +91,26 @@ async function reread(p: ReservationPrimitives): Promise<ReservationState | null
   }
 }
 
+/** Resultados que deixam o estado do Deco incerto: um lote para aí. */
+export const STOP_OUTCOMES: readonly WriteOutcome[] = ["ambiguous", "unverified", "lost"];
+
+/**
+ * Aplica várias mudanças em sequência (mesma sessão). Para no primeiro
+ * resultado que deixa o estado incerto; recusas e conflitos não param o lote.
+ */
+export async function applyReservationChanges(
+  p: ReservationPrimitives,
+  changes: ReservationChange[],
+): Promise<ReservationWriteResult[]> {
+  const out: ReservationWriteResult[] = [];
+  for (const change of changes) {
+    const r = await applyReservationChange(p, change);
+    out.push(r);
+    if (STOP_OUTCOMES.includes(r.outcome)) break;
+  }
+  return out;
+}
+
 export async function applyReservationChange(
   p: ReservationPrimitives,
   change: ReservationChange,

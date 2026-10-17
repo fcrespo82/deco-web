@@ -24,6 +24,7 @@ import { CircuitOpenError } from "../core/gateway.js";
 import { ConflictError, WriteDisabledError } from "../core/reservations.js";
 import { DecoError } from "../deco-client/errors.js";
 import { registerDataRoutes } from "./routes.js";
+import { registerOpsRoutes } from "./ops-routes.js";
 import { buildClients, buildOverview, buildStatus } from "./views.js";
 
 export const WEB_DIST = fileURLToPath(new URL("../../web/dist", import.meta.url));
@@ -147,6 +148,7 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
   // Sem identidade de usuário (senha única da UI): registra o IP de origem.
   const actorOf = (req: FastifyRequest) => `${authRequired ? "ui" : "ui-aberta"}@${req.ip}`;
   registerDataRoutes(server, app, actorOf);
+  registerOpsRoutes(server, app, actorOf);
 
   server.post("/api/refresh", async (_req, reply) => {
     const last = app.poller.cache.lastAttemptAt;

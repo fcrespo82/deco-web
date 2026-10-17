@@ -29,6 +29,23 @@ export interface Config {
   retentionDays: number;
   /** Ausência mínima para registrar desconexão de um cliente. */
   disconnectGraceMs: number;
+  alerts: {
+    /** Alerta de dispositivo novo (MAC nunca visto e não aprovado). */
+    newDevice: boolean;
+    /** Nó offline por mais que isso gera alerta; null = desligado. */
+    nodeOfflineMs: number | null;
+    /** Internet fora por mais que isso gera alerta; null = desligado. */
+    internetDownMs: number | null;
+    /** URL do painel, para links nas notificações. */
+    publicUrl: string | null;
+  };
+  /** Canais (sem segredos; tokens em loadNotifySecrets). */
+  notify: {
+    /** URL completa do tópico, ex.: https://ntfy.sh/meu-topico. */
+    ntfyUrl: string | null;
+    telegramChatId: string | null;
+    telegramApi: string;
+  };
 }
 
 export class ConfigError extends Error {}
@@ -38,6 +55,33 @@ const MIN_POLL_SECONDS = 30;
 function flag(env: NodeJS.ProcessEnv, name: string): boolean {
   const raw = env[name]?.trim().toLowerCase();
   return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
+function flagDefault(env: NodeJS.ProcessEnv, name: string, fallback: boolean): boolean {
+  const raw = env[name]?.trim().toLowerCase();
+  if (!raw) return fallback;
+  if (["1", "true", "yes", "on"].includes(raw)) return true;
+  if (["0", "false", "no", "off"].includes(raw)) return false;
+  throw new ConfigError(`${name} deve ser 1 ou 0, recebido "${env[name]}"`);
+}
+
+/** Minutos → ms; 0 desliga (null). */
+function minutesOrOff(env: NodeJS.ProcessEnv, name: string, fallback: number): number | null {
+  const raw = env[name]?.trim();
+  if (raw === "0") return null;
+  return positiveNumber(env, name, fallback) * 60_000;
+}
+
+function optionalUrl(env: NodeJS.ProcessEnv, name: string): string | null {
+  const raw = env[name]?.trim();
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error();
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    throw new ConfigError(`${name} deve ser uma URL http(s), recebido "${raw}"`);
+  }
 }
 
 function positiveNumber(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
@@ -75,6 +119,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     throw new ConfigError(`LOG_LEVEL inválido: "${env.LOG_LEVEL}"`);
   }
 
+  const ntfyUrl = optionalUrl(env, "NOTIFY_NTFY_URL");
+  if (ntfyUrl && new URL(ntfyUrl).pathname.split("/").filter(Boolean).length === 0) {
+    throw new ConfigError("NOTIFY_NTFY_URL precisa incluir o tópico, ex.: https://ntfy.sh/meu-topico");
+  }
+  const telegramChatId = env.NOTIFY_TELEGRAM_CHAT_ID?.trim() || null;
+  const hasTelegramToken = Boolean(env.NOTIFY_TELEGRAM_TOKEN?.trim() || env.NOTIFY_TELEGRAM_TOKEN_FILE?.trim());
+  if (hasTelegramToken !== Boolean(telegramChatId)) {
+    throw new ConfigError("Telegram precisa de NOTIFY_TELEGRAM_TOKEN e NOTIFY_TELEGRAM_CHAT_ID juntos");
+  }
+
   return {
     mock,
     deco: {
@@ -94,6 +148,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     http: {
       bind: env.BIND?.trim() || "0.0.0.0",
       port: Math.round(positiveNumber(env, "PORT", 8080)),
+    },
+    alerts: {
+      newDevice: flagDefault(env, "ALERT_NEW_DEVICE", true),
+      nodeOfflineMs: minutesOrOff(env, "ALERT_NODE_OFFLINE_MINUTES", 5),
+      internetDownMs: minutesOrOff(env, "ALERT_INTERNET_DOWN_MINUTES", 3),
+      publicUrl: optionalUrl(env, "PUBLIC_URL"),
+    },
+    notify: {
+      ntfyUrl,
+      telegramChatId,
+      telegramApi: optionalUrl(env, "NOTIFY_TELEGRAM_API") ?? "https://api.telegram.org",
     },
   };
 }
@@ -122,12 +187,28 @@ export function loadUiPassword(env: NodeJS.ProcessEnv = process.env): string | u
   return env.UI_PASSWORD || undefined;
 }
 
+function secret(env: NodeJS.ProcessEnv, name: string): string | null {
+  const file = env[`${name}_FILE`]?.trim();
+  if (file) {
+    const value = readFileSync(file, "utf8").trim();
+    if (!value) throw new ConfigError(`${name}_FILE (${file}) está vazio`);
+    return value;
+  }
+  return env[name]?.trim() || null;
+}
+
+/** Tokens dos canais de notificação. Fora do Config, como as senhas. */
+export function loadNotifySecrets(env: NodeJS.ProcessEnv = process.env): { ntfyToken: string | null; telegramToken: string | null } {
+  return { ntfyToken: secret(env, "NOTIFY_NTFY_TOKEN"), telegramToken: secret(env, "NOTIFY_TELEGRAM_TOKEN") };
+}
+
 /** Resumo legível para o log de inicialização. Sem segredos. */
 export function describeConfig(c: Config): string {
   const target = c.mock ? "mock (fixtures)" : `${c.deco.host} (usuário ${c.deco.username})`;
   const mode = c.allowDangerous ? "escrita + perigosas" : c.allowWrite ? "escrita" : "somente leitura";
+  const channels = [c.notify.ntfyUrl && "ntfy", c.notify.telegramChatId && "Telegram"].filter(Boolean).join(" + ") || "nenhum";
   return (
-    `Deco: ${target} · poll ${c.pollIntervalMs / 1000}s (detalhe a cada ${c.detailEvery}) · ${mode} · ` +
+    `Deco: ${target} · alertas: ${channels} · poll ${c.pollIntervalMs / 1000}s (detalhe a cada ${c.detailEvery}) · ${mode} · ` +
     `dados em ${c.dataDir} · http://${c.http.bind}:${c.http.port}`
   );
 }

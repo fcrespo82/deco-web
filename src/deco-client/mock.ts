@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { asArray, parseReservations, parseSnapshot } from "./parse.js";
-import { applyReservationChange, type ReservationChange, type ReservationWriteResult } from "./reservations.js";
+import { applyReservationChanges, type ReservationChange, type ReservationWriteResult } from "./reservations.js";
 import type { DecoApi, RawSnapshot, Snapshot } from "./types.js";
 import { DecoApiError } from "./vendor/errors.js";
 
@@ -76,11 +76,15 @@ export class MockDecoApi implements DecoApi {
   }
 
   async changeReservation(change: ReservationChange): Promise<ReservationWriteResult> {
+    return (await this.changeReservations([change]))[0]!;
+  }
+
+  async changeReservations(changes: ReservationChange[]): Promise<ReservationWriteResult[]> {
     this.calls += 1;
     if (this.latencyMs) await new Promise((r) => setTimeout(r, this.latencyMs));
     const failure = this.failures.shift();
     if (failure) throw failure;
-    return applyReservationChange(
+    return applyReservationChanges(
       {
         list: async () => {
           const err = this.listFailures.shift();
@@ -91,7 +95,7 @@ export class MockDecoApi implements DecoApi {
         add: async (mac, ip) => this.write(`add ${mac}=${ip}`, () => this.addReservation(mac, ip)),
         remove: async (mac) => this.write(`remove ${mac}`, () => this.removeReservation(mac)),
       },
-      change,
+      changes,
     );
   }
 

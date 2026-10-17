@@ -87,6 +87,18 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX audit_at ON audit_log(at);
   `,
+  `
+  CREATE TABLE alerts (
+    id       INTEGER PRIMARY KEY,
+    at       TEXT NOT NULL,
+    kind     TEXT NOT NULL,
+    mac      TEXT,
+    title    TEXT NOT NULL,
+    body     TEXT NOT NULL,
+    delivery TEXT NOT NULL DEFAULT '[]'
+  );
+  CREATE INDEX alerts_at ON alerts(at);
+  `,
 ];
 
 export interface ClientSeen {

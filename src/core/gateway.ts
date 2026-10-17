@@ -58,6 +58,10 @@ export class DecoGateway {
     return this.run((api) => api.changeReservation(change));
   }
 
+  changeReservations(changes: ReservationChange[]): Promise<ReservationWriteResult[]> {
+    return this.run((api) => api.changeReservations(changes));
+  }
+
   /**
    * Roda `fn` na fila. O breaker é consultado ao sair da fila (não ao entrar),
    * para que tarefas enfileiradas atrás de uma falha de login não tentem logar.

@@ -5,7 +5,8 @@
  */
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { type Config, loadDecoPassword } from "./config.js";
+import { type Config, loadDecoPassword, loadNotifySecrets } from "./config.js";
+import { AlertEngine } from "./core/alerts.js";
 import { CircuitBreaker, type BreakerState } from "./core/breaker.js";
 import { DecoGateway } from "./core/gateway.js";
 import { EventDetector, type NetEvent } from "./core/events.js";
@@ -14,12 +15,14 @@ import { ReservationService } from "./core/reservations.js";
 import { LiveDecoApi } from "./deco-client/live.js";
 import { MockDecoApi } from "./deco-client/mock.js";
 import type { DecoApi } from "./deco-client/types.js";
+import { AlertRepo } from "./db/alerts.js";
 import { AuditRepo } from "./db/audit.js";
 import { EventRepo } from "./db/events.js";
 import { InventoryRepo } from "./db/inventory.js";
 import { IpRangeRepo } from "./db/ipranges.js";
 import { Store } from "./db/store.js";
 import type { Logger } from "./log.js";
+import { NtfyChannel, TelegramChannel, type Channel } from "./notify/channels.js";
 
 const BREAKER_KEY = "breaker_state";
 const LAST_PRUNE_KEY = "last_prune";
@@ -36,13 +39,34 @@ export interface App {
   audit: AuditRepo;
   /** Escrita de reservas no Deco (exige DECO_ALLOW_WRITE). */
   reservations: ReservationService;
+  alerts: AlertRepo;
+  alertEngine: AlertEngine;
   /** Escuta eventos novos (alertas). */
   onEvents(listener: (events: NetEvent[]) => void): void;
   /** Para o poller, espera o poll em andamento (e o logout) e fecha o banco. */
   close(): Promise<void>;
 }
 
-export function createApp(config: Config, log: Logger, api?: DecoApi): App {
+/** Canais a partir da configuração (tokens lidos aqui, nunca guardados no Config). */
+export function channelsFromConfig(config: Config): Channel[] {
+  const secrets = loadNotifySecrets();
+  const out: Channel[] = [];
+  if (config.notify.ntfyUrl) out.push(new NtfyChannel(config.notify.ntfyUrl, secrets.ntfyToken));
+  if (config.notify.telegramChatId && secrets.telegramToken) {
+    out.push(new TelegramChannel(config.notify.telegramApi, secrets.telegramToken, config.notify.telegramChatId));
+  }
+  return out;
+}
+
+export interface AppDeps {
+  api?: DecoApi;
+  /** Substitui os canais de notificação (testes). */
+  channels?: Channel[];
+}
+
+export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | AppDeps): App {
+  const deps: AppDeps = depsOrApi && "fetchSnapshot" in depsOrApi ? { api: depsOrApi } : (depsOrApi ?? {});
+  const api = deps.api;
   mkdirSync(config.dataDir, { recursive: true });
   const store = new Store(join(config.dataDir, "deco-web.sqlite"));
 
@@ -83,6 +107,16 @@ export function createApp(config: Config, log: Logger, api?: DecoApi): App {
   const ranges = new IpRangeRepo(store.db);
   const events = new EventRepo(store.db);
   const audit = new AuditRepo(store.db);
+  const alerts = new AlertRepo(store.db);
+  const alertEngine = new AlertEngine({
+    settings: config.alerts,
+    channels: deps.channels ?? channelsFromConfig(config),
+    repo: alerts,
+    kv: store,
+    isApproved: (mac) => inventory.findByMac(mac)?.approved ?? false,
+    aliasOf: (mac) => inventory.findByMac(mac)?.alias ?? null,
+    logger: log,
+  });
   const reservations = new ReservationService({ allowWrite: config.allowWrite, gateway, poller, audit, logger: log });
 
   // O detector parte do último snapshot persistido, para um restart não gerar
@@ -94,8 +128,9 @@ export function createApp(config: Config, log: Logger, api?: DecoApi): App {
   detector.prime(store.latestSnapshot());
   const listeners: ((events: NetEvent[]) => void)[] = [];
 
-  poller.on("snapshot", (snap) => {
+  poller.on("snapshot", (snap, previous) => {
     const found = detector.next(snap);
+    void alertEngine.process(found, snap, previous).catch(() => undefined);
     events.insert(found);
     if (found.length) log.debug(`eventos: ${found.map((e) => e.type).join(", ")}`);
     for (const l of listeners) {
@@ -113,7 +148,7 @@ export function createApp(config: Config, log: Logger, api?: DecoApi): App {
     const now = Date.parse(nowIso);
     if (last && now - Date.parse(last) < DAY_MS) return;
     const cutoff = new Date(now - config.retentionDays * DAY_MS).toISOString();
-    const removed = events.prune(cutoff) + store.pruneSamples(cutoff);
+    const removed = events.prune(cutoff) + store.pruneSamples(cutoff) + alerts.prune(cutoff);
     store.setJson(LAST_PRUNE_KEY, nowIso);
     if (removed) log.info(`retenção: ${removed} registro(s) anteriores a ${cutoff} removidos`);
   }
@@ -128,9 +163,12 @@ export function createApp(config: Config, log: Logger, api?: DecoApi): App {
     events,
     audit,
     reservations,
+    alerts,
+    alertEngine,
     onEvents: (l) => listeners.push(l),
     async close() {
       await poller.stop();
+      await alertEngine.idle();
       store.close();
     },
   };

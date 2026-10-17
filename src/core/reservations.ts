@@ -144,6 +144,39 @@ export class ReservationService {
     return { op, mac, ip };
   }
 
+  /**
+   * Lote (importação de backup): uma sessão, cada mudança auditada. Sem
+   * pré-validação pelo cache — o diff já classificou; a lista fresca no Deco
+   * decide conflitos.
+   */
+  async applyBatch(changes: ReservationChange[], actor: string): Promise<ReservationWriteResult[]> {
+    if (!this.opts.allowWrite) throw new WriteDisabledError();
+    if (changes.length === 0) return [];
+    const { gateway, poller, audit } = this.opts;
+    let results: ReservationWriteResult[];
+    try {
+      results = await gateway.changeReservations(changes);
+    } catch (err) {
+      audit.record({ actor, action: "reservation.batch", target: `${changes.length} reservas`, result: `error: ${(err as Error).message}` });
+      throw err;
+    }
+    results.forEach((r, i) => {
+      const c = changes[i]!;
+      audit.record({
+        actor,
+        action: ACTION[c.op],
+        target: c.mac,
+        before: r.before,
+        after: r.state ? r.after : c.op === "remove" ? null : { mac: c.mac, ip: c.ip },
+        result: r.ok ? "ok" : `${r.outcome}: ${r.message}`,
+      });
+    });
+    const last = [...results].reverse().find((r) => r.state);
+    if (last?.state) poller.applyReservations(last.state.reservations, last.state.max);
+    if (results.some((r) => !r.state)) void poller.pollNow();
+    return results;
+  }
+
   async apply(change: ReservationChange, actor: string): Promise<ReservationWriteResult> {
     if (!this.opts.allowWrite) throw new WriteDisabledError();
     const { gateway, poller, audit, logger } = this.opts;

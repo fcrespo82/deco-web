@@ -17,7 +17,7 @@ import { DecoClient, type DecoRequest } from "./vendor/client.js";
 import { DecoLoginError } from "./vendor/errors.js";
 import { normalize } from "./vendor/format.js";
 import { parseNodes, parseReservations, parseSnapshot } from "./parse.js";
-import { applyReservationChange, type ReservationChange, type ReservationWriteResult } from "./reservations.js";
+import { applyReservationChanges, type ReservationChange, type ReservationWriteResult } from "./reservations.js";
 import type { DecoApi, RawSnapshot, Snapshot } from "./types.js";
 import { silentLogger, type Logger } from "../log.js";
 
@@ -73,9 +73,13 @@ export class LiveDecoApi implements DecoApi {
    * timeout; a verificação fica em applyReservationChange.
    */
   async changeReservation(change: ReservationChange): Promise<ReservationWriteResult> {
+    return (await this.changeReservations([change]))[0]!;
+  }
+
+  async changeReservations(changes: ReservationChange[]): Promise<ReservationWriteResult[]> {
     const started = Date.now();
     try {
-      const result = await applyReservationChange(
+      const results = await applyReservationChanges(
         {
           list: async () => {
             const parsed = parseReservations(
@@ -87,10 +91,10 @@ export class LiveDecoApi implements DecoApi {
           add: (mac, ip) => this.write("add", [{ mac, ip }]),
           remove: (mac) => this.write("remove", [mac]),
         },
-        change,
+        changes,
       );
-      this.log.info(`reserva ${change.op} ${change.mac}: ${result.outcome}`);
-      return result;
+      results.forEach((r, i) => this.log.info(`reserva ${changes[i]!.op} ${changes[i]!.mac}: ${r.outcome}`));
+      return results;
     } finally {
       await this.client.logout();
       this.log.debug(`sessão Deco (escrita) encerrada em ${Date.now() - started} ms`);

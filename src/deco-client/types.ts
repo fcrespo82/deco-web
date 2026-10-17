@@ -104,4 +104,6 @@ export interface DecoApi {
   fetchSnapshot(): Promise<Snapshot>;
   /** Altera uma reserva de DHCP, verificando antes e depois (ver reservations.ts). */
   changeReservation(change: ReservationChange): Promise<ReservationWriteResult>;
+  /** Várias mudanças numa sessão só (importação de backup). */
+  changeReservations(changes: ReservationChange[]): Promise<ReservationWriteResult[]>;
 }
