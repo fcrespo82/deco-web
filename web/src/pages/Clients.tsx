@@ -1,8 +1,12 @@
 import { useMemo, useState } from "preact/hooks";
 import { api, type Band, type ClientView } from "../api";
-import { BAND_LABEL, NETWORK_LABEL, ago, dateTime, deviceType, rate } from "../format";
+import { BAND_LABEL, INVENTORY_TYPE_LABEL, NETWORK_LABEL, ago, dateTime, deviceType, rate } from "../format";
 import { useNow, usePolled } from "../hooks";
+import { DeviceEditor } from "../DeviceEditor";
 import { StatusBar } from "../StatusBar";
+
+/** Apelido do inventário, ou o nome que o Deco dá. */
+const label = (c: ClientView) => c.device?.alias ?? c.name;
 
 type SortKey = "name" | "ip" | "node" | "band" | "traffic" | "firstSeen" | "lastSeen";
 
@@ -11,7 +15,7 @@ const ipKey = (ip: string | null) =>
   ip ? ip.split(".").reduce((acc, part) => acc * 256 + Number(part), 0) : Number.MAX_SAFE_INTEGER;
 
 const SORTERS: Record<SortKey, (a: ClientView, b: ClientView) => number> = {
-  name: (a, b) => a.name.localeCompare(b.name, "pt-BR"),
+  name: (a, b) => label(a).localeCompare(label(b), "pt-BR"),
   ip: (a, b) => ipKey(a.ip) - ipKey(b.ip),
   node: (a, b) => (a.nodeName ?? "~").localeCompare(b.nodeName ?? "~", "pt-BR"),
   band: (a, b) => (a.band ?? "~").localeCompare(b.band ?? "~"),
@@ -41,7 +45,18 @@ function matches(c: ClientView, f: Filters): boolean {
   if (f.reservation === "no" && c.reservation) return false;
   if (f.q) {
     const q = f.q.toLowerCase().replace(/[:]/g, "-");
-    const hay = [c.name, c.mac, c.ip, c.reservation?.ip, c.deviceType, deviceType(c.deviceType), c.nodeName]
+    const hay = [
+      c.name,
+      c.device?.alias,
+      c.device?.owner,
+      ...(c.device?.tags ?? []),
+      c.mac,
+      c.ip,
+      c.reservation?.ip,
+      c.deviceType,
+      deviceType(c.deviceType),
+      c.nodeName,
+    ]
       .join(" ")
       .toLowerCase();
     if (!hay.includes(q)) return false;
@@ -66,6 +81,7 @@ export function Clients() {
   const { data, error, reload } = usePolled(api.clients);
   const [f, setF] = useState<Filters>(EMPTY);
   const [sort, setSort] = useState<SortKey | null>(null);
+  const [editing, setEditing] = useState<ClientView | null>(null);
 
   const clients = data?.clients ?? [];
   const nodes = useMemo(() => {
@@ -100,7 +116,7 @@ export function Clients() {
     <>
       <StatusBar status={data.status} reload={reload} />
       <div class="filters">
-        <input type="search" placeholder="Buscar nome, MAC, IP…" value={f.q} onInput={set("q")} aria-label="Buscar" />
+        <input type="search" placeholder="Buscar nome, apelido, dono, tag, MAC, IP…" value={f.q} onInput={set("q")} aria-label="Buscar" />
         <select value={f.status} onChange={set("status")} aria-label="Status">
           <option value="all">Todos ({clients.length})</option>
           <option value="online">Online ({online})</option>
@@ -158,11 +174,24 @@ export function Clients() {
               <tr key={c.mac} class={c.online ? "" : "offline"}>
                 <td class="primary-cell">
                   <span class={`dot ${c.online ? "ok" : ""}`} style="margin-right:6px" />
-                  <span class="client-name">{c.name}</span>
-                  {c.deviceType && (
-                    <div class="muted small">
-                      {deviceType(c.deviceType)}
-                      {c.network && c.network !== "main" ? ` · ${NETWORK_LABEL[c.network] ?? c.network}` : ""}
+                  <button class="link client-name" onClick={() => setEditing(c)} title="Editar no inventário">
+                    {label(c)}
+                  </button>
+                  <div class="muted small">
+                    {[
+                      c.device && c.device.alias !== c.name && c.name !== c.mac ? c.name : null,
+                      c.device?.type ? INVENTORY_TYPE_LABEL[c.device.type] : deviceType(c.deviceType),
+                      c.device?.owner,
+                      c.network && c.network !== "main" ? (NETWORK_LABEL[c.network] ?? c.network) : null,
+                    ]
+                      .filter((v, i, all) => v && all.indexOf(v) === i)
+                      .join(" · ")}
+                  </div>
+                  {c.device && c.device.tags.length > 0 && (
+                    <div class="chips" style="margin-top:3px">
+                      {c.device.tags.map((t) => (
+                        <span class="badge">{t}</span>
+                      ))}
                     </div>
                   )}
                 </td>
@@ -190,6 +219,16 @@ export function Clients() {
         </table>
         {rows.length === 0 && <div class="empty">Nenhum cliente com esses filtros.</div>}
       </div>
+      {editing && (
+        <DeviceEditor
+          mac={editing.mac}
+          suggestedName={editing.name !== editing.mac ? editing.name : undefined}
+          onClose={(changed) => {
+            setEditing(null);
+            if (changed) void reload();
+          }}
+        />
+      )}
       <p class="muted small">
         O firmware do Deco não informa o sinal por cliente nem tráfego acumulado; o tráfego mostrado é a taxa no momento da
         última leitura. "Primeira vez" conta a partir de quando este painel começou a registrar.

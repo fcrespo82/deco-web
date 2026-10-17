@@ -12,61 +12,9 @@ import type { ClientSeen } from "../db/store.js";
 import type { Device, DeviceType } from "../db/inventory.js";
 import type { IpRange } from "../db/ipranges.js";
 import { intToIp, ipToInt, subnetOf, type Subnet } from "./ipmath.js";
+import type { Anomaly, AnomalyCode, CellStatus, IpCell, IpPlan, RangeSummary } from "../server/api-types.js";
 
-export type CellStatus =
-  | "network"
-  | "broadcast"
-  | "gateway"
-  | "node"
-  | "reserved-online"
-  | "reserved"
-  | "online"
-  | "recent"
-  | "free";
-
-export type AnomalyCode =
-  | "outside-plan"
-  | "dynamic-in-static"
-  | "type-mismatch"
-  | "reservation-conflict"
-  | "reservation-not-applied";
-
-export interface Anomaly {
-  code: AnomalyCode;
-  ip: string;
-  mac: string | null;
-  name: string | null;
-  message: string;
-}
-
-export interface IpCell {
-  ip: string;
-  octet: number;
-  status: CellStatus;
-  rangeId: number | null;
-  /** Quem ocupa ou tem a reserva do IP. */
-  mac: string | null;
-  name: string | null;
-  anomalies: AnomalyCode[];
-}
-
-export interface RangeSummary extends IpRange {
-  size: number;
-  reserved: number;
-  inUse: number;
-  free: number;
-  /** Próximo IP livre (nem reservado, nem em uso, nem visto há pouco). */
-  suggestion: string | null;
-}
-
-export interface IpPlan {
-  /** null quando a LAN não é /24 (a grade só cobre /24). */
-  network: { address: string; prefix: number; gateway: string | null } | null;
-  message: string | null;
-  cells: IpCell[];
-  ranges: RangeSummary[];
-  anomalies: Anomaly[];
-}
+export type { Anomaly, AnomalyCode, CellStatus, IpCell, IpPlan, RangeSummary };
 
 export interface IpPlanInput {
   snapshot: Snapshot | null;
@@ -218,7 +166,7 @@ export function buildIpPlan(input: IpPlanInput): IpPlan {
     }
   }
 
-  const summaries = ranges.map((r) => {
+  const summaries = ranges.map((r): RangeSummary => {
     const inRange = cells.filter((c) => c.rangeId === r.id);
     const free = inRange.filter((c) => c.status === "free");
     return {

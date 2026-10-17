@@ -119,3 +119,73 @@ export interface AuditView {
   after: unknown;
   result: string;
 }
+
+// --- plano de IPs ---
+
+export type CellStatus =
+  | "network"
+  | "broadcast"
+  | "gateway"
+  | "node"
+  | "reserved-online"
+  | "reserved"
+  | "online"
+  | "recent"
+  | "free";
+
+export type AnomalyCode =
+  | "outside-plan"
+  | "dynamic-in-static"
+  | "type-mismatch"
+  | "reservation-conflict"
+  | "reservation-not-applied";
+
+export interface Anomaly {
+  code: AnomalyCode;
+  ip: string;
+  mac: string | null;
+  name: string | null;
+  message: string;
+}
+
+export interface IpCell {
+  ip: string;
+  octet: number;
+  status: CellStatus;
+  rangeId: number | null;
+  /** Quem ocupa ou tem a reserva do IP. */
+  mac: string | null;
+  name: string | null;
+  anomalies: AnomalyCode[];
+}
+
+/** Faixa como a API devolve (espelha IpRange do banco). */
+export interface IpRangeView {
+  id: number;
+  name: string;
+  start: number;
+  end: number;
+  label: string;
+  kind: "static" | "dynamic";
+  types: string[];
+  notes: string | null;
+  position: number;
+}
+
+export interface RangeSummary extends IpRangeView {
+  size: number;
+  reserved: number;
+  inUse: number;
+  free: number;
+  /** Próximo IP livre (nem reservado, nem em uso, nem visto há pouco). */
+  suggestion: string | null;
+}
+
+export interface IpPlan {
+  /** null quando a LAN não é /24 (a grade só cobre /24). */
+  network: { address: string; prefix: number; gateway: string | null } | null;
+  message: string | null;
+  cells: IpCell[];
+  ranges: RangeSummary[];
+  anomalies: Anomaly[];
+}

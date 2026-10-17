@@ -3,12 +3,18 @@ import { useEffect, useState } from "preact/hooks";
 import { api, ApiError } from "./api";
 import { useRoute, useTheme } from "./hooks";
 import { Clients } from "./pages/Clients";
+import { History } from "./pages/History";
+import { Inventory } from "./pages/Inventory";
+import { IpPlan } from "./pages/IpPlan";
 import { Overview } from "./pages/Overview";
 import "./styles.css";
 
 const ROUTES = [
   { path: "", label: "Visão geral", page: Overview },
   { path: "clientes", label: "Clientes", page: Clients },
+  { path: "inventario", label: "Inventário", page: Inventory },
+  { path: "ips", label: "Plano de IPs", page: IpPlan },
+  { path: "historico", label: "Histórico", page: History },
 ];
 
 const THEME_LABEL = { auto: "Tema: automático", light: "Tema: claro", dark: "Tema: escuro" } as const;
@@ -61,6 +67,10 @@ function App() {
   useEffect(() => {
     void checkAuth();
   }, []);
+  // No celular a navegação rola na horizontal: mantém a aba ativa visível.
+  useEffect(() => {
+    document.querySelector('.nav a[aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [route, auth?.authenticated]);
 
   if (!auth) return null;
   if (!auth.authenticated) return <Login onDone={checkAuth} />;
