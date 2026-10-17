@@ -22,6 +22,7 @@ export interface Config {
   allowDangerous: boolean;
   dataDir: string;
   logLevel: "debug" | "info" | "warn" | "error";
+  http: { bind: string; port: number };
 }
 
 export class ConfigError extends Error {}
@@ -81,6 +82,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     allowDangerous,
     dataDir: env.DATA_DIR?.trim() || "/data",
     logLevel,
+    http: {
+      bind: env.BIND?.trim() || "0.0.0.0",
+      port: Math.round(positiveNumber(env, "PORT", 8080)),
+    },
   };
 }
 
@@ -97,9 +102,23 @@ export function loadDecoPassword(env: NodeJS.ProcessEnv = process.env): string {
   return password;
 }
 
+/** Senha da UI (UI_PASSWORD ou UI_PASSWORD_FILE). undefined = UI sem senha. */
+export function loadUiPassword(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  const file = env.UI_PASSWORD_FILE?.trim();
+  if (file) {
+    const fromFile = readFileSync(file, "utf8").replace(/\r?\n$/, "");
+    if (!fromFile) throw new ConfigError(`UI_PASSWORD_FILE (${file}) está vazio`);
+    return fromFile;
+  }
+  return env.UI_PASSWORD || undefined;
+}
+
 /** Resumo legível para o log de inicialização. Sem segredos. */
 export function describeConfig(c: Config): string {
   const target = c.mock ? "mock (fixtures)" : `${c.deco.host} (usuário ${c.deco.username})`;
   const mode = c.allowDangerous ? "escrita + perigosas" : c.allowWrite ? "escrita" : "somente leitura";
-  return `Deco: ${target} · poll ${c.pollIntervalMs / 1000}s · ${mode} · dados em ${c.dataDir}`;
+  return (
+    `Deco: ${target} · poll ${c.pollIntervalMs / 1000}s (detalhe a cada ${c.detailEvery}) · ${mode} · ` +
+    `dados em ${c.dataDir} · http://${c.http.bind}:${c.http.port}`
+  );
 }

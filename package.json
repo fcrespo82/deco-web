@@ -11,21 +11,29 @@
   "scripts": {
     "dev": "DECO_MOCK=1 DATA_DIR=./data LOG_LEVEL=debug POLL_INTERVAL=30 tsx watch src/main.ts",
     "start": "node dist/main.js",
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc -p .",
+    "build": "tsc -p tsconfig.build.json && vite build --config web/vite.config.ts",
+    "typecheck": "tsc -p . && tsc -p web",
     "test": "vitest run",
     "probe": "node --env-file-if-exists=.env --import tsx scripts/probe.js",
     "fixture": "node scripts/make-fixture.js",
-    "unlock": "tsx scripts/unlock.ts"
+    "unlock": "tsx scripts/unlock.ts",
+    "dev:web": "vite --config web/vite.config.ts",
+    "build:web": "vite build --config web/vite.config.ts"
   },
   "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.13.3",
+    "preact": "^11.0.1",
     "tsx": "^4.23.12",
     "typescript": "^5.9.3",
+    "vite": "^8.3.4",
     "vitest": "^5.0.5"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3"
+    "@fastify/cookie": "^11.1.3",
+    "@fastify/static": "^10.1.6",
+    "better-sqlite3": "^13.0.3",
+    "fastify": "^5.12.7"
   }
 }
