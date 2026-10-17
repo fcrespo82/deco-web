@@ -9,11 +9,23 @@
     "node": ">=20"
   },
   "scripts": {
-    "probe": "node --env-file-if-exists=.env --import tsx scripts/probe.js"
+    "dev": "DECO_MOCK=1 DATA_DIR=./data LOG_LEVEL=debug POLL_INTERVAL=30 tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p .",
+    "test": "vitest run",
+    "probe": "node --env-file-if-exists=.env --import tsx scripts/probe.js",
+    "fixture": "node scripts/make-fixture.js",
+    "unlock": "tsx scripts/unlock.ts"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.13.3",
     "tsx": "^4.23.12",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3"
   }
 }
