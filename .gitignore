@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+data/
+# Saída do probe: contém MACs, IPs e nomes da sua rede.
+probe-output.json

@@ -1,0 +1,19 @@
+{
+  "name": "deco-web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Interface web para gerenciar uma rede mesh TP-Link Deco pela API local",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "probe": "node --env-file-if-exists=.env --import tsx scripts/probe.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3"
+  }
+}
