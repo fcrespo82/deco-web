@@ -1,12 +1,14 @@
 /**
- * Rotas de inventário, plano de IPs, histórico e auditoria. São dados
- * locais (SQLite): não tocam no Deco e não dependem de DECO_ALLOW_WRITE,
- * mas toda alteração vai para o log de auditoria.
+ * Rotas de inventário, plano de IPs, reservas, histórico e auditoria.
+ * Inventário e plano são dados locais (SQLite): não tocam no Deco e não
+ * dependem de DECO_ALLOW_WRITE. Reservas escrevem no Deco e exigem
+ * DECO_ALLOW_WRITE=1. Toda alteração vai para o log de auditoria.
  */
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { App } from "../app.js";
 import { NET_EVENT_TYPES, type NetEventType } from "../core/events.js";
 import { buildIpPlan, lanSubnet } from "../core/ipplan.js";
+import { suggestReservationIps, type ReservationChange } from "../core/reservations.js";
 import { DEVICE_TYPES } from "../db/inventory.js";
 import { requireMac, ValidationError } from "../db/errors.js";
 import type { EventView } from "./api-types.js";
@@ -112,6 +114,50 @@ export function registerDataRoutes(server: FastifyInstance, app: App, actorOf: (
     const before = app.ranges.delete(idOf(req));
     audit(req, "range.delete", `range:${before.id}`, before, null);
     return { ok: true };
+  });
+
+  // --- reservas (escrita no Deco) --------------------------------------
+
+  server.get("/api/reservations", async () => {
+    const snap = app.poller.cache.snapshot;
+    return {
+      allowWrite: app.reservations.allowWrite,
+      used: snap?.reservations.length ?? 0,
+      max: snap?.reservationMax ?? null,
+      clients: clients().filter((c) => c.reservation),
+    };
+  });
+
+  server.get<{ Querystring: { mac?: string } }>("/api/reservations/suggest", async (req) => {
+    const mac = requireMac(req.query.mac);
+    const type = app.inventory.findByMac(mac)?.type ?? null;
+    const client = app.poller.cache.snapshot?.clients.find((c) => c.mac === mac) ?? null;
+    return { mac, deviceType: type, currentIp: client?.ip ?? null, suggestions: suggestReservationIps(plan(), type) };
+  });
+
+  /** Escritas exigem `confirm: true`: a UI só manda depois do diálogo de confirmação. */
+  const confirmed = (body: { confirm?: unknown } | undefined) => {
+    if (body?.confirm !== true) throw new ValidationError("Confirmação ausente (confirm: true).");
+  };
+  const write = async (req: FastifyRequest, reply: FastifyReply, change: ReservationChange) => {
+    const result = await app.reservations.apply(change, actorOf(req));
+    const code = result.ok ? 200 : result.outcome === "conflict" ? 409 : 502;
+    return reply.code(code).send({ ...result, error: result.ok ? undefined : result.message });
+  };
+
+  server.post<{ Body: { mac?: unknown; ip?: unknown; confirm?: unknown } }>("/api/reservations", async (req, reply) => {
+    confirmed(req.body);
+    return write(req, reply, app.reservations.prepare("add", req.body?.mac, req.body?.ip));
+  });
+
+  server.put<{ Params: { mac: string }; Body: { ip?: unknown; confirm?: unknown } }>("/api/reservations/:mac", async (req, reply) => {
+    confirmed(req.body);
+    return write(req, reply, app.reservations.prepare("move", req.params.mac, req.body?.ip));
+  });
+
+  server.delete<{ Params: { mac: string }; Body: { confirm?: unknown } }>("/api/reservations/:mac", async (req, reply) => {
+    confirmed(req.body);
+    return write(req, reply, app.reservations.prepare("remove", req.params.mac));
   });
 
   // --- histórico ------------------------------------------------------

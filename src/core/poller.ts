@@ -8,7 +8,7 @@
  * - Ao iniciar, carrega o último snapshot do SQLite para a UI ter dados já.
  */
 import { EventEmitter } from "node:events";
-import type { Snapshot } from "../deco-client/types.js";
+import type { Reservation, Snapshot } from "../deco-client/types.js";
 import type { Store } from "../db/store.js";
 import type { BreakerStatus } from "./breaker.js";
 import { CircuitOpenError, type DecoGateway } from "./gateway.js";
@@ -68,6 +68,17 @@ export class Poller extends EventEmitter<PollerEvents> {
 
   get cache(): PollerCache {
     return { ...this.state, breaker: this.gateway.breaker.status };
+  }
+
+  /**
+   * Atualiza as reservas do cache com a lista que uma escrita acabou de reler,
+   * para a UI refletir a mudança sem esperar o próximo poll. O resto do
+   * snapshot (e o detector de eventos) só muda no poll.
+   */
+  applyReservations(reservations: Reservation[], max: number | null): void {
+    const snap = this.state.snapshot;
+    if (!snap) return;
+    this.state.snapshot = { ...snap, reservations, reservationMax: max ?? snap.reservationMax };
   }
 
   start(): void {

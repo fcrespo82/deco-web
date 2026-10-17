@@ -3,6 +3,7 @@
  * qualquer DecoApi. Nada no servidor deve chamar a DecoApi diretamente.
  */
 import { classifyError } from "../deco-client/errors.js";
+import type { ReservationChange, ReservationWriteResult } from "../deco-client/reservations.js";
 import type { DecoApi, Snapshot } from "../deco-client/types.js";
 import type { CircuitBreaker } from "./breaker.js";
 import { SerialQueue } from "./queue.js";
@@ -31,6 +32,11 @@ export class DecoGateway {
 
   fetchSnapshot(): Promise<Snapshot> {
     return this.run((api) => api.fetchSnapshot());
+  }
+
+  /** Recusas do firmware voltam no resultado; só falhas de acesso contam no breaker. */
+  changeReservation(change: ReservationChange): Promise<ReservationWriteResult> {
+    return this.run((api) => api.changeReservation(change));
   }
 
   /**

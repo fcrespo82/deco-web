@@ -10,6 +10,7 @@ import { CircuitBreaker, type BreakerState } from "./core/breaker.js";
 import { DecoGateway } from "./core/gateway.js";
 import { EventDetector, type NetEvent } from "./core/events.js";
 import { Poller } from "./core/poller.js";
+import { ReservationService } from "./core/reservations.js";
 import { LiveDecoApi } from "./deco-client/live.js";
 import { MockDecoApi } from "./deco-client/mock.js";
 import type { DecoApi } from "./deco-client/types.js";
@@ -33,6 +34,8 @@ export interface App {
   ranges: IpRangeRepo;
   events: EventRepo;
   audit: AuditRepo;
+  /** Escrita de reservas no Deco (exige DECO_ALLOW_WRITE). */
+  reservations: ReservationService;
   /** Escuta eventos novos (alertas). */
   onEvents(listener: (events: NetEvent[]) => void): void;
   /** Para o poller, espera o poll em andamento (e o logout) e fecha o banco. */
@@ -79,6 +82,7 @@ export function createApp(config: Config, log: Logger, api?: DecoApi): App {
   const ranges = new IpRangeRepo(store.db);
   const events = new EventRepo(store.db);
   const audit = new AuditRepo(store.db);
+  const reservations = new ReservationService({ allowWrite: config.allowWrite, gateway, poller, audit, logger: log });
 
   // O detector parte do último snapshot persistido, para um restart não gerar
   // uma enxurrada de "conectou".
@@ -122,6 +126,7 @@ export function createApp(config: Config, log: Logger, api?: DecoApi): App {
     ranges,
     events,
     audit,
+    reservations,
     onEvents: (l) => listeners.push(l),
     async close() {
       await poller.stop();

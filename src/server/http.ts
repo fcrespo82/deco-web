@@ -20,6 +20,9 @@ import {
   SessionSigner,
 } from "./auth.js";
 import { NotFoundError, ValidationError } from "../db/errors.js";
+import { CircuitOpenError } from "../core/gateway.js";
+import { ConflictError, WriteDisabledError } from "../core/reservations.js";
+import { DecoError } from "../deco-client/errors.js";
 import { registerDataRoutes } from "./routes.js";
 import { buildClients, buildOverview, buildStatus } from "./views.js";
 
@@ -46,6 +49,10 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
   server.setErrorHandler((err, _req, reply) => {
     if (err instanceof ValidationError) return reply.code(400).send({ error: err.message });
     if (err instanceof NotFoundError) return reply.code(404).send({ error: err.message });
+    if (err instanceof WriteDisabledError) return reply.code(403).send({ error: err.message });
+    if (err instanceof ConflictError) return reply.code(409).send({ error: err.message });
+    if (err instanceof CircuitOpenError) return reply.code(503).send({ error: err.message });
+    if (err instanceof DecoError) return reply.code(502).send({ error: `Falha ao falar com o Deco: ${err.message}` });
     const status = (err as { statusCode?: number }).statusCode;
     if (status && status >= 400 && status < 500) return reply.code(status).send({ error: (err as Error).message });
     console.error(err);

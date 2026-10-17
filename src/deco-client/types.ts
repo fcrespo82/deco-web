@@ -3,6 +3,8 @@
  * tipos; o formato cru do firmware fica confinado a parse.ts.
  */
 
+import type { ReservationChange, ReservationWriteResult } from "./reservations.js";
+
 export type Band = "2.4GHz" | "5GHz" | "6GHz" | "wired";
 
 export interface MeshNode {
@@ -97,7 +99,9 @@ export interface RawSnapshot {
   detailTakenAt?: string;
 }
 
-/** Leitura que o resto do sistema faz do Deco. Implementações: live e mock. */
+/** O que o resto do sistema faz no Deco. Implementações: live e mock. */
 export interface DecoApi {
   fetchSnapshot(): Promise<Snapshot>;
+  /** Altera uma reserva de DHCP, verificando antes e depois (ver reservations.ts). */
+  changeReservation(change: ReservationChange): Promise<ReservationWriteResult>;
 }

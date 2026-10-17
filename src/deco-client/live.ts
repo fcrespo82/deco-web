@@ -16,7 +16,8 @@
 import { DecoClient, type DecoRequest } from "./vendor/client.js";
 import { DecoLoginError } from "./vendor/errors.js";
 import { normalize } from "./vendor/format.js";
-import { parseNodes, parseSnapshot } from "./parse.js";
+import { parseNodes, parseReservations, parseSnapshot } from "./parse.js";
+import { applyReservationChange, type ReservationChange, type ReservationWriteResult } from "./reservations.js";
 import type { DecoApi, RawSnapshot, Snapshot } from "./types.js";
 import { silentLogger, type Logger } from "../log.js";
 
@@ -63,6 +64,50 @@ export class LiveDecoApi implements DecoApi {
     } finally {
       await this.client.logout();
       this.log.debug(`sessão Deco encerrada em ${Date.now() - started} ms`);
+    }
+  }
+
+  /**
+   * Uma sessão própria para cada alteração: login → getlist → escrita →
+   * getlist → logout. O cliente copiado já nunca reenvia uma escrita após
+   * timeout; a verificação fica em applyReservationChange.
+   */
+  async changeReservation(change: ReservationChange): Promise<ReservationWriteResult> {
+    const started = Date.now();
+    try {
+      const result = await applyReservationChange(
+        {
+          list: async () => {
+            const parsed = parseReservations(
+              await this.read({ endpoint: "admin/client", form: "addr_reservation", operation: "getlist" }),
+            );
+            return { reservations: parsed.list, max: parsed.max };
+          },
+          // add recebe objetos; remove recebe MACs soltos. A assimetria é do firmware.
+          add: (mac, ip) => this.write("add", [{ mac, ip }]),
+          remove: (mac) => this.write("remove", [mac]),
+        },
+        change,
+      );
+      this.log.info(`reserva ${change.op} ${change.mac}: ${result.outcome}`);
+      return result;
+    } finally {
+      await this.client.logout();
+      this.log.debug(`sessão Deco (escrita) encerrada em ${Date.now() - started} ms`);
+    }
+  }
+
+  private async write(operation: "add" | "remove", list: unknown[]): Promise<void> {
+    const started = Date.now();
+    try {
+      await this.client.call({
+        endpoint: "admin/client",
+        form: "addr_reservation",
+        operation,
+        params: { reservation_list: list },
+      });
+    } finally {
+      this.log.debug(`deco addr_reservation ${operation}: ${Date.now() - started} ms`);
     }
   }
 
