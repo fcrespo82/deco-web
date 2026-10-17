@@ -4,8 +4,18 @@
  */
 import type { Band, Snapshot } from "../deco-client/types.js";
 import type { ClientSeen, NodeSeen } from "../db/store.js";
+import type { Device } from "../db/inventory.js";
 import type { PollerCache } from "../core/poller.js";
-import type { ClientView, NodeView, OverviewView, StatusView } from "./api-types.js";
+import type {
+  ClientView,
+  DeviceMacView,
+  DeviceSummary,
+  DeviceView,
+  InventoryView,
+  NodeView,
+  OverviewView,
+  StatusView,
+} from "./api-types.js";
 
 export type * from "./api-types.js";
 
@@ -80,7 +90,20 @@ export function buildOverview(
  * Clientes online (do snapshot) + conhecidos offline (do histórico) + MACs que
  * só existem como reserva. Online primeiro, depois por nome.
  */
-export function buildClients(snap: Snapshot | null, seen: Map<string, ClientSeen>): ClientView[] {
+export const deviceSummary = (d: Device): DeviceSummary => ({
+  id: d.id,
+  alias: d.alias,
+  owner: d.owner,
+  type: d.type,
+  tags: d.tags,
+  approved: d.approved,
+});
+
+export function buildClients(
+  snap: Snapshot | null,
+  seen: Map<string, ClientSeen>,
+  inventory: Map<string, Device> = new Map(),
+): ClientView[] {
   const nodes = new Map((snap?.nodes ?? []).map((n) => [n.mac, n]));
   const reservations = new Map((snap?.reservations ?? []).map((r) => [r.mac, r.ip]));
   const out = new Map<string, ClientView>();
@@ -97,6 +120,7 @@ export function buildClients(snap: Snapshot | null, seen: Map<string, ClientSeen
     out.set(c.mac, {
       mac: c.mac,
       name: c.name,
+      device: null,
       online: true,
       ip: c.ip,
       deviceType: c.deviceType,
@@ -118,6 +142,7 @@ export function buildClients(snap: Snapshot | null, seen: Map<string, ClientSeen
     out.set(s.mac, {
       mac: s.mac,
       name: s.lastName ?? s.mac,
+      device: null,
       online: false,
       ip: s.lastIp,
       deviceType: null,
@@ -138,6 +163,7 @@ export function buildClients(snap: Snapshot | null, seen: Map<string, ClientSeen
     out.set(mac, {
       mac,
       name: mac,
+      device: null,
       online: false,
       ip: null,
       deviceType: null,
@@ -153,7 +179,71 @@ export function buildClients(snap: Snapshot | null, seen: Map<string, ClientSeen
     });
   }
 
+  // MACs só do inventário (cadastrados à mão, nunca vistos) também aparecem.
+  for (const [mac] of inventory) {
+    if (out.has(mac)) continue;
+    out.set(mac, {
+      mac,
+      name: mac,
+      device: null,
+      online: false,
+      ip: null,
+      deviceType: null,
+      band: null,
+      network: null,
+      nodeMac: null,
+      nodeName: null,
+      upKBps: 0,
+      downKBps: 0,
+      firstSeen: null,
+      lastSeen: null,
+      reservation: null,
+    });
+  }
+  for (const view of out.values()) {
+    const d = inventory.get(view.mac);
+    if (d) view.device = deviceSummary(d);
+  }
+
+  const label = (c: ClientView) => c.device?.alias ?? c.name;
   return [...out.values()].sort(
-    (a, b) => Number(b.online) - Number(a.online) || a.name.localeCompare(b.name, "pt-BR"),
+    (a, b) => Number(b.online) - Number(a.online) || label(a).localeCompare(label(b), "pt-BR"),
   );
+}
+
+/** Inventário com o estado atual de cada MAC; MACs vistos sem cadastro à parte. */
+export function buildInventory(
+  devices: Device[],
+  clients: ClientView[],
+  deviceTypes: readonly string[],
+): InventoryView {
+  const byMac = new Map(clients.map((c) => [c.mac, c]));
+  const macView = (mac: string): DeviceMacView => {
+    const c = byMac.get(mac);
+    return {
+      mac,
+      online: c?.online ?? false,
+      ip: c?.ip ?? null,
+      band: c?.band ?? null,
+      nodeName: c?.nodeName ?? null,
+      decoName: c && c.name !== mac ? c.name : null,
+      lastSeen: c?.online ? null : (c?.lastSeen ?? null),
+    };
+  };
+  const assigned = new Set(devices.flatMap((d) => d.macs));
+  const views: DeviceView[] = devices.map((d) => {
+    const macs = d.macs.map(macView);
+    return {
+      ...deviceSummary(d),
+      notes: d.notes,
+      createdAt: d.createdAt,
+      updatedAt: d.updatedAt,
+      online: macs.some((m) => m.online),
+      macs,
+    };
+  });
+  const unassigned = clients
+    .filter((c) => !assigned.has(c.mac) && (c.online || c.lastSeen))
+    .map((c) => macView(c.mac));
+  return { devices: views, unassigned, deviceTypes };
 }

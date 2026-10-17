@@ -4,7 +4,7 @@ import { DecoGateway } from "../src/core/gateway.js";
 import { Poller } from "../src/core/poller.js";
 import { DecoLoginError } from "../src/deco-client/errors.js";
 import { MockDecoApi } from "../src/deco-client/mock.js";
-import { Store } from "../src/db/store.js";
+import { MIGRATIONS, Store } from "../src/db/store.js";
 import { silentLogger } from "../src/log.js";
 
 function setup(opts: { now?: () => Date } = {}) {
@@ -128,7 +128,7 @@ describe("Poller + Store", () => {
     await poller.pollNow();
     advance(60_000);
     await poller.pollNow();
-    expect(store.db.pragma("user_version", { simple: true })).toBe(1);
+    expect(store.db.pragma("user_version", { simple: true })).toBe(MIGRATIONS.length);
     expect(store.pruneSamples("2026-10-17T12:00:30Z")).toBe(1);
     expect(store.samples("2000-01-01")).toHaveLength(1);
   });

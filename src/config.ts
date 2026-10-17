@@ -23,6 +23,10 @@ export interface Config {
   dataDir: string;
   logLevel: "debug" | "info" | "warn" | "error";
   http: { bind: string; port: number };
+  /** Eventos e amostras mais velhos que isso são apagados. */
+  retentionDays: number;
+  /** Ausência mínima para registrar desconexão de um cliente. */
+  disconnectGraceMs: number;
 }
 
 export class ConfigError extends Error {}
@@ -82,6 +86,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     allowDangerous,
     dataDir: env.DATA_DIR?.trim() || "/data",
     logLevel,
+    retentionDays: positiveNumber(env, "HISTORY_RETENTION_DAYS", 90),
+    disconnectGraceMs: positiveNumber(env, "EVENT_DISCONNECT_GRACE", 300) * 1000,
     http: {
       bind: env.BIND?.trim() || "0.0.0.0",
       port: Math.round(positiveNumber(env, "PORT", 8080)),

@@ -169,3 +169,74 @@ describe("autenticação da UI", () => {
     expect(checkPassword(undefined, "abc")).toBe(false);
   });
 });
+
+describe("API de inventário, plano e histórico", () => {
+  const json = (method: "POST" | "PATCH" | "PUT" | "DELETE", url: string, payload: unknown = {}) => ({
+    method,
+    url,
+    headers: { "content-type": "application/json" },
+    payload: JSON.stringify(payload),
+  });
+
+  it("apelido pelo cliente aparece na lista e fica na auditoria", async () => {
+    const { app, server } = await setup();
+    await app.poller.pollNow();
+    const mac = app.poller.cache.snapshot!.clients[0]!.mac;
+    const res = await server.inject(json("PUT", `/api/clients/${mac}/device`, { alias: "Notebook da Ana", type: "notebook", owner: "Ana" }));
+    expect(res.statusCode).toBe(200);
+
+    const { clients } = (await server.inject("/api/clients")).json();
+    expect(clients.find((c: any) => c.mac === mac).device).toMatchObject({ alias: "Notebook da Ana", owner: "Ana" });
+
+    const inv = (await server.inject("/api/devices")).json();
+    expect(inv.devices).toHaveLength(1);
+    expect(inv.devices[0].macs[0]).toMatchObject({ mac, online: true });
+    expect(inv.unassigned).toHaveLength(27);
+
+    const { entries } = (await server.inject("/api/audit")).json();
+    expect(entries[0]).toMatchObject({ action: "device.create", actor: expect.stringMatching(/^ui-aberta@/), before: null });
+  });
+
+  it("validação vira 400 com mensagem; inexistente vira 404", async () => {
+    const { server } = await setup();
+    const bad = await server.inject(json("POST", "/api/devices", { alias: "", macs: ["AA-AA-AA-AA-AA-01"] }));
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().error).toMatch(/Apelido/);
+    expect((await server.inject(json("PATCH", "/api/devices/999", { alias: "x" }))).statusCode).toBe(404);
+  });
+
+  it("faixas: exigem dados da rede; depois aparecem no plano com sugestão", async () => {
+    const { app, server } = await setup();
+    const early = await server.inject(json("POST", "/api/ipplan/ranges", { name: "IoT", spec: ".100+", kind: "dynamic" }));
+    expect(early.statusCode).toBe(400);
+
+    await app.poller.pollNow();
+    const created = await server.inject(json("POST", "/api/ipplan/ranges", { name: "Servidores", spec: ".20-.39", kind: "static" }));
+    expect(created.statusCode).toBe(201);
+    const plan = (await server.inject("/api/ipplan")).json();
+    expect(plan.cells).toHaveLength(256);
+    expect(plan.ranges[0]).toMatchObject({ name: "Servidores", suggestion: "192.168.68.37" });
+    expect(plan.anomalies.some((a: any) => a.code === "dynamic-in-static")).toBe(true);
+  });
+
+  it("histórico: eventos do poller com nome resolvido, e amostras para o gráfico", async () => {
+    const { app, api, server } = await setup();
+    await app.poller.pollNow();
+    const raw = api.raw.clientList as { client_list: { mac: string; ip: string }[] };
+    raw.client_list[0]!.ip = "192.168.68.199";
+    await new Promise((r) => setTimeout(r, 5));
+    await app.poller.pollNow();
+
+    const { events } = (await server.inject("/api/history/events")).json();
+    const changed = events.find((e: any) => e.type === "client_ip_changed");
+    expect(changed).toMatchObject({ mac: raw.client_list[0]!.mac, data: { to: "192.168.68.199" } });
+    expect(changed.name).toBeTruthy();
+
+    const filtered = (await server.inject("/api/history/events?type=client_new")).json();
+    expect(filtered.events.every((e: any) => e.type === "client_new")).toBe(true);
+
+    const samples = (await server.inject("/api/history/samples?hours=1")).json();
+    expect(samples.points.length).toBeGreaterThan(0);
+    expect(samples.points[0].avg).toBe(28);
+  });
+});

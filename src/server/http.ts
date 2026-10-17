@@ -19,6 +19,8 @@ import {
   SESSION_TTL_MS,
   SessionSigner,
 } from "./auth.js";
+import { NotFoundError, ValidationError } from "../db/errors.js";
+import { registerDataRoutes } from "./routes.js";
 import { buildClients, buildOverview, buildStatus } from "./views.js";
 
 export const WEB_DIST = fileURLToPath(new URL("../../web/dist", import.meta.url));
@@ -40,6 +42,15 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
   const server = Fastify({ logger: false, trustProxy: false });
 
   await server.register(cookie);
+
+  server.setErrorHandler((err, _req, reply) => {
+    if (err instanceof ValidationError) return reply.code(400).send({ error: err.message });
+    if (err instanceof NotFoundError) return reply.code(404).send({ error: err.message });
+    const status = (err as { statusCode?: number }).statusCode;
+    if (status && status >= 400 && status < 500) return reply.code(status).send({ error: (err as Error).message });
+    console.error(err);
+    return reply.code(500).send({ error: "Erro interno." });
+  });
 
   let secret = app.store.getJson<string>("session_secret");
   if (!secret) {
@@ -123,8 +134,12 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
 
   server.get("/api/clients", async () => ({
     status: status(),
-    clients: buildClients(app.poller.cache.snapshot, app.store.clientSeen()),
+    clients: buildClients(app.poller.cache.snapshot, app.store.clientSeen(), app.inventory.byMac()),
   }));
+
+  // Sem identidade de usuário (senha única da UI): registra o IP de origem.
+  const actorOf = (req: FastifyRequest) => `${authRequired ? "ui" : "ui-aberta"}@${req.ip}`;
+  registerDataRoutes(server, app, actorOf);
 
   server.post("/api/refresh", async (_req, reply) => {
     const last = app.poller.cache.lastAttemptAt;
@@ -136,8 +151,10 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
     return reply.code(202).send({ ok: true });
   });
 
-  server.post("/api/breaker/reset", async () => {
+  server.post("/api/breaker/reset", async (req) => {
+    const before = app.gateway.breaker.state;
     app.gateway.breaker.reset();
+    app.audit.record({ actor: actorOf(req), action: "breaker.reset", target: "deco", before, after: app.gateway.breaker.state });
     return { ok: true, breaker: app.gateway.breaker.status };
   });
 

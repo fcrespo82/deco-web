@@ -41,7 +41,9 @@ export interface OverviewView {
 
 export interface ClientView {
   mac: string;
+  /** Nome que o Deco dá; o apelido do inventário vem em `device`. */
   name: string;
+  device: DeviceSummary | null;
   online: boolean;
   ip: string | null;
   deviceType: string | null;
@@ -54,4 +56,66 @@ export interface ClientView {
   firstSeen: string | null;
   lastSeen: string | null;
   reservation: { ip: string; matchesCurrentIp: boolean | null } | null;
+}
+
+export interface DeviceSummary {
+  id: number;
+  alias: string;
+  owner: string | null;
+  type: string | null;
+  tags: string[];
+  approved: boolean;
+}
+
+export interface DeviceMacView {
+  mac: string;
+  online: boolean;
+  ip: string | null;
+  band: Band | null;
+  nodeName: string | null;
+  /** Nome que o Deco dá a esse MAC. */
+  decoName: string | null;
+  lastSeen: string | null;
+}
+
+export interface DeviceView extends DeviceSummary {
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  online: boolean;
+  macs: DeviceMacView[];
+}
+
+export interface InventoryView {
+  devices: DeviceView[];
+  /** MACs vistos que ainda não estão em nenhum dispositivo. */
+  unassigned: DeviceMacView[];
+  deviceTypes: readonly string[];
+}
+
+export interface SamplePoint {
+  t: string;
+  avg: number;
+  max: number;
+}
+
+export interface EventView {
+  id: number;
+  at: string;
+  type: string;
+  mac: string | null;
+  /** Apelido do inventário, ou o nome do Deco no momento do evento. */
+  name: string | null;
+  data: Record<string, unknown>;
+}
+
+export interface AuditView {
+  id: number;
+  at: string;
+  actor: string;
+  action: string;
+  target: string | null;
+  before: unknown;
+  after: unknown;
+  result: string;
 }

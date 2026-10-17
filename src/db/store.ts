@@ -9,7 +9,7 @@ import Database from "better-sqlite3";
 import type { Snapshot } from "../deco-client/types.js";
 
 /** Cada item roda uma vez, em ordem; o índice + 1 vira o user_version. */
-const MIGRATIONS: string[] = [
+export const MIGRATIONS: string[] = [
   `
   CREATE TABLE kv (
     key   TEXT PRIMARY KEY,
@@ -38,6 +38,54 @@ const MIGRATIONS: string[] = [
     nodes_total    INTEGER NOT NULL,
     by_band        TEXT NOT NULL
   );
+  `,
+  `
+  CREATE TABLE devices (
+    id         INTEGER PRIMARY KEY,
+    alias      TEXT NOT NULL,
+    owner      TEXT,
+    type       TEXT,
+    tags       TEXT NOT NULL DEFAULT '[]',
+    notes      TEXT,
+    approved   INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE TABLE device_macs (
+    mac       TEXT PRIMARY KEY,
+    device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE
+  );
+  CREATE INDEX device_macs_device ON device_macs(device_id);
+  CREATE TABLE ip_ranges (
+    id         INTEGER PRIMARY KEY,
+    name       TEXT NOT NULL,
+    start_ip   INTEGER NOT NULL,
+    end_ip     INTEGER NOT NULL,
+    kind       TEXT NOT NULL,
+    types      TEXT NOT NULL DEFAULT '[]',
+    notes      TEXT,
+    position   INTEGER NOT NULL
+  );
+  CREATE TABLE events (
+    id   INTEGER PRIMARY KEY,
+    at   TEXT NOT NULL,
+    type TEXT NOT NULL,
+    mac  TEXT,
+    data TEXT NOT NULL DEFAULT '{}'
+  );
+  CREATE INDEX events_at ON events(at);
+  CREATE INDEX events_mac ON events(mac, at);
+  CREATE TABLE audit_log (
+    id     INTEGER PRIMARY KEY,
+    at     TEXT NOT NULL,
+    actor  TEXT NOT NULL,
+    action TEXT NOT NULL,
+    target TEXT,
+    before TEXT,
+    after  TEXT,
+    result TEXT NOT NULL DEFAULT 'ok'
+  );
+  CREATE INDEX audit_at ON audit_log(at);
   `,
 ];
 
