@@ -33,6 +33,8 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** Corpo da resposta de erro (ex.: resultado de uma escrita recusada). */
+    readonly body?: unknown,
   ) {
     super(message);
   }
@@ -48,8 +50,29 @@ async function request<T>(method: Method, path: string, body?: unknown): Promise
     body: method === "GET" ? undefined : JSON.stringify(body ?? {}),
   });
   const data = (await res.json().catch(() => ({}))) as { error?: string };
-  if (!res.ok) throw new ApiError(res.status, data.error ?? `Erro ${res.status}`);
+  if (!res.ok) throw new ApiError(res.status, data.error ?? `Erro ${res.status}`, data);
   return data as T;
+}
+
+export interface Reservation {
+  mac: string;
+  ip: string;
+}
+
+/** Resultado de uma escrita de reserva (ver src/deco-client/reservations.ts). */
+export interface ReservationResult {
+  outcome: "applied" | "noop" | "conflict" | "rejected" | "unverified" | "ambiguous" | "rolled-back" | "lost";
+  ok: boolean;
+  message: string;
+  before: Reservation | null;
+  after: Reservation | null;
+}
+
+export interface IpSuggestion {
+  ip: string;
+  rangeId: number | null;
+  rangeName: string | null;
+  matchesType: boolean;
 }
 
 export interface DeviceInput {
@@ -96,6 +119,17 @@ export const api = {
   createRange: (input: RangeInput) => request("POST", "/api/ipplan/ranges", input),
   updateRange: (id: number, input: RangeInput) => request("PATCH", `/api/ipplan/ranges/${id}`, input),
   deleteRange: (id: number) => request("DELETE", `/api/ipplan/ranges/${id}`),
+
+  reservations: () =>
+    request<{ allowWrite: boolean; used: number; max: number | null; clients: ClientView[] }>("GET", "/api/reservations"),
+  suggestIp: (mac: string) =>
+    request<{ mac: string; deviceType: string | null; currentIp: string | null; suggestions: IpSuggestion[] }>(
+      "GET",
+      `/api/reservations/suggest${qs({ mac })}`,
+    ),
+  addReservation: (mac: string, ip: string) => request<ReservationResult>("POST", "/api/reservations", { mac, ip, confirm: true }),
+  moveReservation: (mac: string, ip: string) => request<ReservationResult>("PUT", `/api/reservations/${mac}`, { ip, confirm: true }),
+  removeReservation: (mac: string) => request<ReservationResult>("DELETE", `/api/reservations/${mac}`, { confirm: true }),
 
   events: (q: { limit?: number; before?: number; type?: string; mac?: string } = {}) =>
     request<{ events: EventView[]; nextBefore: number | null; types: string[] }>("GET", `/api/history/events${qs(q)}`),

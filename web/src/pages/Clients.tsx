@@ -3,6 +3,7 @@ import { api, type Band, type ClientView } from "../api";
 import { BAND_LABEL, INVENTORY_TYPE_LABEL, NETWORK_LABEL, ago, dateTime, deviceType, rate } from "../format";
 import { useNow, usePolled } from "../hooks";
 import { DeviceEditor } from "../DeviceEditor";
+import { ReservationDialog } from "../ReservationDialog";
 import { StatusBar } from "../StatusBar";
 
 /** Apelido do inventário, ou o nome que o Deco dá. */
@@ -82,6 +83,7 @@ export function Clients() {
   const [f, setF] = useState<Filters>(EMPTY);
   const [sort, setSort] = useState<SortKey | null>(null);
   const [editing, setEditing] = useState<ClientView | null>(null);
+  const [reserving, setReserving] = useState<ClientView | null>(null);
 
   const clients = data?.clients ?? [];
   const nodes = useMemo(() => {
@@ -197,7 +199,18 @@ export function Clients() {
                 </td>
                 <td data-label="MAC" class="mono">{c.mac}</td>
                 <td data-label="IP" class="mono">{c.ip ?? c.reservation?.ip ?? "—"}</td>
-                <td data-label="Reserva"><Reservation c={c} /></td>
+                <td data-label="Reserva">
+                  <Reservation c={c} />
+                  {data.status.mode.allowWrite && (c.online || c.reservation) && (
+                    <button
+                      class="btn res-action"
+                      onClick={() => setReserving(c)}
+                      aria-label={c.reservation ? `Mudar reserva de ${label(c)}` : `Fixar IP de ${label(c)}`}
+                    >
+                      {c.reservation ? "Mudar" : "Fixar IP"}
+                    </button>
+                  )}
+                </td>
                 <td data-label="Nó">{c.nodeName ?? <span class="muted">—</span>}</td>
                 <td data-label="Banda">{c.band ? BAND_LABEL[c.band] : "—"}</td>
                 <td data-label="Envio / receb." class="num">
@@ -225,6 +238,18 @@ export function Clients() {
           suggestedName={editing.name !== editing.mac ? editing.name : undefined}
           onClose={(changed) => {
             setEditing(null);
+            if (changed) void reload();
+          }}
+        />
+      )}
+      {reserving && (
+        <ReservationDialog
+          mac={reserving.mac}
+          name={label(reserving)}
+          current={reserving.reservation?.ip ?? null}
+          currentIp={reserving.online ? reserving.ip : null}
+          onClose={(changed) => {
+            setReserving(null);
             if (changed) void reload();
           }}
         />

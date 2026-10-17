@@ -3,6 +3,7 @@ import { api, ApiError, type CellStatus, type IpCell, type RangeSummary } from "
 import { INVENTORY_TYPE_LABEL } from "../format";
 import { usePolled } from "../hooks";
 import { Modal } from "../Modal";
+import { ReservationDialog } from "../ReservationDialog";
 
 /** Cores das faixas: ordem categórica fixa (validada); da 9ª em diante, cinza. */
 const RANGE_SLOTS = 8;
@@ -117,7 +118,7 @@ function RangeForm({ range, onClose }: { range: RangeSummary | null; onClose: (c
   );
 }
 
-function CellDetail({ cell, range }: { cell: IpCell; range: RangeSummary | undefined }) {
+function CellDetail({ cell, range, onReserve }: { cell: IpCell; range: RangeSummary | undefined; onReserve?: () => void }) {
   return (
     <div class="card cell-detail" aria-live="polite">
       <div class="node-head">
@@ -146,12 +147,19 @@ function CellDetail({ cell, range }: { cell: IpCell; range: RangeSummary | undef
           </>
         )}
       </dl>
+      {onReserve && (
+        <button class="btn" style="margin-top:10px" onClick={onReserve}>
+          Fixar este IP para o aparelho
+        </button>
+      )}
     </div>
   );
 }
 
 export function IpPlan() {
   const { data, error, reload } = usePolled(api.ipPlan, 30_000);
+  const { data: status } = usePolled(api.status, 60_000);
+  const [reserving, setReserving] = useState<IpCell | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [editing, setEditing] = useState<RangeSummary | "new" | null>(null);
 
@@ -255,7 +263,11 @@ export function IpPlan() {
             </div>
             <aside class="ip-side">
               {cell ? (
-                <CellDetail cell={cell} range={cell.rangeId ? rangeOf.get(cell.rangeId) : undefined} />
+                <CellDetail
+                  cell={cell}
+                  range={cell.rangeId ? rangeOf.get(cell.rangeId) : undefined}
+                  onReserve={status?.mode.allowWrite && cell.status === "online" && cell.mac ? () => setReserving(cell) : undefined}
+                />
               ) : (
                 <p class="muted small">Clique num endereço para ver detalhes.</p>
               )}
@@ -321,6 +333,19 @@ export function IpPlan() {
         uso" vem da lista de clientes; o Deco não expõe a tabela de leases pela API local.
       </p>
 
+      {reserving && (
+        <ReservationDialog
+          mac={reserving.mac!}
+          name={reserving.name ?? reserving.mac!}
+          current={null}
+          currentIp={reserving.ip}
+          presetIp={reserving.ip}
+          onClose={(changed) => {
+            setReserving(null);
+            if (changed) void reload();
+          }}
+        />
+      )}
       {editing && (
         <RangeForm
           range={editing === "new" ? null : editing}

@@ -7,11 +7,13 @@ import { History } from "./pages/History";
 import { Inventory } from "./pages/Inventory";
 import { IpPlan } from "./pages/IpPlan";
 import { Overview } from "./pages/Overview";
+import { Reservations } from "./pages/Reservations";
 import "./styles.css";
 
 const ROUTES = [
   { path: "", label: "Visão geral", page: Overview },
   { path: "clientes", label: "Clientes", page: Clients },
+  { path: "reservas", label: "Reservas", page: Reservations },
   { path: "inventario", label: "Inventário", page: Inventory },
   { path: "ips", label: "Plano de IPs", page: IpPlan },
   { path: "historico", label: "Histórico", page: History },

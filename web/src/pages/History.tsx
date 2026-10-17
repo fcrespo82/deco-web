@@ -108,12 +108,25 @@ const ACTION_LABEL: Record<string, string> = {
   "range.update": "Editou faixa",
   "range.delete": "Excluiu faixa",
   "breaker.reset": "Destravou acesso ao Deco",
+  "reservation.add": "Criou reserva no Deco",
+  "reservation.move": "Mudou IP reservado no Deco",
+  "reservation.remove": "Removeu reserva do Deco",
 };
 
 function describe(v: unknown): string {
   if (!v || typeof v !== "object") return "";
   const o = v as Record<string, unknown>;
+  if (typeof o.mac === "string" && typeof o.ip === "string") return `${o.ip} · ${o.mac}`;
   return String(o.alias ?? o.name ?? o.mac ?? "");
+}
+
+/** Reservas: mostra a transição (antes → depois). */
+function target(a: AuditView): string {
+  if (a.action.startsWith("reservation.")) {
+    const ip = (v: unknown) => (v && typeof v === "object" ? String((v as { ip?: string }).ip ?? "—") : "—");
+    return `${a.target ?? ""}: ${ip(a.before)} → ${a.action === "reservation.remove" && a.result === "ok" ? "—" : ip(a.after)}`;
+  }
+  return describe(a.after) || describe(a.before) || a.target || "";
 }
 
 function Audit() {
@@ -140,9 +153,17 @@ function Audit() {
               <td class="primary-cell small nowrap">{dateTime(a.at)}</td>
               <td data-label="Ação">
                 {ACTION_LABEL[a.action] ?? a.action}
-                {a.result !== "ok" && <span class="badge bad">{a.result}</span>}
+                {a.result !== "ok" && (
+                  <div>
+                    <span class="badge bad" title={a.result}>
+                      {a.result.split(":")[0]}
+                    </span>
+                  </div>
+                )}
               </td>
-              <td data-label="Alvo">{describe(a.after) || describe(a.before) || a.target}</td>
+              <td data-label="Alvo" class={a.action.startsWith("reservation.") ? "mono small" : ""}>
+                {target(a)}
+              </td>
               <td data-label="Quem" class="mono small">{a.actor}</td>
             </tr>
           ))}
