@@ -128,4 +128,23 @@ describe("DecoGateway", () => {
     expect(peak).toBe(1);
     expect(api.calls).toBe(3);
   });
+
+  it("espera a pausa mínima entre sessões consecutivas", async () => {
+    let clock = 1_000;
+    const sleeps: number[] = [];
+    const gw = new DecoGateway(new MockDecoApi(), new CircuitBreaker(), {
+      minGapMs: 10_000,
+      now: () => clock,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+        clock += ms;
+      },
+    });
+    await gw.fetchSnapshot(); // primeira: sem espera
+    clock += 3_000;
+    await gw.fetchSnapshot(); // 3 s depois: espera 7 s
+    clock += 20_000;
+    await gw.fetchSnapshot(); // 20 s depois: sem espera
+    expect(sleeps).toEqual([7_000]);
+  });
 });

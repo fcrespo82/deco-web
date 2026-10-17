@@ -76,7 +76,8 @@ export function createApp(config: Config, log: Logger, api?: DecoApi): App {
     log.error("Acesso ao Deco continua TRAVADO desde a última execução. Destrave pela UI ou com \"npm run unlock\".");
   }
 
-  const gateway = new DecoGateway(deco, breaker);
+  // O mock não precisa de pausa entre sessões (e os testes ficam rápidos).
+  const gateway = new DecoGateway(deco, breaker, { minGapMs: config.mock ? 0 : config.deco.sessionGapMs });
   const poller = new Poller({ gateway, store, intervalMs: config.pollIntervalMs, logger: log });
   const inventory = new InventoryRepo(store.db);
   const ranges = new IpRangeRepo(store.db);

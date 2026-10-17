@@ -14,6 +14,8 @@ export interface Config {
     host: string;
     username: string;
     timeoutMs: number;
+    /** Pausa mínima entre sessões admin consecutivas. */
+    sessionGapMs: number;
   };
   pollIntervalMs: number;
   /** Leitura detalhada (cliente→nó, Wi-Fi, CPU) a cada N polls. */
@@ -79,6 +81,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       host,
       username: env.DECO_USERNAME?.trim() || "admin",
       timeoutMs: positiveNumber(env, "DECO_TIMEOUT_MS", 15_000),
+      sessionGapMs: positiveNumber(env, "DECO_SESSION_GAP_MS", 10_000),
     },
     pollIntervalMs: pollSeconds * 1000,
     detailEvery: Math.round(positiveNumber(env, "POLL_DETAIL_EVERY", 5)),
