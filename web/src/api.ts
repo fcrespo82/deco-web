@@ -75,6 +75,31 @@ export interface IpSuggestion {
   matchesType: boolean;
 }
 
+export interface AlertEntry {
+  id: number;
+  at: string;
+  kind: "new_device" | "node_offline" | "node_online" | "internet_down" | "internet_up" | "test";
+  mac: string | null;
+  title: string;
+  body: string;
+  delivery: { channel: string; ok: boolean; error?: string }[];
+}
+
+export interface AlertsView {
+  settings: { newDevice: boolean; nodeOfflineMinutes: number | null; internetDownMinutes: number | null; publicUrl: boolean };
+  channels: { name: string; target: string }[];
+  alerts: AlertEntry[];
+  pending: ClientView[];
+}
+
+export type { BackupDiff, BackupFile } from "../../src/core/backup";
+
+export interface ImportResult {
+  devices: { added: number; updated: number };
+  ranges: { added: number; updated: number; skipped: number };
+  reservations: { mac: string; ip: string | null; outcome: string; message: string }[];
+}
+
 export interface DeviceInput {
   alias?: string;
   owner?: string | null;
@@ -130,6 +155,15 @@ export const api = {
   addReservation: (mac: string, ip: string) => request<ReservationResult>("POST", "/api/reservations", { mac, ip, confirm: true }),
   moveReservation: (mac: string, ip: string) => request<ReservationResult>("PUT", `/api/reservations/${mac}`, { ip, confirm: true }),
   removeReservation: (mac: string) => request<ReservationResult>("DELETE", `/api/reservations/${mac}`, { confirm: true }),
+
+  alerts: () => request<AlertsView>("GET", "/api/alerts"),
+  testAlert: () => request<AlertEntry>("POST", "/api/alerts/test"),
+  approve: (macs: string[]) => request<{ approved: number }>("POST", "/api/devices/approve", { macs }),
+
+  exportBackup: () => request<import("../../src/core/backup").BackupFile>("GET", "/api/backup"),
+  previewBackup: (backup: unknown) => request<import("../../src/core/backup").BackupDiff>("POST", "/api/backup/preview", { backup }),
+  importBackup: (backup: unknown, sections: { devices: boolean; ranges: boolean; reservations: boolean }) =>
+    request<ImportResult>("POST", "/api/backup/import", { backup, sections, confirm: true }),
 
   events: (q: { limit?: number; before?: number; type?: string; mac?: string } = {}) =>
     request<{ events: EventView[]; nextBefore: number | null; types: string[] }>("GET", `/api/history/events${qs(q)}`),

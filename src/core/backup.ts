@@ -278,7 +278,6 @@ export function diffBackup(input: DiffInput): BackupDiff {
       continue;
     }
     const key = p.local ? `local:${p.local.id}` : `new:${p.b.name}`;
-    const clash = [...final].find(([k, r]) => k !== key && r.start <= p.end && p.start <= r.end);
     const changes: FieldChange[] = [];
     if (p.local) {
       if (p.local.start !== p.start || p.local.end !== p.end) changes.push({ field: "spec", from: p.local.label, to: label });
@@ -286,6 +285,10 @@ export function diffBackup(input: DiffInput): BackupDiff {
       if (!sameList(p.local.types, p.b.types)) changes.push({ field: "types", from: p.local.types, to: p.b.types });
       if (p.local.notes !== p.b.notes) changes.push({ field: "notes", from: p.local.notes, to: p.b.notes });
     }
+    // Faixas que já existem têm precedência: numa sobreposição, a que entra
+    // é o conflito. Uma faixa local sem mudança nunca conflita.
+    const others = [...final].filter(([k]) => k !== key && (!p.local || k.startsWith("local:")));
+    const clash = p.local && changes.length === 0 ? undefined : others.find(([, r]) => r.start <= p.end && p.start <= r.end);
     if (clash) {
       rangeChanges.push({
         index: p.index,

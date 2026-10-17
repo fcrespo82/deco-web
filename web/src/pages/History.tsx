@@ -111,6 +111,10 @@ const ACTION_LABEL: Record<string, string> = {
   "reservation.add": "Criou reserva no Deco",
   "reservation.move": "Mudou IP reservado no Deco",
   "reservation.remove": "Removeu reserva do Deco",
+  "reservation.batch": "Lote de reservas no Deco",
+  "device.approve": "Aprovou dispositivos",
+  "alerts.test": "Enviou alerta de teste",
+  "backup.import": "Importou backup",
 };
 
 function describe(v: unknown): string {

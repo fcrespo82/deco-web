@@ -2,6 +2,8 @@ import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { api, ApiError } from "./api";
 import { useRoute, useTheme } from "./hooks";
+import { Alerts } from "./pages/Alerts";
+import { Backup } from "./pages/Backup";
 import { Clients } from "./pages/Clients";
 import { History } from "./pages/History";
 import { Inventory } from "./pages/Inventory";
@@ -17,6 +19,8 @@ const ROUTES = [
   { path: "inventario", label: "Inventário", page: Inventory },
   { path: "ips", label: "Plano de IPs", page: IpPlan },
   { path: "historico", label: "Histórico", page: History },
+  { path: "alertas", label: "Alertas", page: Alerts },
+  { path: "backup", label: "Backup", page: Backup },
 ];
 
 const THEME_LABEL = { auto: "Tema: automático", light: "Tema: claro", dark: "Tema: escuro" } as const;

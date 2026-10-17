@@ -128,6 +128,15 @@ describe("pré-visualizar e importar", () => {
     expect(r.ranges).toEqual({ added: 0, updated: 0, skipped: 1 });
   });
 
+  it("faixa nova que sobrepõe uma faixa existente sem mudança: só a nova é conflito", async () => {
+    const s = await seeded();
+    const backup = (await s.server.inject("/api/backup")).json() as BackupFile;
+    backup.ranges.push({ name: "Sobreposta", spec: "192.168.68.50-192.168.68.60", kind: "static", types: [], notes: null });
+    const p = (await s.send("POST", "/api/backup/preview", { backup })).json();
+    expect(p.ranges.changes.map((r: any) => [r.action, r.name])).toEqual([["conflict", "Sobreposta"]]);
+    expect(p.ranges.unchanged).toBe(2);
+  });
+
   it("reservas: acrescenta e move numa sessão só, cada uma auditada; nunca remove as só locais", async () => {
     const s = await seeded();
     const backup = (await s.server.inject("/api/backup")).json() as BackupFile;
