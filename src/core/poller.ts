@@ -8,7 +8,7 @@
  * - Ao iniciar, carrega o último snapshot do SQLite para a UI ter dados já.
  */
 import { EventEmitter } from "node:events";
-import type { Reservation, Snapshot } from "../deco-client/types.js";
+import type { Reservation, Snapshot, WifiNetwork } from "../deco-client/types.js";
 import type { Store } from "../db/store.js";
 import type { BreakerStatus } from "./breaker.js";
 import { CircuitOpenError, type DecoGateway } from "./gateway.js";
@@ -21,6 +21,8 @@ export interface PollerCache {
   lastAttemptAt: string | null;
   lastError: { message: string; at: string } | null;
   nextPollAt: string | null;
+  /** Leituras suspensas até esta hora (ex.: gateway reiniciando). */
+  pausedUntil: string | null;
   breaker: BreakerStatus;
 }
 
@@ -63,6 +65,7 @@ export class Poller extends EventEmitter<PollerEvents> {
       lastAttemptAt: null,
       lastError: null,
       nextPollAt: null,
+      pausedUntil: null,
     };
   }
 
@@ -79,6 +82,21 @@ export class Poller extends EventEmitter<PollerEvents> {
     const snap = this.state.snapshot;
     if (!snap) return;
     this.state.snapshot = { ...snap, reservations, reservationMax: max ?? snap.reservationMax };
+  }
+
+  /** Atualiza o Wi-Fi do cache com o que uma escrita acabou de reler. */
+  applyWifi(wifi: WifiNetwork[]): void {
+    const snap = this.state.snapshot;
+    if (!snap) return;
+    this.state.snapshot = { ...snap, wifi };
+  }
+
+  /**
+   * Suspende as leituras por `ms` — depois de mandar o gateway reiniciar,
+   * tentar logar só gera falhas, backoff no breaker e logs à toa.
+   */
+  pause(ms: number): void {
+    this.state.pausedUntil = new Date(this.now().getTime() + ms).toISOString();
   }
 
   start(): void {
@@ -115,6 +133,13 @@ export class Poller extends EventEmitter<PollerEvents> {
   }
 
   private async poll(): Promise<Snapshot | null> {
+    const paused = this.state.pausedUntil;
+    if (paused && this.now().getTime() < Date.parse(paused)) {
+      this.log.debug(`poll pulado: leituras suspensas até ${paused}`);
+      return null;
+    }
+    this.state.pausedUntil = null;
+
     // Breaker aberto: nem entra na fila. Evita acumular tentativas.
     const permit = this.gateway.breaker.permit();
     if (!permit.ok) {

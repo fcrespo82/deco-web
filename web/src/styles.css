@@ -338,3 +338,8 @@ code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; b
 .diff-fields { margin: 2px 0 0 4px; padding-left: 14px; font-size: 13px; }
 .diff-fields del { color: var(--bad); text-decoration: line-through; }
 .diff-fields ins { color: var(--ok); text-decoration: none; }
+
+/* Operações perigosas (Visão geral) */
+.card-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+.form .row { display: flex; gap: 6px; }
+.form .row input { flex: 1; min-width: 0; }

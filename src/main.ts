@@ -1,5 +1,5 @@
 import { type App, createApp } from "./app.js";
-import { ConfigError, describeConfig, loadConfig, loadUiPassword } from "./config.js";
+import { ConfigError, describeConfig, loadConfig, loadMetricsToken, loadUiPassword } from "./config.js";
 import { createLogger } from "./log.js";
 import { buildServer } from "./server/http.js";
 
@@ -13,9 +13,11 @@ function fail(err: unknown): never {
 
 let config;
 let uiPassword: string | undefined;
+let metricsToken: string | null;
 try {
   config = loadConfig();
   uiPassword = loadUiPassword();
+  metricsToken = loadMetricsToken();
 } catch (err) {
   fail(err);
 }
@@ -36,7 +38,7 @@ app.poller.on("snapshot", (snap) => {
   log.info(`snapshot: ${snap.nodes.filter((n) => n.online).length}/${snap.nodes.length} nós online, ${snap.clients.length} clientes`);
 });
 
-const server = await buildServer({ app, uiPassword });
+const server = await buildServer({ app, uiPassword, metricsToken });
 await server.listen({ host: config.http.bind, port: config.http.port });
 log.info(`HTTP ouvindo em http://${config.http.bind}:${config.http.port}`);
 app.poller.start();

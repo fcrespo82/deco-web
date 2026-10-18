@@ -4,6 +4,7 @@
  */
 import { classifyError } from "../deco-client/errors.js";
 import type { ReservationChange, ReservationWriteResult } from "../deco-client/reservations.js";
+import type { RebootResult, WifiChange, WifiWriteResult } from "../deco-client/system.js";
 import type { DecoApi, Snapshot } from "../deco-client/types.js";
 import type { CircuitBreaker } from "./breaker.js";
 import { SerialQueue } from "./queue.js";
@@ -60,6 +61,14 @@ export class DecoGateway {
 
   changeReservations(changes: ReservationChange[]): Promise<ReservationWriteResult[]> {
     return this.run((api) => api.changeReservations(changes));
+  }
+
+  rebootNodes(macs: string[]): Promise<RebootResult> {
+    return this.run((api) => api.rebootNodes(macs));
+  }
+
+  changeWifi(change: WifiChange): Promise<WifiWriteResult> {
+    return this.run((api) => api.changeWifi(change));
   }
 
   /**

@@ -1,4 +1,6 @@
-import { api, type Band, type NodeView, type OverviewView } from "../api";
+import { useState } from "preact/hooks";
+import { api, type Band, type NodeView, type OverviewView, type WifiKind } from "../api";
+import { RebootDialog, WifiDialog } from "../DangerDialogs";
 import { BAND_LABEL, NETWORK_LABEL, WIFI_KIND_LABEL, pct, shortFirmware, since } from "../format";
 import { useNow, usePolled } from "../hooks";
 import { StatusBar } from "../StatusBar";
@@ -42,7 +44,7 @@ function Uplink({ node }: { node: NodeView }) {
   );
 }
 
-function NodeCard({ node, now }: { node: NodeView; now: number }) {
+function NodeCard({ node, now, onReboot }: { node: NodeView; now: number; onReboot?: () => void }) {
   return (
     <article class="card">
       <div class="node-head">
@@ -77,6 +79,13 @@ function NodeCard({ node, now }: { node: NodeView; now: number }) {
           {shortFirmware(node.firmware)}
         </dd>
       </dl>
+      {onReboot && (
+        <div class="card-actions">
+          <button class="btn danger" onClick={onReboot} disabled={!node.online}>
+            Reiniciar…
+          </button>
+        </div>
+      )}
     </article>
   );
 }
@@ -143,12 +152,33 @@ function Kpis({ data }: { data: OverviewView }) {
 export function Overview() {
   const now = useNow();
   const { data, error, reload } = usePolled(api.overview);
+  const [rebooting, setRebooting] = useState<NodeView | null>(null);
+  const [editingWifi, setEditingWifi] = useState<WifiKind | null>(null);
 
   if (!data) return <div class="empty">{error ? `Erro: ${error.message}` : "Carregando…"}</div>;
+
+  const dangerous = data.status.mode.allowDangerous;
+  const KIND_ORDER = ["host", "guest", "iot"];
+  const wifi = [...(data.wifi ?? [])].sort(
+    (a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || a.band.localeCompare(b.band),
+  );
+  /** A primeira linha de cada rede leva o botão (a rede é uma só nas várias bandas). */
+  const firstOfKind = (i: number) => wifi.findIndex((w) => w.kind === wifi[i]!.kind) === i;
 
   return (
     <>
       <StatusBar status={data.status} reload={reload} />
+      {rebooting && <RebootDialog node={rebooting} onClose={() => (setRebooting(null), reload())} />}
+      {editingWifi && (
+        <WifiDialog
+          kind={editingWifi}
+          rows={wifi.filter((w) => w.kind === editingWifi)}
+          onClose={(changed) => {
+            setEditingWifi(null);
+            if (changed) reload();
+          }}
+        />
+      )}
       {data.nodes.length === 0 ? (
         <div class="card empty">Ainda sem dados do Deco.</div>
       ) : (
@@ -157,10 +187,10 @@ export function Overview() {
           <h2>Nós</h2>
           <div class="grid nodes">
             {data.nodes.map((n) => (
-              <NodeCard key={n.mac} node={n} now={now} />
+              <NodeCard key={n.mac} node={n} now={now} onReboot={dangerous ? () => setRebooting(n) : undefined} />
             ))}
           </div>
-          {data.wifi && data.wifi.length > 0 && (
+          {wifi.length > 0 && (
             <>
               <h2>Redes Wi-Fi</h2>
               <div class="table-wrap">
@@ -172,10 +202,11 @@ export function Overview() {
                       <th>Banda</th>
                       <th>Canal</th>
                       <th>Status</th>
+                      {dangerous && <th />}
                     </tr>
                   </thead>
                   <tbody>
-                    {data.wifi.map((w) => (
+                    {wifi.map((w, i) => (
                       <tr class={w.enabled ? "" : "offline"}>
                         <td class="primary-cell client-name">{w.ssid}</td>
                         <td data-label="Rede">{WIFI_KIND_LABEL[w.kind] ?? w.kind}</td>
@@ -186,6 +217,15 @@ export function Overview() {
                         <td data-label="Status">
                           <span class={`badge ${w.enabled ? "ok" : ""}`}>{w.enabled ? "ativa" : "desligada"}</span>
                         </td>
+                        {dangerous && (
+                          <td>
+                            {firstOfKind(i) && (w.kind === "host" || w.kind === "guest" || w.kind === "iot") && (
+                              <button class="btn" onClick={() => setEditingWifi(w.kind as WifiKind)}>
+                                Alterar…
+                              </button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

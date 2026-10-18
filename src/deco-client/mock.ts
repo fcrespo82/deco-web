@@ -5,8 +5,9 @@
  */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { asArray, parseReservations, parseSnapshot } from "./parse.js";
+import { asArray, parseNodes, parseReservations, parseSnapshot } from "./parse.js";
 import { applyReservationChanges, type ReservationChange, type ReservationWriteResult } from "./reservations.js";
+import { applyReboot, applyWifiChange, type RebootResult, type WifiChange, type WifiWriteResult } from "./system.js";
 import type { DecoApi, RawSnapshot, Snapshot } from "./types.js";
 import { DecoApiError } from "./vendor/errors.js";
 
@@ -37,8 +38,12 @@ export interface MockDecoOptions {
 export class MockDecoApi implements DecoApi {
   raw: RawSnapshot;
   calls = 0;
-  /** Escritas recebidas, na ordem: "add AA-..=192.168.68.50", "remove AA-..". */
+  /** Escritas recebidas, na ordem: "add AA-..=192.168.68.50", "remove AA-..", "reboot AA-..", "wlan {...}". */
   writes: string[] = [];
+  /** Corpo cru (base64) de cada escrita de Wi-Fi recebida. */
+  wifiWrites: Record<string, unknown>[] = [];
+  /** Senhas do Wi-Fi por "banda/rede"; o fixture só tem a versão redigida. */
+  wifiPasswords = new Map<string, string>();
   private failures: Error[] = [];
   private writeFailures: WriteFailure[] = [];
   private listFailures: Error[] = [];
@@ -97,6 +102,70 @@ export class MockDecoApi implements DecoApi {
       },
       changes,
     );
+  }
+
+  async rebootNodes(macs: string[]): Promise<RebootResult> {
+    this.calls += 1;
+    const failure = this.failures.shift();
+    if (failure) throw failure;
+    return applyReboot(
+      {
+        nodes: async () => parseNodes(structuredClone(this.raw.deviceList)),
+        reboot: async (list) => this.write(`reboot ${list.join(",")}`, () => undefined),
+      },
+      macs,
+    );
+  }
+
+  async changeWifi(change: WifiChange): Promise<WifiWriteResult> {
+    this.calls += 1;
+    const failure = this.failures.shift();
+    if (failure) throw failure;
+    return applyWifiChange(
+      {
+        read: async () => {
+          const err = this.listFailures.shift();
+          if (err) throw err;
+          return this.encodedWlan();
+        },
+        write: async (params) => {
+          this.wifiWrites.push(structuredClone(params));
+          this.write(`wlan ${Object.keys(params).join(",")}`, () => this.applyWlan(params));
+        },
+        sleep: async () => undefined,
+      },
+      change,
+    );
+  }
+
+  /** wlan como o firmware manda: SSID e senha em base64. */
+  private encodedWlan(): Record<string, unknown> {
+    const b64 = (s: string) => Buffer.from(s, "utf8").toString("base64");
+    const wlan = structuredClone((this.raw.wlan ?? {}) as Record<string, Record<string, Record<string, unknown>>>);
+    for (const [band, nets] of Object.entries(wlan)) {
+      if (typeof nets !== "object" || nets === null) continue;
+      for (const [kind, net] of Object.entries(nets)) {
+        if (typeof net !== "object" || net === null || !("ssid" in net)) continue;
+        net.ssid = b64(String(net.ssid));
+        net.password = b64(this.wifiPasswords.get(`${band}/${kind}`) ?? "senha-de-exemplo");
+      }
+    }
+    return wlan;
+  }
+
+  /** Aplica uma escrita parcial, decodificando como o firmware faria. */
+  private applyWlan(params: Record<string, unknown>): void {
+    const fromB64 = (s: unknown) => Buffer.from(String(s), "base64").toString("utf8");
+    const wlan = (this.raw.wlan ??= {}) as Record<string, Record<string, Record<string, unknown>>>;
+    for (const [band, nets] of Object.entries(params as Record<string, Record<string, Record<string, unknown>>>)) {
+      for (const [kind, fields] of Object.entries(nets)) {
+        const net = wlan[band]?.[kind];
+        if (!net) throw new DecoApiError(`admin/wireless?form=wlan returned error_code -1`, "-1");
+        if ("enable" in fields) net.enable = fields.enable;
+        if ("ssid" in fields) net.ssid = fromB64(fields.ssid);
+        if ("password" in fields) this.wifiPasswords.set(`${band}/${kind}`, fromB64(fields.password));
+      }
+    }
   }
 
   private write(label: string, apply: () => void): void {

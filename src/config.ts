@@ -202,6 +202,11 @@ export function loadNotifySecrets(env: NodeJS.ProcessEnv = process.env): { ntfyT
   return { ntfyToken: secret(env, "NOTIFY_NTFY_TOKEN"), telegramToken: secret(env, "NOTIFY_TELEGRAM_TOKEN") };
 }
 
+/** Token para GET /metrics (METRICS_TOKEN ou METRICS_TOKEN_FILE). */
+export function loadMetricsToken(env: NodeJS.ProcessEnv = process.env): string | null {
+  return secret(env, "METRICS_TOKEN");
+}
+
 /** Resumo legível para o log de inicialização. Sem segredos. */
 export function describeConfig(c: Config): string {
   const target = c.mock ? "mock (fixtures)" : `${c.deco.host} (usuário ${c.deco.username})`;

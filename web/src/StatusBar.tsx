@@ -69,12 +69,19 @@ export function StatusBar({ status, reload }: Props) {
           </span>
         </div>
       )}
+      {status.pausedUntil && Date.parse(status.pausedUntil) > now && (
+        <div class="banner warn" role="status">
+          Gateway reiniciando: leituras suspensas até {new Date(status.pausedUntil).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}.
+        </div>
+      )}
       {status.stale && status.fetchedAt && status.breaker === "closed" && (
         <div class="banner warn" role="status">Dados desatualizados — última leitura {ago(status.fetchedAt, now)}.</div>
       )}
       <div class="statusbar">
         {status.mode.mock && <span class="badge accent">Mock</span>}
-        <span class="badge">{status.mode.allowWrite ? "Escrita habilitada" : "Somente leitura"}</span>
+        <span class={`badge${status.mode.allowDangerous ? " warn" : ""}`}>
+          {status.mode.allowDangerous ? "Escrita + reinício/Wi-Fi" : status.mode.allowWrite ? "Escrita habilitada" : "Somente leitura"}
+        </span>
         <span>
           {status.fetchedAt ? <>Atualizado {ago(status.fetchedAt, now)}</> : "Aguardando a primeira leitura do Deco…"}
         </span>

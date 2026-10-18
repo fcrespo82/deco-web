@@ -28,6 +28,7 @@ export type {
   StatusView,
 } from "../../src/server/api-types";
 export type { Band, WifiNetwork } from "../../src/deco-client/types";
+import type { Band } from "../../src/deco-client/types";
 
 export class ApiError extends Error {
   constructor(
@@ -66,6 +67,40 @@ export interface ReservationResult {
   message: string;
   before: Reservation | null;
   after: Reservation | null;
+}
+
+/** Resultado de um pedido de reinício (ver src/deco-client/system.ts). */
+export interface RebootResult {
+  outcome: "sent" | "conflict" | "rejected" | "ambiguous";
+  ok: boolean;
+  message: string;
+  nodes: { mac: string; name: string; role: "master" | "slave" }[];
+}
+
+export type WifiKind = "host" | "guest" | "iot";
+
+export interface WifiNetworkState {
+  network: WifiKind;
+  ssid: string;
+  enabled: boolean;
+  bands: Band[];
+}
+
+/** Resultado de uma alteração de Wi-Fi. Nunca traz senha. */
+export interface WifiResult {
+  outcome: "applied" | "noop" | "conflict" | "rejected" | "unverified" | "ambiguous";
+  ok: boolean;
+  message: string;
+  before: WifiNetworkState | null;
+  after: WifiNetworkState | null;
+  passwordChanged: boolean;
+}
+
+export interface WifiChangeInput {
+  network: WifiKind;
+  enabled?: boolean;
+  ssid?: string;
+  password?: string;
 }
 
 export interface IpSuggestion {
@@ -155,6 +190,9 @@ export const api = {
   addReservation: (mac: string, ip: string) => request<ReservationResult>("POST", "/api/reservations", { mac, ip, confirm: true }),
   moveReservation: (mac: string, ip: string) => request<ReservationResult>("PUT", `/api/reservations/${mac}`, { ip, confirm: true }),
   removeReservation: (mac: string) => request<ReservationResult>("DELETE", `/api/reservations/${mac}`, { confirm: true }),
+
+  rebootNodes: (macs: string[]) => request<RebootResult>("POST", "/api/nodes/reboot", { macs, confirm: true }),
+  changeWifi: (change: WifiChangeInput) => request<WifiResult>("POST", "/api/wifi", { ...change, confirm: true }),
 
   alerts: () => request<AlertsView>("GET", "/api/alerts"),
   testAlert: () => request<AlertEntry>("POST", "/api/alerts/test"),

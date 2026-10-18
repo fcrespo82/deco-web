@@ -22,9 +22,12 @@ import {
 import { NotFoundError, ValidationError } from "../db/errors.js";
 import { CircuitOpenError } from "../core/gateway.js";
 import { ConflictError, WriteDisabledError } from "../core/reservations.js";
+import { DangerousDisabledError } from "../core/system.js";
 import { DecoError } from "../deco-client/errors.js";
 import { registerDataRoutes } from "./routes.js";
 import { registerOpsRoutes } from "./ops-routes.js";
+import { registerSystemRoutes } from "./system-routes.js";
+import { buildMetrics } from "./metrics.js";
 import { buildClients, buildOverview, buildStatus } from "./views.js";
 
 export const WEB_DIST = fileURLToPath(new URL("../../web/dist", import.meta.url));
@@ -36,6 +39,8 @@ export interface HttpOptions {
   app: App;
   /** Senha da UI; undefined deixa a UI aberta. */
   uiPassword?: string;
+  /** Token Bearer para GET /metrics; sem ele, /metrics segue a regra da UI. */
+  metricsToken?: string | null;
   webDist?: string;
   now?: () => Date;
 }
@@ -50,7 +55,9 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
   server.setErrorHandler((err, _req, reply) => {
     if (err instanceof ValidationError) return reply.code(400).send({ error: err.message });
     if (err instanceof NotFoundError) return reply.code(404).send({ error: err.message });
-    if (err instanceof WriteDisabledError) return reply.code(403).send({ error: err.message });
+    if (err instanceof WriteDisabledError || err instanceof DangerousDisabledError) {
+      return reply.code(403).send({ error: err.message });
+    }
     if (err instanceof ConflictError) return reply.code(409).send({ error: err.message });
     if (err instanceof CircuitOpenError) return reply.code(503).send({ error: err.message });
     if (err instanceof DecoError) return reply.code(502).send({ error: `Falha ao falar com o Deco: ${err.message}` });
@@ -122,6 +129,29 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
     reply.clearCookie(SESSION_COOKIE, { path: "/" }).send({ ok: true }),
   );
 
+  // Prometheus: Bearer METRICS_TOKEN, ou a mesma sessão da UI. Fora de /api
+  // porque é o caminho que os exporters usam.
+  server.get("/metrics", async (req, reply) => {
+    const auth = String(req.headers.authorization ?? "");
+    const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+    const tokenOk = Boolean(opts.metricsToken && bearer !== null && checkPassword(bearer, opts.metricsToken));
+    if (!tokenOk && (opts.metricsToken ? !signer.verify(req.cookies[SESSION_COOKIE]) : !isAuthenticated(req))) {
+      return reply
+        .code(401)
+        .header("www-authenticate", "Bearer")
+        .type("text/plain")
+        .send(opts.metricsToken ? "Token inválido.\n" : "Defina METRICS_TOKEN para o Prometheus acessar /metrics.\n");
+    }
+    return reply.type("text/plain; version=0.0.4; charset=utf-8").send(
+      buildMetrics({
+        cache: app.poller.cache,
+        now: now(),
+        pollIntervalMs: app.config.pollIntervalMs,
+        aliasOf: (mac) => app.inventory.findByMac(mac)?.alias,
+      }),
+    );
+  });
+
   // --- protegidas -----------------------------------------------------
 
   server.addHook("onRequest", async (req, reply) => {
@@ -149,6 +179,7 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
   const actorOf = (req: FastifyRequest) => `${authRequired ? "ui" : "ui-aberta"}@${req.ip}`;
   registerDataRoutes(server, app, actorOf);
   registerOpsRoutes(server, app, actorOf);
+  registerSystemRoutes(server, app, actorOf);
 
   server.post("/api/refresh", async (_req, reply) => {
     const last = app.poller.cache.lastAttemptAt;

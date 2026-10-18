@@ -12,6 +12,7 @@ import { DecoGateway } from "./core/gateway.js";
 import { EventDetector, type NetEvent } from "./core/events.js";
 import { Poller } from "./core/poller.js";
 import { ReservationService } from "./core/reservations.js";
+import { SystemService } from "./core/system.js";
 import { LiveDecoApi } from "./deco-client/live.js";
 import { MockDecoApi } from "./deco-client/mock.js";
 import type { DecoApi } from "./deco-client/types.js";
@@ -39,6 +40,8 @@ export interface App {
   audit: AuditRepo;
   /** Escrita de reservas no Deco (exige DECO_ALLOW_WRITE). */
   reservations: ReservationService;
+  /** Reiniciar nós e alterar Wi-Fi (exige DECO_ALLOW_DANGEROUS). */
+  system: SystemService;
   alerts: AlertRepo;
   alertEngine: AlertEngine;
   /** Escuta eventos novos (alertas). */
@@ -118,6 +121,7 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
     logger: log,
   });
   const reservations = new ReservationService({ allowWrite: config.allowWrite, gateway, poller, audit, logger: log });
+  const system = new SystemService({ allowDangerous: config.allowDangerous, gateway, poller, audit, logger: log });
 
   // O detector parte do último snapshot persistido, para um restart não gerar
   // uma enxurrada de "conectou".
@@ -163,6 +167,7 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
     events,
     audit,
     reservations,
+    system,
     alerts,
     alertEngine,
     onEvents: (l) => listeners.push(l),

@@ -9,6 +9,8 @@ export interface StatusView {
   detailTakenAt: string | null;
   lastAttemptAt: string | null;
   nextPollAt: string | null;
+  /** Leituras suspensas até esta hora (gateway reiniciando). */
+  pausedUntil: string | null;
   lastError: { message: string; at: string } | null;
   breaker: "closed" | "open" | "locked";
   /** Snapshot mais velho que 3 intervalos de poll (ou inexistente). */

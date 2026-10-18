@@ -4,6 +4,7 @@
  */
 
 import type { ReservationChange, ReservationWriteResult } from "./reservations.js";
+import type { RebootResult, WifiChange, WifiWriteResult } from "./system.js";
 
 export type Band = "2.4GHz" | "5GHz" | "6GHz" | "wired";
 
@@ -106,4 +107,8 @@ export interface DecoApi {
   changeReservation(change: ReservationChange): Promise<ReservationWriteResult>;
   /** Várias mudanças numa sessão só (importação de backup). */
   changeReservations(changes: ReservationChange[]): Promise<ReservationWriteResult[]>;
+  /** Reinicia nós do mesh (ver system.ts). Perigoso: derruba os clientes. */
+  rebootNodes(macs: string[]): Promise<RebootResult>;
+  /** Altera uma rede Wi-Fi, verificando antes e depois (ver system.ts). */
+  changeWifi(change: WifiChange): Promise<WifiWriteResult>;
 }

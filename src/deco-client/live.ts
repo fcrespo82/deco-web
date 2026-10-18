@@ -18,6 +18,7 @@ import { DecoLoginError } from "./vendor/errors.js";
 import { normalize } from "./vendor/format.js";
 import { parseNodes, parseReservations, parseSnapshot } from "./parse.js";
 import { applyReservationChanges, type ReservationChange, type ReservationWriteResult } from "./reservations.js";
+import { applyReboot, applyWifiChange, type RebootResult, type WifiChange, type WifiWriteResult } from "./system.js";
 import type { DecoApi, RawSnapshot, Snapshot } from "./types.js";
 import { silentLogger, type Logger } from "../log.js";
 
@@ -98,6 +99,60 @@ export class LiveDecoApi implements DecoApi {
     } finally {
       await this.client.logout();
       this.log.debug(`sessão Deco (escrita) encerrada em ${Date.now() - started} ms`);
+    }
+  }
+
+  /**
+   * Uma sessão: device_list (confere os MACs) → reboot → logout. (O logout
+   * do cliente nunca lança: com o gateway já reiniciando, só descarta a sessão.)
+   */
+  async rebootNodes(macs: string[]): Promise<RebootResult> {
+    try {
+      const result = await applyReboot(
+        {
+          nodes: async () =>
+            parseNodes(await this.read({ endpoint: "admin/device", form: "device_list", operation: "read" })),
+          reboot: async (list) => {
+            await this.client.call({
+              endpoint: "admin/device",
+              form: "system",
+              operation: "reboot",
+              params: { mac_list: list.map((mac) => ({ mac })) },
+            });
+          },
+        },
+        macs,
+      );
+      this.log.info(`reboot ${macs.join(", ")}: ${result.outcome}`);
+      return result;
+    } finally {
+      await this.client.logout();
+    }
+  }
+
+  /**
+   * Uma sessão: wlan → escrita → wlan → logout. As leituras aqui não passam
+   * por normalize: a escrita precisa do formato cru (base64) para comparar e
+   * codificar. Nada disso sai desta chamada; o resultado não tem senha.
+   */
+  async changeWifi(change: WifiChange): Promise<WifiWriteResult> {
+    const started = Date.now();
+    const request = { endpoint: "admin/wireless", form: "wlan" } as const;
+    try {
+      const result = await applyWifiChange(
+        {
+          read: async () => (await this.client.call({ ...request, operation: "read" })) as Record<string, unknown>,
+          write: async (params) => {
+            await this.client.call({ ...request, operation: "write", params });
+          },
+        },
+        change,
+      );
+      this.log.info(`wifi ${change.network}: ${result.outcome}`);
+      return result;
+    } finally {
+      await this.client.logout();
+      this.log.debug(`sessão Deco (wifi) encerrada em ${Date.now() - started} ms`);
     }
   }
 
