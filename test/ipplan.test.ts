@@ -118,21 +118,22 @@ describe("buildIpPlan", () => {
   });
 
   it("sem tipo nem sugestão: untyped; faixa sem tipos não cobra tipo", () => {
-    const mac = snapshot.reservations.find((r) => r.ip === "192.168.68.72")!.mac;
-    const device: Device = {
-      id: 1, alias: "Coisa", owner: null, type: null, tags: [], notes: null, approved: true,
-      macs: [mac], createdAt: "", updatedAt: "",
-    };
+    // Reserva de um MAC privado, nunca visto: sem nome, categoria nem fabricante.
     const raw = structuredClone(loadFixture());
-    const c = (raw.clientList as { client_list: { mac: string; name?: string; client_type?: string }[] }).client_list.find((x) => x.mac.toUpperCase().replace(/:/g, "-") === mac);
-    if (c) {
-      c.name = Buffer.from("Coisa").toString("base64");
-      c.client_type = "other";
-    }
-    const withTypes = buildIpPlan({ snapshot: parseSnapshot(raw, now), ranges: [range(1, 64, 95, "static", "Servidores", ["servidor"])], inventory: new Map([[mac, device]]), seen: new Map(), now });
-    expect(withTypes.anomalies.find((a) => a.ip === "192.168.68.72")?.code).toBe("untyped");
-    const noTypes = buildIpPlan({ snapshot: parseSnapshot(raw, now), ranges: [range(1, 64, 95, "static", "Livre", [])], inventory: new Map([[mac, device]]), seen: new Map(), now });
-    expect(noTypes.anomalies.filter((a) => a.code === "untyped" || a.code === "type-mismatch")).toEqual([]);
+    const list = (raw.reservations as { reservation_list: { mac: string; ip: string }[] }).reservation_list;
+    list.push({ mac: "02-00-00-00-00-70", ip: "192.168.68.70" });
+    const build = (types: IpRange["types"]) =>
+      buildIpPlan({ snapshot: parseSnapshot(raw, now), ranges: [range(1, 64, 95, "static", "F", types)], inventory: new Map(), seen: new Map(), now });
+    expect(build(["servidor"]).anomalies.find((a) => a.ip === "192.168.68.70")?.code).toBe("untyped");
+    expect(build([]).anomalies.filter((a) => a.code === "untyped" || a.code === "type-mismatch")).toEqual([]);
+  });
+
+  it("dinâmico em faixa fixa não é cobrado pela categoria", () => {
+    const p = plan([range(1, 2, 254, "static", "Tudo", ["outro"])], new Map());
+    const dyn = p.anomalies.filter((a) => a.code === "dynamic-in-static").map((a) => a.ip);
+    expect(dyn.length).toBeGreaterThan(0);
+    const typed = p.anomalies.filter((a) => a.code === "type-mismatch" || a.code === "untyped").map((a) => a.ip);
+    expect(typed.filter((ip) => dyn.includes(ip))).toEqual([]);
   });
 
   it("reserva dentro da faixa dinâmica: static-in-dynamic", () => {

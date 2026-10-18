@@ -63,6 +63,7 @@ describe("suggestType", () => {
     expect(s("iot_device_78E7", "Other")).toBe("iot");
     expect(s(null, "Other", "Espressif Inc.")).toBe("iot");
     expect(s(null, null, "Seiko Epson Corporation")).toBe("impressora");
+    expect(s(null, null, "Philips Lighting BV")).toBe("iot");
   });
 
   it("Smart TV não vira IoT", () => {

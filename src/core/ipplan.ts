@@ -164,7 +164,9 @@ export function buildIpPlan(input: IpPlanInput): IpPlan {
     if (reservedMac && range?.kind === "dynamic") {
       flag("static-in-dynamic", reservedMac, `Reserva dentro da faixa dinâmica "${range.name}": o DHCP pode entregar este IP a outro aparelho.`);
     }
-    const holder = status === "node" ? null : (reservedMac ?? onlineMac);
+    // Categoria só se cobra de quem tem reserva: um dinâmico numa faixa fixa
+    // já é "dynamic-in-static" e sai dali ao renovar o IP.
+    const holder = status === "node" ? null : reservedMac;
     if (holder && range && range.types.length > 0) {
       const t = typeOf(holder);
       const expected = range.types.map((x) => TYPE_LABEL[x]).join(", ");

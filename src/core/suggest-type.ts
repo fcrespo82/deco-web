@@ -29,7 +29,7 @@ const RULES: [DeviceType, (h: { name: string; deco: string; vendor: string }) =>
     (h) =>
       /camera|plug|light|bulb|sensor|iot|thermostat|doorbell|smart home|smart switch|hub/.test(h.deco) ||
       /iot_device|tapo|shelly|sonoff|tuya|^esp|^c2\d\d$|^p1\d\d$|^l5\d\d$|cam/.test(h.name) ||
-      /espressif|tuya|shelly|sonoff|itead|signify|wyze|ring llc|ezviz|hikvision|dahua|xiaomi communications|beijing xiaomi/.test(h.vendor),
+      /espressif|tuya|shelly|sonoff|itead|signify|philips lighting|wyze|ring llc|ezviz|hikvision|dahua|xiaomi communications|beijing xiaomi/.test(h.vendor),
   ],
   [
     "tv",
