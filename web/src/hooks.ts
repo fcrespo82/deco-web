@@ -1,34 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "preact/hooks";
-
-/** Lê `fetcher` agora e a cada `intervalMs`. A API serve do cache, então é barato. */
-export function usePolled<T>(fetcher: () => Promise<T>, intervalMs = 15_000) {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher;
-
-  const reload = useCallback(async () => {
-    try {
-      const value = await fetcherRef.current();
-      setData(value);
-      setError(null);
-      return value;
-    } catch (err) {
-      setError(err as Error);
-      return null;
-    }
-  }, []);
-
-  useEffect(() => {
-    void reload();
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible") void reload();
-    }, intervalMs);
-    return () => clearInterval(id);
-  }, [reload, intervalMs]);
-
-  return { data, error, reload };
-}
+import { useEffect, useState } from "preact/hooks";
 
 /** Força re-render periódico para textos relativos ("há 2 min"). */
 export function useNow(intervalMs = 30_000): number {

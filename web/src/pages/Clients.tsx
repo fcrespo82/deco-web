@@ -1,10 +1,12 @@
 import { useMemo, useState } from "preact/hooks";
-import { api, type Band, type ClientView } from "../api";
-import { BAND_LABEL, INVENTORY_TYPE_LABEL, NETWORK_LABEL, ago, dateTime, deviceType, rate } from "../format";
-import { useNow, usePolled } from "../hooks";
+import { ArrowDownUp, Lock, MonitorSmartphone, Search, X } from "lucide-preact";
+import type { Band, ClientView } from "../api";
+import { useClients, useStatus } from "../data";
 import { DeviceEditor } from "../DeviceEditor";
+import { BAND_LABEL, INVENTORY_TYPE_LABEL, NETWORK_LABEL, ago, dateTime, deviceType, rate } from "../format";
+import { useNow } from "../hooks";
 import { ReservationDialog } from "../ReservationDialog";
-import { StatusBar } from "../StatusBar";
+import { Badge, Button, cx, Dot, Empty, FilterChips, PageLoading, TableCard } from "../ui";
 
 /** Apelido do inventário, ou o nome que o Deco dá. */
 const label = (c: ClientView) => c.device?.alias ?? c.name;
@@ -23,6 +25,16 @@ const SORTERS: Record<SortKey, (a: ClientView, b: ClientView) => number> = {
   traffic: (a, b) => b.upKBps + b.downKBps - (a.upKBps + a.downKBps),
   firstSeen: (a, b) => (b.firstSeen ?? "").localeCompare(a.firstSeen ?? ""),
   lastSeen: (a, b) => (b.lastSeen ?? "").localeCompare(a.lastSeen ?? ""),
+};
+
+const SORT_LABEL: Record<SortKey, string> = {
+  name: "Nome",
+  ip: "IP",
+  node: "Nó",
+  band: "Banda",
+  traffic: "Tráfego",
+  firstSeen: "Primeira vez",
+  lastSeen: "Última vez",
 };
 
 interface Filters {
@@ -68,20 +80,25 @@ function matches(c: ClientView, f: Filters): boolean {
 }
 
 function Reservation({ c }: { c: ClientView }) {
-  if (!c.reservation) return <span class="muted">—</span>;
+  if (!c.reservation) return <span class="text-muted">—</span>;
   if (c.reservation.matchesCurrentIp === false) {
     return (
-      <span class="badge warn" title={`Reservado ${c.reservation.ip}, mas está usando ${c.ip}`}>
+      <Badge tone="warn" title={`Reservado ${c.reservation.ip}, mas está usando ${c.ip}`}>
         reservado {c.reservation.ip}
-      </span>
+      </Badge>
     );
   }
-  return <span class="badge ok">reservado</span>;
+  return (
+    <Badge tone="ok">
+      <Lock class="size-3" /> reservado
+    </Badge>
+  );
 }
 
 export function Clients() {
   const now = useNow();
-  const { data, error, reload } = usePolled(api.clients);
+  const { data, error } = useClients();
+  const status = useStatus();
   const [f, setF] = useState<Filters>(EMPTY);
   const [sort, setSort] = useState<SortKey | null>(null);
   const [editing, setEditing] = useState<ClientView | null>(null);
@@ -101,150 +118,175 @@ export function Clients() {
     return sort ? [...filtered].sort(SORTERS[sort]) : filtered;
   }, [clients, f, sort]);
 
-  if (!data) return <div class="empty">{error ? `Erro: ${error.message}` : "Carregando…"}</div>;
+  if (!data) return <PageLoading error={error} />;
 
-  const set = <K extends keyof Filters>(k: K) => (e: Event) =>
-    setF({ ...f, [k]: (e.target as HTMLInputElement).value });
+  const set = <K extends keyof Filters>(k: K) => (e: Event) => setF({ ...f, [k]: (e.target as HTMLInputElement).value });
   const online = clients.filter((c) => c.online).length;
+  const allowWrite = (status ?? data.status).mode.allowWrite;
+  const filtered = JSON.stringify(f) !== JSON.stringify(EMPTY);
 
-  const Th = ({ k, children }: { k: SortKey; children: string }) => (
-    <th aria-sort={sort === k ? "descending" : undefined}>
-      <button onClick={() => setSort(sort === k ? null : k)}>
+  const Th = ({ k, children, class: klass }: { k: SortKey; children: string; class?: string }) => (
+    <th aria-sort={sort === k ? "descending" : undefined} class={klass}>
+      <button type="button" class={cx("inline-flex items-center gap-1 uppercase hover:text-fg", sort === k && "text-fg")} onClick={() => setSort(sort === k ? null : k)}>
         {children}
-        {sort === k ? " ▾" : ""}
+        {sort === k && <span aria-hidden="true">▾</span>}
       </button>
     </th>
   );
 
   return (
     <>
-      <StatusBar status={data.status} reload={reload} />
-      <div class="filters">
-        <input type="search" placeholder="Buscar nome, apelido, dono, tag, MAC, IP…" value={f.q} onInput={set("q")} aria-label="Buscar" />
-        <select value={f.status} onChange={set("status")} aria-label="Status">
-          <option value="all">Todos ({clients.length})</option>
-          <option value="online">Online ({online})</option>
-          <option value="offline">Offline ({clients.length - online})</option>
-        </select>
-        <select value={f.band} onChange={set("band")} aria-label="Banda">
-          <option value="">Qualquer banda</option>
-          {(["wired", "5GHz", "2.4GHz", "6GHz"] as Band[]).map((b) => (
-            <option value={b}>{BAND_LABEL[b]}</option>
-          ))}
-        </select>
-        <select value={f.node} onChange={set("node")} aria-label="Nó">
-          <option value="">Qualquer nó</option>
-          {nodes.map(([mac, name]) => (
-            <option value={mac}>{name}</option>
-          ))}
-        </select>
-        {networks.length > 1 && (
-          <select value={f.network} onChange={set("network")} aria-label="Rede">
-            <option value="">Qualquer rede</option>
-            {networks.map((n) => (
-              <option value={n}>{NETWORK_LABEL[n] ?? n}</option>
+      <div class="mb-4 grid gap-3">
+        <FilterChips
+          label="Status"
+          value={f.status}
+          onChange={(status) => setF({ ...f, status })}
+          options={[
+            { value: "all", label: "Todos", count: clients.length },
+            { value: "online", label: "Online", count: online },
+            { value: "offline", label: "Offline", count: clients.length - online },
+          ]}
+        />
+        <div class="flex flex-wrap gap-2">
+          <div class="relative min-w-0 basis-full sm:basis-auto sm:flex-[1_1_260px]">
+            <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+            <input type="search" class="field pl-9" placeholder="Buscar nome, apelido, dono, tag, MAC, IP…" value={f.q} onInput={set("q")} aria-label="Buscar" />
+          </div>
+          <select class="field w-auto min-w-[calc(50%-4px)] flex-1 sm:min-w-0 sm:flex-none" value={f.band} onChange={set("band")} aria-label="Banda">
+            <option value="">Qualquer banda</option>
+            {(["wired", "5GHz", "2.4GHz", "6GHz"] as Band[]).map((b) => (
+              <option value={b}>{BAND_LABEL[b]}</option>
             ))}
           </select>
-        )}
-        <select value={f.reservation} onChange={set("reservation")} aria-label="Reserva">
-          <option value="">Com ou sem reserva</option>
-          <option value="yes">Com reserva</option>
-          <option value="no">Sem reserva</option>
-        </select>
-        {JSON.stringify(f) !== JSON.stringify(EMPTY) && (
-          <button class="btn" onClick={() => setF(EMPTY)}>
-            Limpar
-          </button>
+          <select class="field w-auto min-w-[calc(50%-4px)] flex-1 sm:min-w-0 sm:flex-none" value={f.node} onChange={set("node")} aria-label="Nó">
+            <option value="">Qualquer nó</option>
+            {nodes.map(([mac, name]) => (
+              <option value={mac}>{name}</option>
+            ))}
+          </select>
+          {networks.length > 1 && (
+            <select class="field w-auto min-w-[calc(50%-4px)] flex-1 sm:min-w-0 sm:flex-none" value={f.network} onChange={set("network")} aria-label="Rede">
+              <option value="">Qualquer rede</option>
+              {networks.map((n) => (
+                <option value={n}>{NETWORK_LABEL[n] ?? n}</option>
+              ))}
+            </select>
+          )}
+          <select class="field w-auto min-w-[calc(50%-4px)] flex-1 sm:min-w-0 sm:flex-none" value={f.reservation} onChange={set("reservation")} aria-label="Reserva">
+            <option value="">Com ou sem reserva</option>
+            <option value="yes">Com reserva</option>
+            <option value="no">Sem reserva</option>
+          </select>
+          {/* No celular não há cabeçalho de tabela: a ordenação vem aqui. */}
+          <label class="relative min-w-[calc(50%-4px)] flex-1 md:hidden">
+            <ArrowDownUp class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+            <select class="field pl-9" value={sort ?? ""} onChange={(e) => setSort(((e.target as HTMLSelectElement).value || null) as SortKey | null)} aria-label="Ordenar por">
+              <option value="">Ordem padrão</option>
+              {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => (
+                <option value={k}>{SORT_LABEL[k]}</option>
+              ))}
+            </select>
+          </label>
+          {filtered && (
+            <Button variant="ghost" icon={<X class="size-4" />} onClick={() => setF(EMPTY)}>
+              Limpar
+            </Button>
+          )}
+        </div>
+        {filtered && (
+          <p class="text-[12.5px] text-muted">
+            {rows.length} de {clients.length} clientes
+          </p>
         )}
       </div>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <Th k="name">Nome</Th>
-              <th>MAC</th>
-              <Th k="ip">IP</Th>
-              <th>Reserva</th>
-              <Th k="node">Nó</Th>
-              <Th k="band">Banda</Th>
-              <Th k="traffic">Envio / receb.</Th>
-              <Th k="firstSeen">Primeira vez</Th>
-              <Th k="lastSeen">Última vez</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((c) => (
-              <tr key={c.mac} class={c.online ? "" : "offline"}>
-                <td class="primary-cell">
-                  <span class={`dot ${c.online ? "ok" : ""}`} style="margin-right:6px" />
-                  <button class="link client-name" onClick={() => setEditing(c)} title="Editar no inventário">
-                    {label(c)}
-                  </button>
-                  <div class="muted small">
-                    {[
-                      c.device && c.device.alias !== c.name && c.name !== c.mac ? c.name : null,
-                      c.device?.type ? INVENTORY_TYPE_LABEL[c.device.type] : deviceType(c.deviceType),
-                      c.vendor ?? (c.randomMac ? "MAC privado" : null),
-                      c.device?.owner,
-                      c.network && c.network !== "main" ? (NETWORK_LABEL[c.network] ?? c.network) : null,
-                    ]
-                      .filter((v, i, all) => v && all.indexOf(v) === i)
-                      .join(" · ")}
-                  </div>
-                  {c.device && c.device.tags.length > 0 && (
-                    <div class="chips" style="margin-top:3px">
-                      {c.device.tags.map((t) => (
-                        <span class="badge">{t}</span>
-                      ))}
-                    </div>
-                  )}
-                </td>
-                <td data-label="MAC" class="mono">{c.mac}</td>
-                <td data-label="IP" class="mono">{c.ip ?? c.reservation?.ip ?? "—"}</td>
-                <td data-label="Reserva">
-                  <Reservation c={c} />
-                  {data.status.mode.allowWrite && (c.online || c.reservation) && (
-                    <button
-                      class="btn res-action"
-                      onClick={() => setReserving(c)}
-                      aria-label={c.reservation ? `Mudar reserva de ${label(c)}` : `Fixar IP de ${label(c)}`}
-                    >
-                      {c.reservation ? "Mudar" : "Fixar IP"}
-                    </button>
-                  )}
-                </td>
-                <td data-label="Nó">{c.nodeName ?? <span class="muted">—</span>}</td>
-                <td data-label="Banda">{c.band ? BAND_LABEL[c.band] : "—"}</td>
-                <td data-label="Envio / receb." class="num">
-                  {c.online && c.upKBps + c.downKBps > 0 ? (
-                    `${rate(c.upKBps)} / ${rate(c.downKBps)}`
-                  ) : (
-                    <span class="muted">—</span>
-                  )}
-                </td>
-                <td data-label="Primeira vez" class="small hide-mobile" title={dateTime(c.firstSeen)}>
-                  {ago(c.firstSeen, now)}
-                </td>
-                <td data-label="Última vez" class="small" title={dateTime(c.lastSeen)}>
-                  {c.online ? "agora" : ago(c.lastSeen, now)}
-                </td>
+      {rows.length === 0 ? (
+        <Empty icon={<MonitorSmartphone />}>Nenhum cliente com esses filtros.</Empty>
+      ) : (
+        <TableCard>
+          <table class="rtable">
+            <thead>
+              <tr>
+                <Th k="name">Nome</Th>
+                <th>MAC</th>
+                <Th k="ip">IP</Th>
+                <th>Reserva</th>
+                <Th k="node">Nó</Th>
+                <Th k="band">Banda</Th>
+                <Th k="traffic">Envio / receb.</Th>
+                <Th k="firstSeen">Primeira vez</Th>
+                <Th k="lastSeen">Última vez</Th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {rows.length === 0 && <div class="empty">Nenhum cliente com esses filtros.</div>}
-      </div>
+            </thead>
+            <tbody>
+              {rows.map((c) => (
+                <tr key={c.mac} class={c.online ? "" : "is-off"}>
+                  <td class="cell-primary">
+                    <div class="flex items-center gap-2">
+                      <Dot tone={c.online ? "ok" : "off"} label={c.online ? "online" : "offline"} />
+                      <button type="button" class="truncate text-left font-medium text-fg hover:text-accent hover:underline" onClick={() => setEditing(c)} title="Editar no inventário">
+                        {label(c)}
+                      </button>
+                    </div>
+                    <div class="mt-0.5 pl-4 text-[12px] text-muted">
+                      {[
+                        c.device && c.device.alias !== c.name && c.name !== c.mac ? c.name : null,
+                        c.device?.type ? INVENTORY_TYPE_LABEL[c.device.type] : deviceType(c.deviceType),
+                        c.vendor ?? (c.randomMac ? "MAC privado" : null),
+                        c.device?.owner,
+                        c.network && c.network !== "main" ? (NETWORK_LABEL[c.network] ?? c.network) : null,
+                      ]
+                        .filter((v, i, all) => v && all.indexOf(v) === i)
+                        .join(" · ")}
+                    </div>
+                    {c.device && c.device.tags.length > 0 && (
+                      <div class="mt-1 flex flex-wrap gap-1 pl-4">
+                        {c.device.tags.map((t) => (
+                          <Badge>{t}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td data-label="MAC" class="whitespace-nowrap font-mono text-[12.5px]">
+                    {c.mac}
+                  </td>
+                  <td data-label="IP" class="whitespace-nowrap font-mono text-[12.5px]">
+                    {c.ip ?? c.reservation?.ip ?? "—"}
+                  </td>
+                  <td data-label="Reserva">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                      <Reservation c={c} />
+                      {allowWrite && (c.online || c.reservation) && (
+                        <Button size="sm" variant="ghost" onClick={() => setReserving(c)} aria-label={c.reservation ? `Mudar reserva de ${label(c)}` : `Fixar IP de ${label(c)}`}>
+                          {c.reservation ? "Mudar" : "Fixar IP"}
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                  <td data-label="Nó">{c.nodeName ?? <span class="text-muted">—</span>}</td>
+                  <td data-label="Banda">{c.band ? BAND_LABEL[c.band] : "—"}</td>
+                  <td data-label="Envio / receb." class="whitespace-nowrap tabular-nums">
+                    {c.online && c.upKBps + c.downKBps > 0 ? `${rate(c.upKBps)} / ${rate(c.downKBps)}` : <span class="text-muted">—</span>}
+                  </td>
+                  <td data-label="Primeira vez" class="hide-sm text-[12.5px]" title={dateTime(c.firstSeen)}>
+                    {ago(c.firstSeen, now)}
+                  </td>
+                  <td data-label="Última vez" class="text-[12.5px]" title={dateTime(c.lastSeen)}>
+                    {c.online ? "agora" : ago(c.lastSeen, now)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableCard>
+      )}
       {editing && (
         <DeviceEditor
           mac={editing.mac}
           suggestedName={editing.name !== editing.mac ? editing.name : undefined}
           suggestedType={editing.suggestedType ?? undefined}
           vendor={editing.vendorFull ?? (editing.randomMac ? null : undefined)}
-          onClose={(changed) => {
-            setEditing(null);
-            if (changed) void reload();
-          }}
+          onClose={() => setEditing(null)}
         />
       )}
       {reserving && (
@@ -253,15 +295,12 @@ export function Clients() {
           name={label(reserving)}
           current={reserving.reservation?.ip ?? null}
           currentIp={reserving.online ? reserving.ip : null}
-          onClose={(changed) => {
-            setReserving(null);
-            if (changed) void reload();
-          }}
+          onClose={() => setReserving(null)}
         />
       )}
-      <p class="muted small">
-        O firmware do Deco não informa o sinal por cliente nem tráfego acumulado; o tráfego mostrado é a taxa no momento da
-        última leitura. "Primeira vez" conta a partir de quando este painel começou a registrar.
+      <p class="mt-4 text-[12.5px] text-muted">
+        O firmware do Deco não informa o sinal por cliente nem tráfego acumulado; o tráfego mostrado é a taxa no momento da última leitura. "Primeira vez" conta
+        a partir de quando este painel começou a registrar.
       </p>
     </>
   );

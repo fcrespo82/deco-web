@@ -136,7 +136,10 @@ está logado, o app do celular é desconectado (e vice-versa). Por isso:
 - **Sessões curtas.** Cada leitura é login → leituras → logout, sempre. Nenhuma
   sessão fica aberta. Num X50 medimos ~13 s por leitura (login 6–17 s).
 - **A interface nunca fala com o Deco.** Ela lê o cache do último poll; o botão
-  "Atualizar" pede um poll e tem intervalo mínimo de 30 s.
+  "Atualizar" pede um poll e tem intervalo mínimo de 30 s. A tela se atualiza
+  sozinha: o servidor avisa por Server-Sent Events (`/api/live`) quando um poll
+  termina ou alguém altera algo, e a UI relê só o que mudou. Atrás de um proxy
+  reverso, desligue o buffer de resposta para essa rota.
 - **Uma fila só.** Leituras e escritas passam pela mesma fila: nunca há duas
   chamadas ao Deco ao mesmo tempo.
 - **Proteção contra bloqueio.** O Deco bloqueia o login depois de ~10 senhas

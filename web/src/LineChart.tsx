@@ -122,9 +122,9 @@ export function LineChart({ points, from, to, bucketMs, label }: Props) {
   const px = p ? x(Date.parse(p.t)) : 0;
 
   return (
-    <div class="chart" ref={wrap}>
+    <div class="chart relative" ref={wrap}>
       {points.length === 0 ? (
-        <div class="empty">Sem amostras neste período.</div>
+        <div class="py-16 text-center text-muted">Sem amostras neste período.</div>
       ) : (
         <>
           <svg
@@ -138,9 +138,15 @@ export function LineChart({ points, from, to, bucketMs, label }: Props) {
             onKeyDown={onKey}
             onBlur={() => setActive(null)}
           >
+            <defs>
+              <linearGradient id="area-fill" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="var(--series-1)" stop-opacity="0.22" />
+                <stop offset="100%" stop-color="var(--series-1)" stop-opacity="0" />
+              </linearGradient>
+            </defs>
             {yTicks.map((v) => (
               <g>
-                <line class="grid" x1={PAD.left} x2={width - PAD.right} y1={y(v)} y2={y(v)} />
+                <line class="grid-line" x1={PAD.left} x2={width - PAD.right} y1={y(v)} y2={y(v)} />
                 <text class="tick" x={PAD.left - 6} y={y(v) + 4} text-anchor="end">
                   {Math.round(v)}
                 </text>
@@ -165,19 +171,19 @@ export function LineChart({ points, from, to, bucketMs, label }: Props) {
           </svg>
           {p && (
             <div
-              class="tooltip"
+              class="pointer-events-none absolute top-1 -translate-x-1/2 whitespace-nowrap rounded-lg border border-line bg-surface px-3 py-1.5 text-[13px] shadow-pop"
               style={{ left: `${Math.min(Math.max(px, 80), width - 80)}px` }}
               role="status"
             >
               <strong>{p.avg.toLocaleString("pt-BR")}</strong> clientes (média)
-              <div class="muted small">máx. {p.max} · {fullFmt.format(Date.parse(p.t))}</div>
+              <div class="text-[12px] text-muted">máx. {p.max} · {fullFmt.format(Date.parse(p.t))}</div>
             </div>
           )}
         </>
       )}
-      <details class="data-table">
-        <summary>Ver dados em tabela</summary>
-        <table>
+      <details class="mt-2 text-[13px]">
+        <summary class="cursor-pointer text-muted hover:text-fg">Ver dados em tabela</summary>
+        <table class="mt-2 w-full text-left text-[12.5px] [&_td]:border-t [&_td]:border-line [&_td]:py-1 [&_th]:py-1 [&_th]:font-medium [&_th]:text-muted">
           <thead>
             <tr>
               <th>Início</th>
@@ -189,8 +195,8 @@ export function LineChart({ points, from, to, bucketMs, label }: Props) {
             {points.map((pt) => (
               <tr>
                 <td>{fullFmt.format(Date.parse(pt.t))}</td>
-                <td class="num">{pt.avg.toLocaleString("pt-BR")}</td>
-                <td class="num">{pt.max}</td>
+                <td class="tabular-nums">{pt.avg.toLocaleString("pt-BR")}</td>
+                <td class="tabular-nums">{pt.max}</td>
               </tr>
             ))}
           </tbody>

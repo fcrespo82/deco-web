@@ -2,10 +2,14 @@
  * Backup: exportar em JSON e importar com pré-visualização. A importação é
  * mesclagem — acrescenta e atualiza, nunca apaga o que só existe aqui.
  */
+import type { ComponentChildren } from "preact";
 import { useState } from "preact/hooks";
-import { api, ApiError, type BackupDiff, type ImportResult } from "../api";
+import { Download, FileUp } from "lucide-preact";
+import { api, type BackupDiff, type ImportResult } from "../api";
 import { INVENTORY_TYPE_LABEL, dateTime } from "../format";
-import { Modal } from "../Modal";
+import { errorText } from "../lib/mutate";
+import { toast } from "../lib/toast";
+import { Badge, Banner, Button, Card, Check, Dialog, Kv, SectionTitle, type Tone } from "../ui";
 
 type Sections = { devices: boolean; ranges: boolean; reservations: boolean };
 
@@ -35,29 +39,40 @@ function show(v: unknown): string {
 function Changes({ changes }: { changes: { field: string; from: unknown; to: unknown }[] }) {
   if (!changes.length) return null;
   return (
-    <ul class="diff-fields">
+    <ul class="ml-1 mt-1 list-disc pl-4 text-[12.5px]">
       {changes.map((c) => (
         <li>
-          <span class="muted">{FIELD_LABEL[c.field] ?? c.field}:</span> <del>{show(c.from)}</del> → <ins>{show(c.to)}</ins>
+          <span class="text-muted">{FIELD_LABEL[c.field] ?? c.field}:</span> <del class="text-bad">{show(c.from)}</del> → <ins class="text-ok no-underline">{show(c.to)}</ins>
         </li>
       ))}
     </ul>
   );
 }
 
-const ACTION: Record<string, { label: string; tone: string }> = {
+const ACTION: Record<string, { label: string; tone: Tone }> = {
   add: { label: "novo", tone: "ok" },
   update: { label: "altera", tone: "warn" },
   move: { label: "muda IP", tone: "warn" },
   conflict: { label: "conflito", tone: "bad" },
 };
-const Action = ({ a }: { a: string }) => <span class={`badge ${ACTION[a]?.tone ?? ""}`}>{ACTION[a]?.label ?? a}</span>;
+const Action = ({ a }: { a: string }) => <Badge tone={ACTION[a]?.tone ?? ""}>{ACTION[a]?.label ?? a}</Badge>;
 
 function Summary({ unchanged, localOnly, what }: { unchanged: number; localOnly: number; what: string }) {
   return (
-    <p class="muted small" style="margin:6px 0 0">
+    <p class="mt-2 text-[12.5px] text-muted">
       {unchanged} iguais · {localOnly} {what} só neste painel (mantidos)
     </p>
+  );
+}
+
+function Section({ checked, onToggle, disabled, title, meta, children }: { checked: boolean; onToggle: () => void; disabled: boolean; title: string; meta: string; children: ComponentChildren }) {
+  return (
+    <Card class={checked ? "border-accent/50" : ""}>
+      <Check checked={checked} onChange={onToggle} disabled={disabled}>
+        <strong class="font-semibold">{title}</strong> <span class="text-muted">· {meta}</span>
+      </Check>
+      {children}
+    </Card>
   );
 }
 
@@ -65,116 +80,107 @@ function Preview({ diff, sections, setSections }: { diff: BackupDiff; sections: 
   const toggle = (k: keyof Sections) => setSections({ ...sections, [k]: !sections[k] });
   const resApplicable = diff.reservations.changes.filter((c) => c.action !== "conflict").length;
   return (
-    <>
-      <p class="muted small">
+    <div class="grid gap-3">
+      <p class="text-[12.5px] text-muted">
         Backup de {dateTime(diff.exportedAt)}
         {diff.network.backup ? ` · rede ${diff.network.backup}` : ""}
-        {!diff.network.matches && <strong class="error"> — diferente desta rede ({diff.network.current})</strong>}
+        {!diff.network.matches && <strong class="text-bad"> — diferente desta rede ({diff.network.current})</strong>}
       </p>
 
-      <section class="card diff-section">
-        <label class="check">
-          <input type="checkbox" checked={sections.devices} onChange={() => toggle("devices")} disabled={!diff.devices.changes.length} />
-          <strong>Inventário</strong> <span class="muted">· {diff.devices.changes.length} mudança(s) · só neste painel</span>
-        </label>
+      <Section checked={sections.devices} onToggle={() => toggle("devices")} disabled={!diff.devices.changes.length} title="Inventário" meta={`${diff.devices.changes.length} mudança(s) · só neste painel`}>
         {diff.devices.changes.length > 0 && (
-          <ul class="diff-list">
+          <ul class="mt-3 grid gap-2 text-[13.5px]">
             {diff.devices.changes.map((d) => (
               <li>
-                <Action a={d.action} /> {d.alias} <span class="muted small mono">{d.macs.join(", ")}</span>
+                <Action a={d.action} /> {d.alias} <span class="font-mono text-[12px] text-muted">{d.macs.join(", ")}</span>
                 <Changes changes={d.changes} />
               </li>
             ))}
           </ul>
         )}
         <Summary unchanged={diff.devices.unchanged} localOnly={diff.devices.localOnly} what="dispositivos" />
-      </section>
+      </Section>
 
-      <section class="card diff-section">
-        <label class="check">
-          <input
-            type="checkbox"
-            checked={sections.ranges}
-            onChange={() => toggle("ranges")}
-            disabled={!diff.ranges.changes.some((r) => r.action !== "conflict")}
-          />
-          <strong>Plano de IPs</strong> <span class="muted">· {diff.ranges.changes.length} mudança(s) · só neste painel</span>
-        </label>
+      <Section
+        checked={sections.ranges}
+        onToggle={() => toggle("ranges")}
+        disabled={!diff.ranges.changes.some((r) => r.action !== "conflict")}
+        title="Plano de IPs"
+        meta={`${diff.ranges.changes.length} mudança(s) · só neste painel`}
+      >
         {diff.ranges.changes.length > 0 && (
-          <ul class="diff-list">
+          <ul class="mt-3 grid gap-2 text-[13.5px]">
             {diff.ranges.changes.map((r) => (
               <li>
-                <Action a={r.action} /> {r.name} <span class="mono small">{r.label}</span>
-                {r.reason && <span class="error small"> — {r.reason}; será pulada</span>}
+                <Action a={r.action} /> {r.name} <span class="font-mono text-[12px]">{r.label}</span>
+                {r.reason && <span class="text-[12.5px] text-bad"> — {r.reason}; será pulada</span>}
                 <Changes changes={r.changes} />
               </li>
             ))}
           </ul>
         )}
         <Summary unchanged={diff.ranges.unchanged} localOnly={diff.ranges.localOnly} what="faixas" />
-      </section>
+      </Section>
 
-      <section class="card diff-section">
-        <label class="check">
-          <input
-            type="checkbox"
-            checked={sections.reservations}
-            onChange={() => toggle("reservations")}
-            disabled={Boolean(diff.reservations.blocked) || resApplicable === 0}
-          />
-          <strong>Reservas de DHCP</strong> <span class="muted">· {diff.reservations.changes.length} mudança(s) · altera o Deco</span>
-        </label>
-        {diff.reservations.blocked && resApplicable > 0 && <div class="banner warn" style="margin:8px 0 0">{diff.reservations.blocked}</div>}
+      <Section
+        checked={sections.reservations}
+        onToggle={() => toggle("reservations")}
+        disabled={Boolean(diff.reservations.blocked) || resApplicable === 0}
+        title="Reservas de DHCP"
+        meta={`${diff.reservations.changes.length} mudança(s) · altera o Deco`}
+      >
+        {diff.reservations.blocked && resApplicable > 0 && (
+          <div class="mt-3">
+            <Banner tone="warn">{diff.reservations.blocked}</Banner>
+          </div>
+        )}
         {diff.reservations.changes.length > 0 && (
-          <ul class="diff-list">
+          <ul class="mt-3 grid gap-2 text-[13.5px]">
             {diff.reservations.changes.map((r) => (
               <li>
-                <Action a={r.action} /> {r.name ?? <span class="mono">{r.mac}</span>}{" "}
-                <span class="mono small">
+                <Action a={r.action} /> {r.name ?? <span class="font-mono">{r.mac}</span>}{" "}
+                <span class="font-mono text-[12px]">
                   {r.from ?? "sem reserva"} → {r.to}
                 </span>
-                {r.reason && <span class="error small"> — {r.reason}; será pulada</span>}
+                {r.reason && <span class="text-[12.5px] text-bad"> — {r.reason}; será pulada</span>}
               </li>
             ))}
           </ul>
         )}
-        <p class="muted small" style="margin:6px 0 0">
+        <p class="mt-2 text-[12.5px] text-muted">
           {diff.reservations.unchanged} iguais · {diff.reservations.localOnly} só no Deco (mantidas — a importação não remove reservas)
         </p>
-      </section>
-    </>
+      </Section>
+    </div>
   );
 }
 
 function Results({ r }: { r: ImportResult }) {
   return (
-    <div class="card">
-      <h3 style="margin:0 0 8px">Importação concluída</h3>
-      <dl class="kv" style="margin-top:0">
-        <dt>Inventário</dt>
-        <dd>
-          {r.devices.added} novo(s), {r.devices.updated} atualizado(s)
-        </dd>
-        <dt>Plano de IPs</dt>
-        <dd>
-          {r.ranges.added} nova(s), {r.ranges.updated} atualizada(s)
-          {r.ranges.skipped ? `, ${r.ranges.skipped} pulada(s)` : ""}
-        </dd>
-        <dt>Reservas</dt>
-        <dd>{r.reservations.length === 0 ? "nenhuma alteração" : `${r.reservations.filter((x) => x.outcome === "applied").length} de ${r.reservations.length} aplicada(s)`}</dd>
-      </dl>
+    <Card class="mt-4">
+      <h3 class="mb-3 font-semibold">Importação concluída</h3>
+      <Kv
+        items={[
+          ["Inventário", `${r.devices.added} novo(s), ${r.devices.updated} atualizado(s)`],
+          ["Plano de IPs", `${r.ranges.added} nova(s), ${r.ranges.updated} atualizada(s)${r.ranges.skipped ? `, ${r.ranges.skipped} pulada(s)` : ""}`],
+          [
+            "Reservas",
+            r.reservations.length === 0 ? "nenhuma alteração" : `${r.reservations.filter((x) => x.outcome === "applied").length} de ${r.reservations.length} aplicada(s)`,
+          ],
+        ]}
+      />
       {r.reservations.some((x) => x.outcome !== "applied") && (
-        <ul class="diff-list">
+        <ul class="mt-3 grid gap-1.5 text-[13px]">
           {r.reservations
             .filter((x) => x.outcome !== "applied")
             .map((x) => (
               <li>
-                <span class="badge bad">{x.outcome}</span> <span class="mono small">{x.mac}</span> {x.message}
+                <Badge tone="bad">{x.outcome}</Badge> <span class="font-mono text-[12px]">{x.mac}</span> {x.message}
               </li>
             ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -199,8 +205,9 @@ export function Backup() {
       a.download = `deco-web-backup-${backup.exportedAt.slice(0, 10)}.json`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      toast("Backup baixado");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha ao exportar.");
+      setError(errorText(e, "Falha ao exportar."));
     } finally {
       setExporting(false);
     }
@@ -227,7 +234,7 @@ export function Backup() {
       });
     } catch (err) {
       setFile(null);
-      setError(err instanceof SyntaxError ? "O arquivo não é um JSON válido." : err instanceof Error ? err.message : "Falha ao ler.");
+      setError(err instanceof SyntaxError ? "O arquivo não é um JSON válido." : errorText(err, "Falha ao ler."));
     }
   }
 
@@ -237,11 +244,12 @@ export function Backup() {
     setError(null);
     try {
       setResult(await api.importBackup(file.backup, sections));
+      toast("Backup importado");
       setDiff(null);
       setFile(null);
       setConfirming(false);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Falha ao importar.");
+      setError(errorText(e, "Falha ao importar."));
       setConfirming(false);
     } finally {
       setBusy(false);
@@ -253,79 +261,81 @@ export function Backup() {
 
   return (
     <>
-      <div class="grid cols-2">
-        <div class="card">
-          <h3 style="margin:0 0 6px">Exportar</h3>
-          <p class="muted small" style="margin:0 0 10px">
-            Reservas do Deco, inventário e plano de IPs, em JSON. Não inclui senhas, PSK do Wi-Fi nem histórico.
-          </p>
-          <button class="btn primary" onClick={download} disabled={exporting}>
+      <div class="grid gap-3 md:grid-cols-2">
+        <Card>
+          <div class="mb-1 flex items-center gap-2 font-semibold">
+            <Download class="size-4 text-muted" /> Exportar
+          </div>
+          <p class="mb-4 text-[12.5px] text-muted">Reservas do Deco, inventário e plano de IPs, em JSON. Não inclui senhas, PSK do Wi-Fi nem histórico.</p>
+          <Button variant="primary" onClick={download} loading={exporting}>
             {exporting ? "Gerando…" : "Baixar backup"}
-          </button>
-        </div>
-        <div class="card">
-          <h3 style="margin:0 0 6px">Importar</h3>
-          <p class="muted small" style="margin:0 0 10px">
-            Mostra o que muda antes de aplicar. Acrescenta e atualiza; nunca apaga o que só existe aqui.
-          </p>
-          <label class="btn file-btn">
-            Escolher arquivo…
-            <input type="file" accept="application/json,.json" onChange={pick} />
-          </label>
-          {file && <span class="muted small" style="margin-left:8px">{file.name}</span>}
-        </div>
+          </Button>
+        </Card>
+        <Card>
+          <div class="mb-1 flex items-center gap-2 font-semibold">
+            <FileUp class="size-4 text-muted" /> Importar
+          </div>
+          <p class="mb-4 text-[12.5px] text-muted">Mostra o que muda antes de aplicar. Acrescenta e atualiza; nunca apaga o que só existe aqui.</p>
+          <div class="flex flex-wrap items-center gap-3">
+            <label class="relative inline-flex h-9 cursor-pointer items-center rounded-lg border border-line bg-surface px-3.5 text-[13.5px] font-medium shadow-card transition hover:bg-surface-2 focus-within:ring-2 focus-within:ring-accent">
+              Escolher arquivo…
+              <input type="file" accept="application/json,.json" onChange={pick} class="absolute inset-0 cursor-pointer opacity-0" />
+            </label>
+            {file && <span class="truncate text-[12.5px] text-muted">{file.name}</span>}
+          </div>
+        </Card>
       </div>
-      {error && <div class="banner bad" style="margin-top:12px">{error}</div>}
+      {error && (
+        <div class="mt-4">
+          <Banner tone="bad">{error}</Banner>
+        </div>
+      )}
       {result && <Results r={result} />}
 
       {diff && (
         <>
-          <h2>O que muda</h2>
+          <SectionTitle>O que muda</SectionTitle>
           <Preview diff={diff} sections={sections} setSections={setSections} />
-          <div class="form-actions" style="margin-top:12px">
-            <span class="spacer" />
-            <button class="btn" onClick={() => (setDiff(null), setFile(null))}>
-              Cancelar
-            </button>
-            <button class="btn primary" disabled={!anySection} onClick={() => setConfirming(true)}>
+          <div class="mt-4 flex flex-wrap justify-end gap-2">
+            <Button onClick={() => (setDiff(null), setFile(null))}>Cancelar</Button>
+            <Button variant="primary" disabled={!anySection} onClick={() => setConfirming(true)}>
               Aplicar selecionados…
-            </button>
+            </Button>
           </div>
         </>
       )}
 
       {confirming && diff && (
-        <Modal title="Confirmar importação" onClose={() => !busy && setConfirming(false)}>
-          <div class="form">
-            <ul class="diff-list" style="margin:0">
+        <Dialog
+          title="Confirmar importação"
+          onClose={() => !busy && setConfirming(false)}
+          footer={
+            <>
+              {busy && <span class="text-[12.5px] text-muted" role="status">Aplicando…</span>}
+              <span class="flex-1" />
+              <Button onClick={() => setConfirming(false)} disabled={busy}>
+                Voltar
+              </Button>
+              <Button variant="primary" onClick={apply} loading={busy}>
+                {sections.reservations ? "Aplicar e gravar no Deco" : "Aplicar"}
+              </Button>
+            </>
+          }
+        >
+          <div class="grid gap-4">
+            <ul class="list-disc space-y-1 pl-5 text-[13.5px]">
               {sections.devices && <li>Inventário: {diff.devices.changes.length} mudança(s)</li>}
-              {sections.ranges && (
-                <li>Plano de IPs: {diff.ranges.changes.filter((r) => r.action !== "conflict").length} mudança(s)</li>
-              )}
+              {sections.ranges && <li>Plano de IPs: {diff.ranges.changes.filter((r) => r.action !== "conflict").length} mudança(s)</li>}
               {sections.reservations && (
                 <li>
-                  <strong>Reservas no Deco: {resCount} mudança(s)</strong>, numa sessão só. Pode levar {Math.round(15 + resCount)} s ou
-                  mais; o app do Deco pode ser desconectado nesse tempo.
+                  <strong>Reservas no Deco: {resCount} mudança(s)</strong>, numa sessão só. Pode levar {Math.round(15 + resCount)} s ou mais; o app do Deco pode ser
+                  desconectado nesse tempo.
                 </li>
               )}
             </ul>
-            {sections.reservations && <div class="banner warn">Isto altera o Deco.</div>}
-            <div class="form-actions">
-              {busy && (
-                <span class="muted small" role="status">
-                  Aplicando…
-                </span>
-              )}
-              <span class="spacer" />
-              <button class="btn" onClick={() => setConfirming(false)} disabled={busy}>
-                Voltar
-              </button>
-              <button class="btn primary" onClick={apply} disabled={busy}>
-                {sections.reservations ? "Aplicar e gravar no Deco" : "Aplicar"}
-              </button>
-            </div>
+            {sections.reservations && <Banner tone="warn">Isto altera o Deco.</Banner>}
           </div>
-        </Modal>
+        </Dialog>
       )}
     </>
   );

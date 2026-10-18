@@ -1,8 +1,12 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
+import { Clock } from "lucide-preact";
 import { api, type AuditView, type EventView } from "../api";
+import { KEYS, useAudit, useSamples } from "../data";
 import { EVENT_LABEL, EVENT_TONE, ago, dateTime, eventDetail } from "../format";
-import { usePolled } from "../hooks";
+import { useNow } from "../hooks";
+import { useQuery } from "../lib/query";
 import { LineChart } from "../LineChart";
+import { Badge, Button, Card, Empty, FilterChips, Segmented, SectionTitle, Skeleton, TableCard } from "../ui";
 
 const RANGES = [
   { hours: 24, label: "24 h" },
@@ -21,44 +25,50 @@ const TYPE_GROUPS: { label: string; types: string }[] = [
   { label: "Reservas", types: "reservation_added,reservation_removed,reservation_changed" },
 ];
 
+/**
+ * Eventos: a primeira página vem do cache e se atualiza sozinha a cada
+ * leitura; "Carregar mais" acrescenta páginas antigas por baixo.
+ */
 function Events() {
+  const now = useNow();
   const [types, setTypes] = useState("");
-  const [events, setEvents] = useState<EventView[]>([]);
-  const [next, setNext] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const first = useQuery(KEYS.events(types), () => api.events({ type: types, limit: 100 }), ["snapshot", "reservations"]);
+  const [older, setOlder] = useState<{ events: EventView[]; next: number | null } | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  async function load(before?: number) {
+  useEffect(() => setOlder(null), [types]);
+
+  const events = useMemo(() => {
+    const all = [...(first.data?.events ?? []), ...(older?.events ?? [])];
+    const seen = new Set<number>();
+    return all.filter((e) => !seen.has(e.id) && seen.add(e.id));
+  }, [first.data, older]);
+  const next = older ? older.next : (first.data?.nextBefore ?? null);
+
+  async function loadMore() {
+    if (!next) return;
+    setLoading(true);
     try {
-      const res = await api.events({ type: types, before, limit: 100 });
-      setEvents((prev) => (before ? [...prev, ...res.events] : res.events));
-      setNext(res.nextBefore);
-      setError(null);
-    } catch (e) {
-      setError((e as Error).message);
+      const res = await api.events({ type: types, before: next, limit: 100 });
+      setOlder((prev) => ({ events: [...(prev?.events ?? []), ...res.events], next: res.nextBefore }));
+    } finally {
+      setLoading(false);
     }
   }
 
-  useEffect(() => {
-    void load();
-    const id = setInterval(() => document.visibilityState === "visible" && void load(), 30_000);
-    return () => clearInterval(id);
-  }, [types]);
-
   return (
     <>
-      <div class="filters" role="group" aria-label="Filtrar eventos">
-        {TYPE_GROUPS.map((g) => (
-          <button class={`btn ${types === g.types ? "primary" : ""}`} aria-pressed={types === g.types} onClick={() => setTypes(g.types)}>
-            {g.label}
-          </button>
-        ))}
+      <div class="mb-3">
+        <FilterChips label="Filtrar eventos" value={types} onChange={setTypes} options={TYPE_GROUPS.map((g) => ({ value: g.types, label: g.label }))} />
       </div>
-      {error && <div class="error">{error}</div>}
-      {events.length === 0 ? (
-        <div class="card empty">Nenhum evento registrado ainda.</div>
+      {first.error && <p class="text-[13px] text-bad">{first.error.message}</p>}
+      {!first.data ? (
+        <Skeleton class="h-64" />
+      ) : events.length === 0 ? (
+        <Empty icon={<Clock />}>Nenhum evento registrado ainda.</Empty>
       ) : (
-        <div class="table-wrap">
-          <table>
+        <TableCard>
+          <table class="rtable">
             <thead>
               <tr>
                 <th>Quando</th>
@@ -69,30 +79,32 @@ function Events() {
             </thead>
             <tbody>
               {events.map((e) => (
-                <tr key={e.id}>
-                  <td class="primary-cell small nowrap" title={dateTime(e.at)}>
-                    {dateTime(e.at)} <span class="muted">· {ago(e.at)}</span>
+                <tr key={e.id} class="animate-fade-in">
+                  <td class="cell-primary whitespace-nowrap text-[12.5px]" title={dateTime(e.at)}>
+                    <span class="text-fg">{dateTime(e.at)}</span> <span class="text-muted">· {ago(e.at, now)}</span>
                   </td>
                   <td data-label="Evento">
-                    <span class={`badge ${EVENT_TONE[e.type] ?? ""}`}>{EVENT_LABEL[e.type] ?? e.type}</span>
+                    <Badge tone={EVENT_TONE[e.type] || ""}>{EVENT_LABEL[e.type] ?? e.type}</Badge>
                   </td>
                   <td data-label="Dispositivo">
-                    {e.name ?? (e.mac ? <span class="mono">{e.mac}</span> : <span class="muted">rede</span>)}
-                    {e.name && e.mac && <div class="muted small mono">{e.mac}</div>}
+                    {e.name ?? (e.mac ? <span class="font-mono text-[12.5px]">{e.mac}</span> : <span class="text-muted">rede</span>)}
+                    {e.name && e.mac && <div class="font-mono text-[11.5px] text-muted">{e.mac}</div>}
                   </td>
-                  <td data-label="Detalhe" class="mono small">{eventDetail(e.type, e.data)}</td>
+                  <td data-label="Detalhe" class="font-mono text-[12.5px]">
+                    {eventDetail(e.type, e.data)}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </TableCard>
       )}
       {next && (
-        <p>
-          <button class="btn" onClick={() => load(next)}>
+        <div class="mt-3 flex justify-center">
+          <Button onClick={loadMore} loading={loading}>
             Carregar mais
-          </button>
-        </p>
+          </Button>
+        </div>
       )}
     </>
   );
@@ -134,15 +146,12 @@ function target(a: AuditView): string {
 }
 
 function Audit() {
-  const [entries, setEntries] = useState<AuditView[] | null>(null);
-  useEffect(() => {
-    api.audit({ limit: 50 }).then((r) => setEntries(r.entries), () => setEntries([]));
-  }, []);
-  if (!entries) return null;
-  if (entries.length === 0) return <p class="muted">Nenhuma alteração registrada.</p>;
+  const { data } = useAudit();
+  if (!data) return <Skeleton class="h-40" />;
+  if (data.entries.length === 0) return <p class="text-muted">Nenhuma alteração registrada.</p>;
   return (
-    <div class="table-wrap">
-      <table>
+    <TableCard>
+      <table class="rtable">
         <thead>
           <tr>
             <th>Quando</th>
@@ -152,51 +161,43 @@ function Audit() {
           </tr>
         </thead>
         <tbody>
-          {entries.map((a) => (
-            <tr>
-              <td class="primary-cell small nowrap">{dateTime(a.at)}</td>
+          {data.entries.map((a) => (
+            <tr key={a.id}>
+              <td class="cell-primary whitespace-nowrap text-[12.5px]">{dateTime(a.at)}</td>
               <td data-label="Ação">
                 {ACTION_LABEL[a.action] ?? a.action}
                 {a.result !== "ok" && (
-                  <div>
-                    <span class="badge bad" title={a.result}>
+                  <div class="mt-0.5">
+                    <Badge tone="bad" title={a.result}>
                       {a.result.split(":")[0]}
-                    </span>
+                    </Badge>
                   </div>
                 )}
               </td>
-              <td data-label="Alvo" class={a.action.startsWith("reservation.") ? "mono small" : ""}>
+              <td data-label="Alvo" class={a.action.startsWith("reservation.") ? "font-mono text-[12.5px]" : ""}>
                 {target(a)}
               </td>
-              <td data-label="Quem" class="mono small">{a.actor}</td>
+              <td data-label="Quem" class="font-mono text-[12px] text-muted">
+                {a.actor}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </TableCard>
   );
 }
 
 export function History() {
   const [hours, setHours] = useState(24);
-  const { data: samples, reload } = usePolled(() => api.samples(hours), 60_000);
-  useEffect(() => {
-    void reload();
-  }, [hours]);
+  const { data: samples } = useSamples(hours);
 
   return (
     <>
-      <div class="section-head">
-        <h2>Clientes online</h2>
-        <div class="segmented" role="group" aria-label="Período">
-          {RANGES.map((r) => (
-            <button class={hours === r.hours ? "on" : ""} aria-pressed={hours === r.hours} onClick={() => setHours(r.hours)}>
-              {r.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div class="card">
+      <SectionTitle actions={<Segmented label="Período" value={hours} onChange={setHours} options={RANGES.map((r) => ({ value: r.hours, label: r.label }))} />}>
+        Clientes online
+      </SectionTitle>
+      <Card>
         {samples ? (
           <LineChart
             points={samples.points}
@@ -206,14 +207,14 @@ export function History() {
             label={`Clientes online nas últimas ${RANGES.find((r) => r.hours === hours)?.label}`}
           />
         ) : (
-          <div class="empty">Carregando…</div>
+          <Skeleton class="h-[220px]" />
         )}
-      </div>
+      </Card>
 
-      <h2>Eventos</h2>
+      <SectionTitle>Eventos</SectionTitle>
       <Events />
 
-      <h2>Alterações feitas no painel</h2>
+      <SectionTitle>Alterações feitas no painel</SectionTitle>
       <Audit />
     </>
   );

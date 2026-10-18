@@ -23,9 +23,12 @@
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.13.3",
+    "lucide-preact": "^1.59.0",
     "preact": "^11.0.1",
+    "tailwindcss": "^4.3.3",
     "tsx": "^4.23.12",
     "typescript": "^5.9.3",
     "vite": "^8.3.4",

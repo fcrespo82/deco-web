@@ -21,6 +21,8 @@ export type {
   InventoryView,
   IpCell,
   IpPlan,
+  LiveMessage,
+  LiveTopic,
   NodeView,
   OverviewView,
   RangeSummary,

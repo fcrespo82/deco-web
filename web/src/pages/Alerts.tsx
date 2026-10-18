@@ -1,7 +1,11 @@
 import { useState } from "preact/hooks";
-import { api, ApiError, type AlertEntry, type ClientView } from "../api";
+import { Bell, Check as CheckIcon, Send } from "lucide-preact";
+import { api, type AlertEntry, type AlertsView, type ClientView } from "../api";
+import { KEYS, useAlerts } from "../data";
 import { BAND_LABEL, ago, dateTime, deviceType } from "../format";
-import { usePolled } from "../hooks";
+import { errorText, mutate } from "../lib/mutate";
+import { setQueryData } from "../lib/query";
+import { Badge, Button, Card, Dot, Empty, Kv, PageLoading, SectionTitle, TableCard } from "../ui";
 
 const KIND_LABEL: Record<AlertEntry["kind"], string> = {
   new_device: "Dispositivo novo",
@@ -11,7 +15,7 @@ const KIND_LABEL: Record<AlertEntry["kind"], string> = {
   internet_up: "Internet voltou",
   test: "Teste",
 };
-const KIND_TONE: Record<AlertEntry["kind"], string> = {
+const KIND_TONE: Record<AlertEntry["kind"], "ok" | "warn" | "bad" | ""> = {
   new_device: "warn",
   node_offline: "bad",
   node_online: "ok",
@@ -22,58 +26,65 @@ const KIND_TONE: Record<AlertEntry["kind"], string> = {
 const CHANNEL_LABEL: Record<string, string> = { ntfy: "ntfy", telegram: "Telegram" };
 
 function Delivery({ a }: { a: AlertEntry }) {
-  if (a.delivery.length === 0) return <span class="muted small">sem canal</span>;
+  if (a.delivery.length === 0) return <span class="text-[12.5px] text-muted">sem canal</span>;
   return (
-    <div class="chips">
+    <div class="flex flex-wrap gap-1">
       {a.delivery.map((d) => (
-        <span class={`badge ${d.ok ? "ok" : "bad"}`} title={d.error}>
+        <Badge tone={d.ok ? "ok" : "bad"} title={d.error}>
           {d.ok ? "✓" : "✗"} {CHANNEL_LABEL[d.channel] ?? d.channel}
-        </span>
+        </Badge>
       ))}
     </div>
   );
 }
 
-function Pending({ pending, onChange }: { pending: ClientView[]; onChange: () => void }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  async function approve(macs: string[], label: string) {
-    if (macs.length > 1 && !confirm(`Aprovar ${label}? Eles deixam de gerar alerta de dispositivo novo.`)) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await api.approve(macs);
-      onChange();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Falha ao aprovar.");
-    } finally {
-      setBusy(false);
-    }
-  }
+type Clients = { status: unknown; clients: ClientView[] };
+
+/** Aprovar some da lista na hora; se o servidor recusar, volta. */
+function approve(macs: string[], what: string) {
+  void mutate({
+    optimistic: () => [
+      setQueryData<AlertsView>(KEYS.alerts, (d) => ({ ...d, pending: d.pending.filter((c) => !macs.includes(c.mac)) })),
+      setQueryData<Clients>(KEYS.clients, (d) => ({
+        ...d,
+        clients: d.clients.map((c) => (macs.includes(c.mac) && c.device ? { ...c, device: { ...c.device, approved: true } } : c)),
+      })),
+    ],
+    run: () => api.approve(macs),
+    success: macs.length === 1 ? `${what} aprovado` : `${macs.length} aparelhos aprovados`,
+    invalidates: ["inventory"],
+    failure: "Não foi possível aprovar",
+  });
+}
+
+function Pending({ pending }: { pending: ClientView[] }) {
   const online = pending.filter((c) => c.online);
+  const bulk = (macs: string[], label: string) => {
+    if (confirm(`Aprovar ${label}? Eles deixam de gerar alerta de dispositivo novo.`)) approve(macs, label);
+  };
   return (
     <>
-      <div class="section-head">
-        <h2>Aguardando aprovação ({pending.length})</h2>
-        {pending.length > 1 && (
-          <div class="row-actions">
-            {online.length > 0 && online.length < pending.length && (
-              <button class="btn" disabled={busy} onClick={() => approve(online.map((c) => c.mac), `os ${online.length} online`)}>
-                Aprovar online ({online.length})
-              </button>
-            )}
-            <button class="btn" disabled={busy} onClick={() => approve(pending.map((c) => c.mac), `todos os ${pending.length}`)}>
-              Aprovar todos
-            </button>
-          </div>
-        )}
-      </div>
-      {error && <div class="error">{error}</div>}
+      <SectionTitle
+        actions={
+          pending.length > 1 && (
+            <>
+              {online.length > 0 && online.length < pending.length && (
+                <Button onClick={() => bulk(online.map((c) => c.mac), `os ${online.length} online`)}>Aprovar online ({online.length})</Button>
+              )}
+              <Button icon={<CheckIcon class="size-4" />} onClick={() => bulk(pending.map((c) => c.mac), `todos os ${pending.length}`)}>
+                Aprovar todos
+              </Button>
+            </>
+          )
+        }
+      >
+        Aguardando aprovação <span class="font-normal text-muted">· {pending.length}</span>
+      </SectionTitle>
       {pending.length === 0 ? (
-        <p class="muted">Todos os aparelhos vistos estão aprovados.</p>
+        <p class="text-muted">Todos os aparelhos vistos estão aprovados.</p>
       ) : (
-        <div class="table-wrap">
-          <table>
+        <TableCard>
+          <table class="rtable">
             <thead>
               <tr>
                 <th>Aparelho</th>
@@ -85,42 +96,44 @@ function Pending({ pending, onChange }: { pending: ClientView[]; onChange: () =>
             </thead>
             <tbody>
               {pending.map((c) => (
-                <tr key={c.mac} class={c.online ? "" : "offline"}>
-                  <td class="primary-cell">
-                    <span class={`dot ${c.online ? "ok" : ""}`} style="margin-right:6px" />
-                    {c.device?.alias ?? c.name}
-                    <div class="muted small">{deviceType(c.deviceType)}</div>
+                <tr key={c.mac} class={c.online ? "" : "is-off"}>
+                  <td class="cell-primary">
+                    <span class="flex items-center gap-2 font-medium text-fg">
+                      <Dot tone={c.online ? "ok" : "off"} />
+                      {c.device?.alias ?? c.name}
+                    </span>
+                    <div class="pl-4 text-[12px] text-muted">{deviceType(c.deviceType)}</div>
                   </td>
-                  <td data-label="MAC" class="mono">{c.mac}</td>
-                  <td data-label="Estado" class="small">
-                    {[c.ip, c.band && BAND_LABEL[c.band], c.nodeName, c.online ? null : c.lastSeen ? `visto ${ago(c.lastSeen)}` : null]
-                      .filter(Boolean)
-                      .join(" · ")}
+                  <td data-label="MAC" class="whitespace-nowrap font-mono text-[12.5px]">
+                    {c.mac}
                   </td>
-                  <td data-label="Primeira vez" class="small" title={dateTime(c.firstSeen)}>
+                  <td data-label="Estado" class="text-[12.5px]">
+                    {[c.ip, c.band && BAND_LABEL[c.band], c.nodeName, c.online ? null : c.lastSeen ? `visto ${ago(c.lastSeen)}` : null].filter(Boolean).join(" · ")}
+                  </td>
+                  <td data-label="Primeira vez" class="text-[12.5px]" title={dateTime(c.firstSeen)}>
                     {ago(c.firstSeen)}
                   </td>
-                  <td>
-                    <button class="btn" disabled={busy} onClick={() => approve([c.mac], c.name)} aria-label={`Aprovar ${c.device?.alias ?? c.name}`}>
+                  <td class="cell-actions text-right">
+                    <Button size="sm" icon={<CheckIcon class="size-3.5" />} onClick={() => approve([c.mac], c.device?.alias ?? c.name)} aria-label={`Aprovar ${c.device?.alias ?? c.name}`}>
                       Aprovar
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </TableCard>
       )}
     </>
   );
 }
 
 export function Alerts() {
-  const { data, error, reload } = usePolled(api.alerts, 30_000);
+  const { data, error } = useAlerts();
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
 
-  if (!data) return <div class="empty">{error ? `Erro: ${error.message}` : "Carregando…"}</div>;
+  if (!data) return <PageLoading error={error} />;
   const s = data.settings;
 
   async function test() {
@@ -134,9 +147,8 @@ export function Alerts() {
           ? { ok: false, text: `Falhou: ${failed.map((d) => `${CHANNEL_LABEL[d.channel] ?? d.channel} (${d.error})`).join("; ")}` }
           : { ok: true, text: "Enviado. Confira no celular." },
       );
-      void reload();
     } catch (e) {
-      setTestResult({ ok: false, text: e instanceof Error ? e.message : "Falha." });
+      setTestResult({ ok: false, text: errorText(e, "Falha.") });
     } finally {
       setTesting(false);
     }
@@ -144,61 +156,53 @@ export function Alerts() {
 
   return (
     <>
-      <div class="grid cols-2">
-        <div class="card">
-          <h3 style="margin:0 0 8px">Canais</h3>
+      <div class="grid gap-3 md:grid-cols-2">
+        <Card>
+          <h3 class="mb-3 font-semibold">Canais</h3>
           {data.channels.length === 0 ? (
-            <p class="muted small" style="margin:0">
-              Nenhum canal configurado: os alertas ficam só nesta tela. Configure <code>NOTIFY_NTFY_URL</code> ou{" "}
-              <code>NOTIFY_TELEGRAM_TOKEN</code> + <code>NOTIFY_TELEGRAM_CHAT_ID</code>.
+            <p class="text-[12.5px] text-muted">
+              Nenhum canal configurado: os alertas ficam só nesta tela. Configure <code>NOTIFY_NTFY_URL</code> ou <code>NOTIFY_TELEGRAM_TOKEN</code> +{" "}
+              <code>NOTIFY_TELEGRAM_CHAT_ID</code>.
             </p>
           ) : (
-            <dl class="kv" style="margin-top:0">
-              {data.channels.map((c) => (
-                <>
-                  <dt>{CHANNEL_LABEL[c.name] ?? c.name}</dt>
-                  <dd>{c.target}</dd>
-                </>
-              ))}
-            </dl>
+            <Kv items={data.channels.map((c) => [CHANNEL_LABEL[c.name] ?? c.name, c.target])} />
           )}
-          <div class="form-actions" style="margin-top:10px">
-            <button class="btn" onClick={test} disabled={testing || data.channels.length === 0}>
+          <div class="mt-4 flex flex-wrap items-center gap-3">
+            <Button icon={<Send class="size-4" />} onClick={test} loading={testing} disabled={data.channels.length === 0}>
               {testing ? "Enviando…" : "Enviar teste"}
-            </button>
+            </Button>
             {testResult && (
-              <span class={`small ${testResult.ok ? "" : "error"}`} role="status">
+              <span class={`text-[12.5px] ${testResult.ok ? "text-ok" : "text-bad"}`} role="status">
                 {testResult.text}
               </span>
             )}
           </div>
-        </div>
-        <div class="card">
-          <h3 style="margin:0 0 8px">Regras</h3>
-          <dl class="kv" style="margin-top:0">
-            <dt>Dispositivo novo</dt>
-            <dd>{s.newDevice ? "MAC nunca visto e não aprovado" : "desligado"}</dd>
-            <dt>Nó offline</dt>
-            <dd>{s.nodeOfflineMinutes === null ? "desligado" : `após ${s.nodeOfflineMinutes} min, e quando voltar`}</dd>
-            <dt>Internet</dt>
-            <dd>{s.internetDownMinutes === null ? "desligado" : `fora por ${s.internetDownMinutes} min, e quando voltar`}</dd>
-          </dl>
+        </Card>
+        <Card>
+          <h3 class="mb-3 font-semibold">Regras</h3>
+          <Kv
+            items={[
+              ["Dispositivo novo", s.newDevice ? "MAC nunca visto e não aprovado" : "desligado"],
+              ["Nó offline", s.nodeOfflineMinutes === null ? "desligado" : `após ${s.nodeOfflineMinutes} min, e quando voltar`],
+              ["Internet", s.internetDownMinutes === null ? "desligado" : `fora por ${s.internetDownMinutes} min, e quando voltar`],
+            ]}
+          />
           {!s.publicUrl && (
-            <p class="muted small" style="margin:8px 0 0">
+            <p class="mt-3 text-[12.5px] text-muted">
               Defina <code>PUBLIC_URL</code> para as notificações abrirem o painel.
             </p>
           )}
-        </div>
+        </Card>
       </div>
 
-      <Pending pending={data.pending} onChange={() => void reload()} />
+      <Pending pending={data.pending} />
 
-      <h2>Alertas recentes</h2>
+      <SectionTitle>Alertas recentes</SectionTitle>
       {data.alerts.length === 0 ? (
-        <p class="muted">Nenhum alerta ainda.</p>
+        <Empty icon={<Bell />}>Nenhum alerta ainda.</Empty>
       ) : (
-        <div class="table-wrap">
-          <table>
+        <TableCard>
+          <table class="rtable">
             <thead>
               <tr>
                 <th>Quando</th>
@@ -209,15 +213,17 @@ export function Alerts() {
             </thead>
             <tbody>
               {data.alerts.map((a) => (
-                <tr key={a.id}>
-                  <td class="primary-cell small nowrap">
-                    {dateTime(a.at)} <span class="muted">· {ago(a.at)}</span>
+                <tr key={a.id} class="animate-fade-in">
+                  <td class="cell-primary whitespace-nowrap text-[12.5px]">
+                    <span class="text-fg">{dateTime(a.at)}</span> <span class="text-muted">· {ago(a.at)}</span>
                   </td>
                   <td data-label="Alerta">
-                    <span class={`badge ${KIND_TONE[a.kind]}`}>{KIND_LABEL[a.kind] ?? a.kind}</span>
-                    <div>{a.title}</div>
+                    <Badge tone={KIND_TONE[a.kind]}>{KIND_LABEL[a.kind] ?? a.kind}</Badge>
+                    <div class="mt-0.5">{a.title}</div>
                   </td>
-                  <td data-label="Detalhe" class="small pre-line">{a.body}</td>
+                  <td data-label="Detalhe" class="whitespace-pre-line text-[12.5px]">
+                    {a.body}
+                  </td>
                   <td data-label="Entrega">
                     <Delivery a={a} />
                   </td>
@@ -225,12 +231,11 @@ export function Alerts() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableCard>
       )}
-      <p class="muted small">
-        Cada alerta é enviado uma vez; se um canal falhar, a falha fica registrada aqui (passe o mouse sobre ✗) e não há
-        reenvio. Sem internet, ntfy público e Telegram não entregam — o aviso de "internet voltou" diz quanto tempo ela
-        ficou fora.
+      <p class="mt-4 text-[12.5px] text-muted">
+        Cada alerta é enviado uma vez; se um canal falhar, a falha fica registrada aqui (passe o mouse sobre ✗) e não há reenvio. Sem internet, ntfy público e
+        Telegram não entregam — o aviso de "internet voltou" diz quanto tempo ela ficou fora.
       </p>
     </>
   );
