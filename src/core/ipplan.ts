@@ -6,12 +6,17 @@
  * O pool de DHCP e os leases do Deco não são legíveis pela API local (só
  * pelo app); "em uso" vem da lista de clientes, e "visto há pouco" protege
  * IPs de aparelhos offline cujo lease provavelmente ainda vale.
+ *
+ * O tipo de um aparelho é o do inventário; sem cadastro, vale o tipo sugerido
+ * (categoria do Deco + fabricante + nome), marcado como "sugerido".
  */
 import type { Snapshot } from "../deco-client/types.js";
 import type { ClientSeen } from "../db/store.js";
 import type { Device, DeviceType } from "../db/inventory.js";
 import type { IpRange } from "../db/ipranges.js";
 import { intToIp, ipToInt, subnetOf, type Subnet } from "./ipmath.js";
+import { macInfo } from "./oui.js";
+import { suggestType } from "./suggest-type.js";
 import type { Anomaly, AnomalyCode, CellStatus, IpCell, IpPlan, RangeSummary } from "../server/api-types.js";
 
 export type { Anomaly, AnomalyCode, CellStatus, IpCell, IpPlan, RangeSummary };
@@ -91,6 +96,19 @@ export function buildIpPlan(input: IpPlanInput): IpPlan {
   }
   const gatewayInt = gateway ? ipToInt(gateway) : null;
 
+  /** Tipo do inventário, ou o sugerido para quem não tem cadastro. */
+  const typeOf = (mac: string): { type: DeviceType; suggested: boolean } | null => {
+    const own = inventory.get(mac)?.type;
+    if (own) return { type: own, suggested: false };
+    const client = snapshot.clients.find((c) => c.mac === mac);
+    const type = suggestType({
+      name: client?.name ?? seen.get(mac)?.lastName ?? null,
+      decoType: client?.deviceType ?? null,
+      vendor: macInfo(mac).vendor,
+    });
+    return type ? { type, suggested: true } : null;
+  };
+
   const anomalies: Anomaly[] = [];
   const cells: IpCell[] = [];
   for (let i = 0; i < subnet.size; i++) {
@@ -143,10 +161,22 @@ export function buildIpPlan(input: IpPlanInput): IpPlan {
     if (onlineMac && !reservedMac && range?.kind === "static") {
       flag("dynamic-in-static", onlineMac, `Endereço dinâmico dentro da faixa fixa "${range.name}".`);
     }
-    const holder = reservedMac ?? onlineMac;
-    const type = holder ? inventory.get(holder)?.type : null;
-    if (range && type && range.types.length > 0 && !range.types.includes(type)) {
-      flag("type-mismatch", holder, `${TYPE_LABEL[type]} na faixa "${range.name}", que espera ${range.types.map((t) => TYPE_LABEL[t]).join(", ")}.`);
+    if (reservedMac && range?.kind === "dynamic") {
+      flag("static-in-dynamic", reservedMac, `Reserva dentro da faixa dinâmica "${range.name}": o DHCP pode entregar este IP a outro aparelho.`);
+    }
+    const holder = status === "node" ? null : (reservedMac ?? onlineMac);
+    if (holder && range && range.types.length > 0) {
+      const t = typeOf(holder);
+      const expected = range.types.map((x) => TYPE_LABEL[x]).join(", ");
+      if (!t) {
+        flag("untyped", holder, `Sem tipo na faixa "${range.name}", que espera ${expected}. Defina o tipo no inventário.`);
+      } else if (!range.types.includes(t.type)) {
+        flag(
+          "type-mismatch",
+          holder,
+          `${TYPE_LABEL[t.type]}${t.suggested ? " (sugerido)" : ""} na faixa "${range.name}", que espera ${expected}.`,
+        );
+      }
     }
     cells.push(cell);
   }

@@ -21,13 +21,34 @@ const STATUS_LABEL: Record<CellStatus, string> = {
   free: "Livre",
 };
 
-const ANOMALY_LABEL: Record<string, string> = {
-  "outside-plan": "Fora do plano",
-  "dynamic-in-static": "Dinâmico em faixa fixa",
-  "type-mismatch": "Tipo inesperado",
-  "reservation-conflict": "Conflito de reserva",
-  "reservation-not-applied": "Reserva não aplicada",
-};
+/** Grupos de anomalia, na ordem em que aparecem, com o que fazer em cada um. */
+const ANOMALY_GROUPS: { code: string; label: string; hint: string }[] = [
+  {
+    code: "dynamic-in-static",
+    label: "Dinâmico em faixa fixa",
+    hint: "Aparelho sem reserva usando um IP de faixa fixa. Some quando ele renovar o IP no pool do DHCP (reconectar acelera) — ou fixe o IP dele na faixa do tipo.",
+  },
+  {
+    code: "static-in-dynamic",
+    label: "Fixo em faixa dinâmica",
+    hint: "Reserva dentro do pool: o DHCP pode entregar este IP a outro aparelho. Mova a reserva para a faixa do tipo.",
+  },
+  {
+    code: "type-mismatch",
+    label: "Categoria errada",
+    hint: "O tipo do aparelho (do inventário, ou sugerido quando não há cadastro) não é o que a faixa espera. Mova a reserva ou corrija o tipo no inventário.",
+  },
+  {
+    code: "untyped",
+    label: "Sem categoria",
+    hint: "Aparelho numa faixa com tipos definidos, sem tipo no inventário e sem sugestão possível. Defina o tipo no inventário.",
+  },
+  { code: "outside-plan", label: "Fora do plano", hint: "Reserva fora de qualquer faixa. Crie uma faixa ou mova a reserva." },
+  { code: "reservation-conflict", label: "Conflito de reserva", hint: "IP reservado para um aparelho, em uso por outro." },
+  { code: "reservation-not-applied", label: "Reserva não aplicada", hint: "Tem reserva, mas ainda usa outro IP. Reconectar o aparelho aplica a reserva." },
+];
+const ANOMALY_LABEL: Record<string, string> = Object.fromEntries(ANOMALY_GROUPS.map((g) => [g.code, g.label]));
+const groupIndex = (code: string) => ANOMALY_GROUPS.findIndex((g) => g.code === code);
 
 const LEGEND: CellStatus[] = ["reserved-online", "reserved", "online", "recent", "free", "node", "gateway"];
 
@@ -160,6 +181,7 @@ export function IpPlan() {
   const { data, error, reload } = usePolled(api.ipPlan, 30_000);
   const { data: status } = usePolled(api.status, 60_000);
   const [reserving, setReserving] = useState<IpCell | null>(null);
+  const [anomalyFilter, setAnomalyFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [editing, setEditing] = useState<RangeSummary | "new" | null>(null);
 
@@ -296,6 +318,22 @@ export function IpPlan() {
       )}
 
       <h2>Anomalias ({data.anomalies.length})</h2>
+      {data.anomalies.length > 0 && (
+        <div class="filter-chips" role="group" aria-label="Filtrar anomalias">
+          <button class={anomalyFilter === null ? "on" : ""} aria-pressed={anomalyFilter === null} onClick={() => setAnomalyFilter(null)}>
+            Todas <span class="count">{data.anomalies.length}</span>
+          </button>
+          {ANOMALY_GROUPS.map((g) => {
+            const n = data.anomalies.filter((a) => a.code === g.code).length;
+            return n === 0 ? null : (
+              <button class={anomalyFilter === g.code ? "on" : ""} aria-pressed={anomalyFilter === g.code} onClick={() => setAnomalyFilter(g.code)}>
+                {g.label} <span class="count">{n}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {anomalyFilter && <p class="muted small">{ANOMALY_GROUPS.find((g) => g.code === anomalyFilter)?.hint}</p>}
       {data.anomalies.length === 0 ? (
         <p class="muted">Nada fora do esperado.</p>
       ) : (
@@ -310,7 +348,10 @@ export function IpPlan() {
               </tr>
             </thead>
             <tbody>
-              {data.anomalies.map((a) => (
+              {data.anomalies
+                .filter((a) => !anomalyFilter || a.code === anomalyFilter)
+                .sort((a, b) => groupIndex(a.code) - groupIndex(b.code))
+                .map((a) => (
                 <tr>
                   <td class="primary-cell mono">
                     <button class="link mono" onClick={() => setSelected(a.ip)}>

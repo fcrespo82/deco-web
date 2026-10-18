@@ -144,8 +144,14 @@ export type CellStatus =
 
 export type AnomalyCode =
   | "outside-plan"
+  /** Cliente sem reserva usando IP de faixa fixa. */
   | "dynamic-in-static"
+  /** Reserva dentro da faixa dinâmica (pool do DHCP). */
+  | "static-in-dynamic"
+  /** Tipo do aparelho (inventário ou sugerido) não é o que a faixa espera. */
   | "type-mismatch"
+  /** Aparelho numa faixa com tipos definidos, sem tipo cadastrado nem sugerido. */
+  | "untyped"
   | "reservation-conflict"
   | "reservation-not-applied";
 

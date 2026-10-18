@@ -105,9 +105,40 @@ describe("buildIpPlan", () => {
       macs: [mac], createdAt: "", updatedAt: "",
     };
     const p = plan([range(1, 64, 95, "static", "Servidores", ["servidor"])], new Map([[mac, device]]));
-    const mismatch = p.anomalies.find((a) => a.code === "type-mismatch");
-    expect(mismatch).toMatchObject({ ip: "192.168.68.72", name: "Lâmpada" });
-    expect(mismatch!.message).toMatch(/IoT.*Servidores.*servidor/);
+    const mismatch = p.anomalies.find((a) => a.code === "type-mismatch" && a.ip === "192.168.68.72");
+    expect(mismatch).toMatchObject({ name: "Lâmpada" });
+    expect(mismatch!.message).toMatch(/^IoT na faixa "Servidores".*servidor/);
+  });
+
+  it("sem cadastro, vale o tipo sugerido, marcado como tal", () => {
+    const p = plan([range(1, 64, 95, "static", "Servidores", ["servidor"])], new Map());
+    const projector = p.anomalies.find((a) => a.ip === "192.168.68.71");
+    expect(projector).toMatchObject({ code: "type-mismatch" });
+    expect(projector!.message).toMatch(/^TV \(sugerido\)/);
+  });
+
+  it("sem tipo nem sugestão: untyped; faixa sem tipos não cobra tipo", () => {
+    const mac = snapshot.reservations.find((r) => r.ip === "192.168.68.72")!.mac;
+    const device: Device = {
+      id: 1, alias: "Coisa", owner: null, type: null, tags: [], notes: null, approved: true,
+      macs: [mac], createdAt: "", updatedAt: "",
+    };
+    const raw = structuredClone(loadFixture());
+    const c = (raw.clientList as { client_list: { mac: string; name?: string; client_type?: string }[] }).client_list.find((x) => x.mac.toUpperCase().replace(/:/g, "-") === mac);
+    if (c) {
+      c.name = Buffer.from("Coisa").toString("base64");
+      c.client_type = "other";
+    }
+    const withTypes = buildIpPlan({ snapshot: parseSnapshot(raw, now), ranges: [range(1, 64, 95, "static", "Servidores", ["servidor"])], inventory: new Map([[mac, device]]), seen: new Map(), now });
+    expect(withTypes.anomalies.find((a) => a.ip === "192.168.68.72")?.code).toBe("untyped");
+    const noTypes = buildIpPlan({ snapshot: parseSnapshot(raw, now), ranges: [range(1, 64, 95, "static", "Livre", [])], inventory: new Map([[mac, device]]), seen: new Map(), now });
+    expect(noTypes.anomalies.filter((a) => a.code === "untyped" || a.code === "type-mismatch")).toEqual([]);
+  });
+
+  it("reserva dentro da faixa dinâmica: static-in-dynamic", () => {
+    const p = plan([range(1, 64, 95, "dynamic", "DHCP")], new Map());
+    const codes = p.anomalies.filter((a) => a.ip === "192.168.68.72").map((a) => a.code);
+    expect(codes).toContain("static-in-dynamic");
   });
 
   it("conflito: IP reservado em uso por outro MAC, e reserva ainda não aplicada", () => {
