@@ -28,6 +28,8 @@ COPY --from=build /app/web/dist ./web/dist
 COPY package.json THIRD_PARTY_NOTICES.md ./
 # Fixture anonimizada: só é usada com DECO_MOCK=1 (demonstração).
 COPY fixtures ./fixtures
+# Base de fabricantes por MAC (IEEE), consultada localmente.
+COPY oui ./oui
 
 # Usuário sem privilégios (uid 1000 da imagem oficial) dono do volume.
 RUN mkdir -p /data && chown node:node /data

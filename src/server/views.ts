@@ -2,6 +2,8 @@
  * Monta as respostas da API a partir do cache do poller e do SQLite.
  * Funções puras: nenhuma toca no Deco.
  */
+import { macInfo } from "../core/oui.js";
+import { suggestType } from "../core/suggest-type.js";
 import type { Band, Snapshot } from "../deco-client/types.js";
 import type { ClientSeen, NodeSeen } from "../db/store.js";
 import type { Device } from "../db/inventory.js";
@@ -100,6 +102,9 @@ export const deviceSummary = (d: Device): DeviceSummary => ({
   approved: d.approved,
 });
 
+/** Preenchido no fim de buildClients, quando nome e inventário já são conhecidos. */
+const NO_MAC_INFO = { vendor: null, vendorFull: null, randomMac: false, suggestedType: null } as const;
+
 export function buildClients(
   snap: Snapshot | null,
   seen: Map<string, ClientSeen>,
@@ -122,6 +127,7 @@ export function buildClients(
       mac: c.mac,
       name: c.name,
       device: null,
+      ...NO_MAC_INFO,
       online: true,
       ip: c.ip,
       deviceType: c.deviceType,
@@ -144,6 +150,7 @@ export function buildClients(
       mac: s.mac,
       name: s.lastName ?? s.mac,
       device: null,
+      ...NO_MAC_INFO,
       online: false,
       ip: s.lastIp,
       deviceType: null,
@@ -165,6 +172,7 @@ export function buildClients(
       mac,
       name: mac,
       device: null,
+      ...NO_MAC_INFO,
       online: false,
       ip: null,
       deviceType: null,
@@ -187,6 +195,7 @@ export function buildClients(
       mac,
       name: mac,
       device: null,
+      ...NO_MAC_INFO,
       online: false,
       ip: null,
       deviceType: null,
@@ -204,6 +213,13 @@ export function buildClients(
   for (const view of out.values()) {
     const d = inventory.get(view.mac);
     if (d) view.device = deviceSummary(d);
+    const info = macInfo(view.mac);
+    view.vendor = info.vendorShort;
+    view.vendorFull = info.vendor;
+    view.randomMac = info.randomized;
+    view.suggestedType = d?.type
+      ? null
+      : suggestType({ name: view.name !== view.mac ? view.name : null, decoType: view.deviceType, vendor: info.vendor });
   }
 
   const label = (c: ClientView) => c.device?.alias ?? c.name;

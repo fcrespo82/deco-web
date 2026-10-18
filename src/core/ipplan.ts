@@ -33,6 +33,7 @@ const TYPE_LABEL: Record<DeviceType, string> = {
   tablet: "tablet",
   tv: "TV",
   iot: "IoT",
+  impressora: "impressora",
   servidor: "servidor",
   rede: "rede",
   outro: "outro",

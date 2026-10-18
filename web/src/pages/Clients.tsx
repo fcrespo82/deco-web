@@ -56,6 +56,8 @@ function matches(c: ClientView, f: Filters): boolean {
       c.reservation?.ip,
       c.deviceType,
       deviceType(c.deviceType),
+      c.vendorFull,
+      c.randomMac ? "mac privado aleatório" : null,
       c.nodeName,
     ]
       .join(" ")
@@ -183,6 +185,7 @@ export function Clients() {
                     {[
                       c.device && c.device.alias !== c.name && c.name !== c.mac ? c.name : null,
                       c.device?.type ? INVENTORY_TYPE_LABEL[c.device.type] : deviceType(c.deviceType),
+                      c.vendor ?? (c.randomMac ? "MAC privado" : null),
                       c.device?.owner,
                       c.network && c.network !== "main" ? (NETWORK_LABEL[c.network] ?? c.network) : null,
                     ]
@@ -236,6 +239,8 @@ export function Clients() {
         <DeviceEditor
           mac={editing.mac}
           suggestedName={editing.name !== editing.mac ? editing.name : undefined}
+          suggestedType={editing.suggestedType ?? undefined}
+          vendor={editing.vendorFull ?? (editing.randomMac ? null : undefined)}
           onClose={(changed) => {
             setEditing(null);
             if (changed) void reload();

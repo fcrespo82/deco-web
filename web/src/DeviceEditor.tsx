@@ -13,10 +13,14 @@ interface Props {
   deviceId?: number;
   /** Nome sugerido para um MAC ainda sem cadastro (o nome do Deco). */
   suggestedName?: string;
+  /** Tipo sugerido (fabricante + categoria do Deco) para um MAC sem cadastro. */
+  suggestedType?: string;
+  /** Fabricante do MAC; null = MAC privado/aleatório; undefined = não informado. */
+  vendor?: string | null;
   onClose: (changed: boolean) => void;
 }
 
-export function DeviceEditor({ mac, deviceId, suggestedName, onClose }: Props) {
+export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vendor, onClose }: Props) {
   const [inventory, setInventory] = useState<InventoryView | null>(null);
   const [events, setEvents] = useState<EventView[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +41,7 @@ export function DeviceEditor({ mac, deviceId, suggestedName, onClose }: Props) {
     setForm({
       alias: d?.alias ?? suggestedName ?? "",
       owner: d?.owner ?? "",
-      type: d?.type ?? "",
+      type: d?.type ?? (d ? "" : (suggestedType ?? "")),
       tags: d?.tags.join(", ") ?? "",
       notes: d?.notes ?? "",
       approved: d?.approved ?? false,
@@ -105,6 +109,12 @@ export function DeviceEditor({ mac, deviceId, suggestedName, onClose }: Props) {
       ) : (
         <>
           <form class="form" onSubmit={save}>
+            {!device && vendor !== undefined && (
+              <p class="muted small" style="margin:0">
+                {vendor ? <>Fabricante do MAC: {vendor}</> : "MAC privado/aleatório: sem fabricante (celular com endereço privado, VM ou container)."}
+                {suggestedType && form.type === suggestedType && <> · tipo sugerido: {INVENTORY_TYPE_LABEL[suggestedType] ?? suggestedType}</>}
+              </p>
+            )}
             <label>
               Apelido
               <input value={form.alias} onInput={set("alias")} required maxLength={80} />

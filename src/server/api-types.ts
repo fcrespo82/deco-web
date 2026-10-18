@@ -49,6 +49,13 @@ export interface ClientView {
   online: boolean;
   ip: string | null;
   deviceType: string | null;
+  /** Fabricante pelo MAC (base do IEEE), sem sufixos jurídicos. */
+  vendor: string | null;
+  vendorFull: string | null;
+  /** MAC privado/aleatório (ou gerado por VM): sem fabricante. */
+  randomMac: boolean;
+  /** Tipo sugerido para o inventário, enquanto o aparelho não tem tipo. */
+  suggestedType: string | null;
   band: Band | null;
   network: string | null;
   nodeMac: string | null;

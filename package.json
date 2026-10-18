@@ -18,7 +18,8 @@
     "fixture": "node scripts/make-fixture.js",
     "unlock": "tsx src/unlock.ts",
     "dev:web": "vite --config web/vite.config.ts",
-    "build:web": "vite build --config web/vite.config.ts"
+    "build:web": "vite build --config web/vite.config.ts",
+    "update-oui": "node scripts/update-oui.mjs"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",

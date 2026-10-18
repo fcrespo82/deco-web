@@ -6,7 +6,7 @@
 import type Database from "better-sqlite3";
 import { NotFoundError, optionalText, requireMac, requireText, stringList, ValidationError } from "./errors.js";
 
-export const DEVICE_TYPES = ["pc", "notebook", "celular", "tablet", "tv", "iot", "servidor", "rede", "outro"] as const;
+export const DEVICE_TYPES = ["pc", "notebook", "celular", "tablet", "tv", "iot", "impressora", "servidor", "rede", "outro"] as const;
 export type DeviceType = (typeof DEVICE_TYPES)[number];
 
 export interface Device {
