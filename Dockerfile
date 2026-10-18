@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1
+# Com Podman: podman build --format docker (senão o HEALTHCHECK é ignorado).
 
 # --- build: compila backend (tsc) e frontend (vite) -------------------------
 FROM node:22-bookworm-slim AS build
