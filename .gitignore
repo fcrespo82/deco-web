@@ -6,3 +6,5 @@ data/
 probe-output.json
 # Arquivos de segredo do compose.yaml.
 secrets/
+# Ajustes locais do compose (ver compose.override.example.yaml).
+compose.override.yaml

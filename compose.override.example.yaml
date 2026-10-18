@@ -1,0 +1,18 @@
+# Copie para compose.override.yaml (fora do git) e ajuste. O podman-compose e o
+# docker compose mesclam esse arquivo com o compose.yaml automaticamente.
+services:
+  deco-web:
+    environment:
+      DECO_ALLOW_WRITE: 1
+      # Reiniciar nós e alterar Wi-Fi (ver README antes de ligar):
+      # DECO_ALLOW_DANGEROUS: 1
+      NOTIFY_NTFY_URL: https://ntfy.sh/um-topico-dificil-de-adivinhar
+      # PUBLIC_URL: http://192.168.68.X:8080
+      # Prometheus: crie secrets/metrics_token e descomente as linhas abaixo.
+      # METRICS_TOKEN_FILE: /run/secrets/metrics_token
+    # secrets:
+    #   - metrics_token
+
+# secrets:
+#   metrics_token:
+#     file: ./secrets/metrics_token

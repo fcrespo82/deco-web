@@ -1,5 +1,9 @@
 # Deco Dashboard — exemplo de implantação na LAN.
 # NÃO publique esta porta na internet (veja o README).
+#
+# Não edite este arquivo para a sua instalação: copie
+# compose.override.example.yaml para compose.override.yaml (fora do git) e
+# ajuste lá. O compose mescla os dois automaticamente.
 services:
   deco-web:
     build: .
@@ -14,8 +18,10 @@ services:
       DECO_PASSWORD_FILE: /run/secrets/deco_password
       UI_PASSWORD_FILE: /run/secrets/ui_password
       POLL_INTERVAL: 90
-      # Escrita (reservas): descomente para habilitar.
+      # Escrita (reservas) e operações perigosas (reiniciar/Wi-Fi): habilite
+      # no compose.override.yaml.
       # DECO_ALLOW_WRITE: 1
+      # DECO_ALLOW_DANGEROUS: 1
       TZ: America/Sao_Paulo
       # PUBLIC_URL: http://192.168.68.10:8080
       # NOTIFY_NTFY_URL: https://ntfy.sh/um-topico-dificil-de-adivinhar
