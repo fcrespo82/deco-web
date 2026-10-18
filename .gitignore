@@ -4,3 +4,5 @@ dist/
 data/
 # Saída do probe: contém MACs, IPs e nomes da sua rede.
 probe-output.json
+# Arquivos de segredo do compose.yaml.
+secrets/

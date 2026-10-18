@@ -16,7 +16,7 @@
     "test": "vitest run",
     "probe": "node --env-file-if-exists=.env --import tsx scripts/probe.js",
     "fixture": "node scripts/make-fixture.js",
-    "unlock": "tsx scripts/unlock.ts",
+    "unlock": "tsx src/unlock.ts",
     "dev:web": "vite --config web/vite.config.ts",
     "build:web": "vite build --config web/vite.config.ts"
   },

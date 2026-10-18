@@ -1,0 +1,46 @@
+# Deco Dashboard — exemplo de implantação na LAN.
+# NÃO publique esta porta na internet (veja o README).
+services:
+  deco-web:
+    build: .
+    image: deco-web:latest
+    container_name: deco-web
+    restart: unless-stopped
+    ports:
+      # Prefira ligar só ao IP da máquina na LAN, ex.: "192.168.68.10:8080:8080".
+      - "8080:8080"
+    environment:
+      DECO_HOST: 192.168.68.1
+      DECO_PASSWORD_FILE: /run/secrets/deco_password
+      UI_PASSWORD_FILE: /run/secrets/ui_password
+      POLL_INTERVAL: 90
+      # Escrita (reservas): descomente para habilitar.
+      # DECO_ALLOW_WRITE: 1
+      TZ: America/Sao_Paulo
+      # PUBLIC_URL: http://192.168.68.10:8080
+      # NOTIFY_NTFY_URL: https://ntfy.sh/um-topico-dificil-de-adivinhar
+      # NOTIFY_TELEGRAM_CHAT_ID: "123456789"
+      # NOTIFY_TELEGRAM_TOKEN_FILE: /run/secrets/telegram_token
+    secrets:
+      - deco_password
+      - ui_password
+    volumes:
+      - deco-web-data:/data
+    # O encerramento espera o poll em andamento deslogar do Deco (até 60 s).
+    stop_grace_period: 75s
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+secrets:
+  deco_password:
+    file: ./secrets/deco_password
+  ui_password:
+    file: ./secrets/ui_password
+
+volumes:
+  deco-web-data:
