@@ -208,7 +208,12 @@ O que o painel faz para evitar estrago:
   Deco: não vai para o banco, para os logs nem para a auditoria, que registra
   só "senha trocada".
 
-O endpoint de reinício vem do deco-mcp.
+O endpoint de reinício vem do deco-mcp (`admin/device?form=system`, operação
+`reboot`). **Testado num X50** reiniciando um satélite no cabo: o Deco aceitou
+o pedido, o nó sumiu na leitura seguinte e voltou em cerca de 3 minutos, sem
+afetar os outros nós e sem falha de acesso no painel. O reinício do gateway
+(confirmação digitada e pausa de 3 minutos nas leituras) ainda não foi testado
+num aparelho real.
 
 ### Descobrir o que o Deco espera
 
