@@ -26,6 +26,14 @@ services:
       - ui_password
     volumes:
       - deco-web-data:/data
+    # Repetido do Dockerfile: o podman-compose constrói em formato OCI, que
+    # ignora o HEALTHCHECK da imagem.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
     # O encerramento espera o poll em andamento deslogar do Deco (até 60 s).
     stop_grace_period: 75s
     read_only: true
