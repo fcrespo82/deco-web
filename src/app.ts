@@ -121,7 +121,14 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
     logger: log,
   });
   const reservations = new ReservationService({ allowWrite: config.allowWrite, gateway, poller, audit, logger: log });
-  const system = new SystemService({ allowDangerous: config.allowDangerous, gateway, poller, audit, logger: log });
+  const system = new SystemService({
+    allowDangerous: config.allowDangerous,
+    wifiWrite: config.experimentalWifiWrite,
+    gateway,
+    poller,
+    audit,
+    logger: log,
+  });
 
   // O detector parte do último snapshot persistido, para um restart não gerar
   // uma enxurrada de "conectou".

@@ -80,7 +80,7 @@ export function StatusBar({ status, reload }: Props) {
       <div class="statusbar">
         {status.mode.mock && <span class="badge accent">Mock</span>}
         <span class={`badge${status.mode.allowDangerous ? " warn" : ""}`}>
-          {status.mode.allowDangerous ? "Escrita + reinício/Wi-Fi" : status.mode.allowWrite ? "Escrita habilitada" : "Somente leitura"}
+          {status.mode.allowDangerous ? (status.mode.wifiWrite ? "Escrita + reinício/Wi-Fi" : "Escrita + reinício") : status.mode.allowWrite ? "Escrita habilitada" : "Somente leitura"}
         </span>
         <span>
           {status.fetchedAt ? <>Atualizado {ago(status.fetchedAt, now)}</> : "Aguardando a primeira leitura do Deco…"}

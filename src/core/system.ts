@@ -30,6 +30,16 @@ export class DangerousDisabledError extends Error {
   }
 }
 
+export class WifiWriteDisabledError extends Error {
+  constructor() {
+    super(
+      "Alterar Wi-Fi está desligado: o firmware do X50 recusa o formato usado. " +
+        "Para testar outro firmware, inicie com DECO_EXPERIMENTAL_WIFI_WRITE=1.",
+    );
+    this.name = "WifiWriteDisabledError";
+  }
+}
+
 export const REBOOT_COOLDOWN_MS = 5 * 60_000;
 export const GATEWAY_REBOOT_PAUSE_MS = 3 * 60_000;
 
@@ -39,6 +49,8 @@ const CONTROL = /[\u0000-\u001f\u007f]/;
 
 export interface SystemServiceOptions {
   allowDangerous: boolean;
+  /** Escrita de Wi-Fi (experimental, ver config.ts). */
+  wifiWrite?: boolean;
   gateway: DecoGateway;
   poller: Poller;
   audit: AuditRepo;
@@ -110,6 +122,7 @@ export class SystemService {
   /** Valida o pedido cru da API. Nunca inclui a senha em mensagens de erro. */
   prepareWifi(body: Record<string, unknown> | undefined): WifiChange {
     this.requireDangerous();
+    if (!this.opts.wifiWrite) throw new WifiWriteDisabledError();
     const network = body?.network;
     if (typeof network !== "string" || !(WIFI_KINDS as readonly string[]).includes(network)) {
       throw new ValidationError(`Rede inválida: use ${WIFI_KINDS.join(", ")}.`);
@@ -150,6 +163,7 @@ export class SystemService {
 
   async changeWifi(change: WifiChange, actor: string): Promise<WifiWriteResult> {
     this.requireDangerous();
+    if (!this.opts.wifiWrite) throw new WifiWriteDisabledError();
     const { gateway, poller, audit, logger } = this.opts;
     const target = `wifi:${change.network}`;
     const asked = {

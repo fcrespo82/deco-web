@@ -22,6 +22,11 @@ export interface Config {
   detailEvery: number;
   allowWrite: boolean;
   allowDangerous: boolean;
+  /**
+   * Escrita de Wi-Fi. Experimental: o formato usado é recusado pelo firmware
+   * do X50 (erro interno "attempt to index global 'mode'").
+   */
+  experimentalWifiWrite: boolean;
   dataDir: string;
   logLevel: "debug" | "info" | "warn" | "error";
   http: { bind: string; port: number };
@@ -113,6 +118,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (allowDangerous && !allowWrite) {
     throw new ConfigError("DECO_ALLOW_DANGEROUS=1 exige DECO_ALLOW_WRITE=1");
   }
+  const experimentalWifiWrite = flag(env, "DECO_EXPERIMENTAL_WIFI_WRITE");
+  if (experimentalWifiWrite && !allowDangerous) {
+    throw new ConfigError("DECO_EXPERIMENTAL_WIFI_WRITE=1 exige DECO_ALLOW_DANGEROUS=1");
+  }
 
   const logLevel = (env.LOG_LEVEL?.trim().toLowerCase() || "info") as Config["logLevel"];
   if (!["debug", "info", "warn", "error"].includes(logLevel)) {
@@ -141,6 +150,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     detailEvery: Math.round(positiveNumber(env, "POLL_DETAIL_EVERY", 5)),
     allowWrite,
     allowDangerous,
+    experimentalWifiWrite,
     dataDir: env.DATA_DIR?.trim() || "/data",
     logLevel,
     retentionDays: positiveNumber(env, "HISTORY_RETENTION_DAYS", 90),
@@ -210,7 +220,7 @@ export function loadMetricsToken(env: NodeJS.ProcessEnv = process.env): string |
 /** Resumo legível para o log de inicialização. Sem segredos. */
 export function describeConfig(c: Config): string {
   const target = c.mock ? "mock (fixtures)" : `${c.deco.host} (usuário ${c.deco.username})`;
-  const mode = c.allowDangerous ? "escrita + perigosas" : c.allowWrite ? "escrita" : "somente leitura";
+  const mode = c.allowDangerous ? `escrita + perigosas${c.experimentalWifiWrite ? " + Wi-Fi (experimental)" : ""}` : c.allowWrite ? "escrita" : "somente leitura";
   const channels = [c.notify.ntfyUrl && "ntfy", c.notify.telegramChatId && "Telegram"].filter(Boolean).join(" + ") || "nenhum";
   return (
     `Deco: ${target} · alertas: ${channels} · poll ${c.pollIntervalMs / 1000}s (detalhe a cada ${c.detailEvery}) · ${mode} · ` +

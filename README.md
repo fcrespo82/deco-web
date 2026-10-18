@@ -19,7 +19,7 @@ Francesco Fullone; ver [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
 
 | Tela | O quê |
 |---|---|
-| Visão geral | Nós (modelo, firmware, backhaul, sinal do uplink, online desde), internet/WAN, Wi-Fi, CPU/memória, totais por banda; reiniciar nó e alterar Wi-Fi (com `DECO_ALLOW_DANGEROUS=1`) |
+| Visão geral | Nós (modelo, firmware, backhaul, sinal do uplink, online desde), internet/WAN, Wi-Fi, CPU/memória, totais por banda; reiniciar nó (com `DECO_ALLOW_DANGEROUS=1`) |
 | Clientes | Online e offline já vistos, filtros, IP, nó, banda, taxa atual, primeira/última vez; "Fixar IP" |
 | Reservas | Reservas de DHCP do Deco: criar, mudar IP, remover (com `DECO_ALLOW_WRITE=1`) |
 | Inventário | Apelido, dono, tipo, tags, notas; vários MACs num mesmo dispositivo (cabo + Wi-Fi) |
@@ -96,7 +96,8 @@ secrets). Segredos nunca vão para o banco, para os logs ou para o navegador.
 | `DECO_TIMEOUT_MS` | `15000` | Timeout de cada chamada HTTP ao Deco |
 | `DECO_SESSION_GAP_MS` | `10000` | Pausa mínima entre sessões consecutivas (ver Limitações) |
 | `DECO_ALLOW_WRITE` | `0` | `1` habilita escrita: reservas de DHCP |
-| `DECO_ALLOW_DANGEROUS` | `0` | `1` habilita reiniciar nós e alterar Wi-Fi (ver [Operações perigosas](#operações-perigosas-reiniciar-e-wi-fi)). Exige `DECO_ALLOW_WRITE=1` |
+| `DECO_ALLOW_DANGEROUS` | `0` | `1` habilita reiniciar nós (ver [Operações perigosas](#operações-perigosas-reiniciar-e-wi-fi)). Exige `DECO_ALLOW_WRITE=1` |
+| `DECO_EXPERIMENTAL_WIFI_WRITE` | `0` | `1` mostra "Alterar…" no Wi-Fi. **O X50 recusa** o formato usado; só para testar outros firmwares. Exige `DECO_ALLOW_DANGEROUS=1` |
 | `DECO_MOCK` | `0` | `1` usa dados de exemplo anonimizados, sem roteador (demonstração) |
 
 ### Painel
@@ -162,8 +163,16 @@ npm run unlock                                          # desenvolvimento
 ## Operações perigosas: reiniciar e Wi-Fi
 
 Com `DECO_ALLOW_WRITE=1` **e** `DECO_ALLOW_DANGEROUS=1`, a Visão geral ganha
-"Reiniciar…" em cada nó e "Alterar…" em cada rede Wi-Fi (principal,
-convidados, IoT): ligar/desligar, nome (SSID) e senha.
+"Reiniciar…" em cada nó.
+
+**Alterar Wi-Fi é experimental e fica escondido.** Com
+`DECO_EXPERIMENTAL_WIFI_WRITE=1`, cada rede (principal, convidados, IoT) ganha
+"Alterar…": ligar/desligar, nome (SSID) e senha. O formato enviado é
+`admin/wireless?form=wlan`, operação `write`, só com os campos que mudam, igual
+a outros clientes do Deco. **No X50 (firmware 1.x) ele é recusado**: o script
+do firmware quebra com `attempt to index global 'mode' (a nil value)` e nada
+muda (testado; o painel releu e confirmou). O formato que o app usa ainda não é
+conhecido. Ver [Descobrir o que o Deco espera](#descobrir-o-que-o-deco-espera).
 
 **Pode estragar ("bricar") o Deco?** Não. Bricar acontece quando a gravação do
 firmware é interrompida no meio. Nenhuma das duas operações toca no firmware:
@@ -199,9 +208,32 @@ O que o painel faz para evitar estrago:
   Deco: não vai para o banco, para os logs nem para a auditoria, que registra
   só "senha trocada".
 
-O endpoint de reinício vem do deco-mcp. A escrita de Wi-Fi segue o formato de
-outros clientes do Deco, e só a releitura confirma que deu certo no seu
-firmware. Comece pela rede de convidados.
+O endpoint de reinício vem do deco-mcp.
+
+### Descobrir o que o Deco espera
+
+O app do celular não usa esta API: ele fala com o Deco pelo protocolo TMP,
+num túnel SSH (porta 20001) ou pela nuvem da TP-Link. Capturar esse tráfego
+exige celular com root e quebrar o SSH, então não é um caminho prático.
+
+O caminho viável é a **interface web local** (`https://192.168.68.1`), que usa
+a mesma API do painel. Se ela permitir alterar o Wi-Fi no seu firmware, dá
+para ver o pedido **antes** de ser cifrado:
+
+1. Pare o painel (`podman stop deco-web`): o Deco aceita uma sessão admin por
+   vez.
+2. Abra `https://192.168.68.1` no Chrome/Firefox, faça login e abra as
+   ferramentas de desenvolvedor (F12).
+3. Em *Sources*/*Depurador*, busque (Ctrl+Shift+F) por `operation` ou
+   `encrypt` nos scripts da página e ponha um breakpoint na função que cifra
+   os dados antes do envio (costuma receber um objeto com `operation` e
+   `params`).
+4. Faça a alteração na interface (comece pela rede de convidados). Quando o
+   breakpoint parar, copie o objeto em texto puro e **apague a senha** antes
+   de compartilhar.
+5. Feche a sessão da interface e suba o painel de novo.
+
+Com o JSON real, dá para ajustar `src/deco-client/system.ts`.
 
 ## Prometheus
 

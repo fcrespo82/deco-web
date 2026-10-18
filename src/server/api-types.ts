@@ -16,7 +16,7 @@ export interface StatusView {
   /** Snapshot mais velho que 3 intervalos de poll (ou inexistente). */
   stale: boolean;
   pollIntervalSeconds: number;
-  mode: { mock: boolean; allowWrite: boolean; allowDangerous: boolean };
+  mode: { mock: boolean; allowWrite: boolean; allowDangerous: boolean; wifiWrite: boolean };
 }
 
 export interface NodeView extends MeshNode {

@@ -22,7 +22,7 @@ import {
 import { NotFoundError, ValidationError } from "../db/errors.js";
 import { CircuitOpenError } from "../core/gateway.js";
 import { ConflictError, WriteDisabledError } from "../core/reservations.js";
-import { DangerousDisabledError } from "../core/system.js";
+import { DangerousDisabledError, WifiWriteDisabledError } from "../core/system.js";
 import { DecoError } from "../deco-client/errors.js";
 import { registerDataRoutes } from "./routes.js";
 import { registerOpsRoutes } from "./ops-routes.js";
@@ -55,7 +55,7 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
   server.setErrorHandler((err, _req, reply) => {
     if (err instanceof ValidationError) return reply.code(400).send({ error: err.message });
     if (err instanceof NotFoundError) return reply.code(404).send({ error: err.message });
-    if (err instanceof WriteDisabledError || err instanceof DangerousDisabledError) {
+    if (err instanceof WriteDisabledError || err instanceof DangerousDisabledError || err instanceof WifiWriteDisabledError) {
       return reply.code(403).send({ error: err.message });
     }
     if (err instanceof ConflictError) return reply.code(409).send({ error: err.message });
@@ -86,6 +86,7 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
         mock: app.config.mock,
         allowWrite: app.config.allowWrite,
         allowDangerous: app.config.allowDangerous,
+        wifiWrite: app.config.experimentalWifiWrite,
       },
       now: now(),
     });

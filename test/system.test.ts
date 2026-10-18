@@ -17,7 +17,7 @@ afterEach(async () => {
   }
 });
 
-const DANGEROUS = { DECO_ALLOW_WRITE: "1", DECO_ALLOW_DANGEROUS: "1" };
+const DANGEROUS = { DECO_ALLOW_WRITE: "1", DECO_ALLOW_DANGEROUS: "1", DECO_EXPERIMENTAL_WIFI_WRITE: "1" };
 
 async function setup(env: Record<string, string> = DANGEROUS) {
   const dir = mkdtempSync(join(tmpdir(), "deco-web-sys-"));
@@ -43,6 +43,15 @@ describe("permissões", () => {
     expect((await post("/api/wifi", { network: "guest", enabled: true, confirm: true })).statusCode).toBe(403);
     expect(api.calls).toBe(calls);
     expect(api.writes).toEqual([]);
+  });
+
+  it("Wi-Fi exige DECO_EXPERIMENTAL_WIFI_WRITE; reiniciar não", async () => {
+    const { api, post, satellite } = await setup({ DECO_ALLOW_WRITE: "1", DECO_ALLOW_DANGEROUS: "1" });
+    const res = await post("/api/wifi", { network: "guest", enabled: true, confirm: true });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatch(/X50 recusa/);
+    expect(api.wifiWrites).toEqual([]);
+    expect((await post("/api/nodes/reboot", { macs: [satellite.mac], confirm: true })).statusCode).toBe(200);
   });
 
   it("exige confirm: true", async () => {

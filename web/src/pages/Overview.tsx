@@ -158,6 +158,8 @@ export function Overview() {
   if (!data) return <div class="empty">{error ? `Erro: ${error.message}` : "Carregando…"}</div>;
 
   const dangerous = data.status.mode.allowDangerous;
+  // Escrita de Wi-Fi é experimental: o X50 recusa o formato (ver README).
+  const wifiWrite = dangerous && data.status.mode.wifiWrite;
   const KIND_ORDER = ["host", "guest", "iot"];
   const wifi = [...(data.wifi ?? [])].sort(
     (a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || a.band.localeCompare(b.band),
@@ -202,7 +204,7 @@ export function Overview() {
                       <th>Banda</th>
                       <th>Canal</th>
                       <th>Status</th>
-                      {dangerous && <th />}
+                      {wifiWrite && <th />}
                     </tr>
                   </thead>
                   <tbody>
@@ -217,7 +219,7 @@ export function Overview() {
                         <td data-label="Status">
                           <span class={`badge ${w.enabled ? "ok" : ""}`}>{w.enabled ? "ativa" : "desligada"}</span>
                         </td>
-                        {dangerous && (
+                        {wifiWrite && (
                           <td>
                             {firstOfKind(i) && (w.kind === "host" || w.kind === "guest" || w.kind === "iot") && (
                               <button class="btn" onClick={() => setEditingWifi(w.kind as WifiKind)}>
