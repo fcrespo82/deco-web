@@ -37,6 +37,7 @@ export function buildStatus({ cache, pollIntervalMs, mode, now }: StatusContext)
     nextPollAt: cache.nextPollAt,
     pausedUntil: cache.pausedUntil,
     lastError: cache.lastError,
+    polling: cache.polling,
     breaker: cache.breaker,
     stale: fetchedAt === null || now.getTime() - fetchedAt > 3 * pollIntervalMs,
     pollIntervalSeconds: pollIntervalMs / 1000,

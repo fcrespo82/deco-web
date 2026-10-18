@@ -24,12 +24,16 @@ export interface PollerCache {
   /** Leituras suspensas até esta hora (ex.: gateway reiniciando). */
   pausedUntil: string | null;
   breaker: BreakerStatus;
+  /** Há uma leitura do Deco em andamento agora. */
+  polling: boolean;
 }
 
 export interface PollerEvents {
   /** Snapshot novo; `previous` é o anterior (ou null no primeiro). */
   snapshot: [next: Snapshot, previous: Snapshot | null];
   error: [err: Error];
+  /** Algo do cache mudou (início/fim de leitura, erro, pausa, escrita relida). */
+  change: [];
 }
 
 export interface PollerOptions {
@@ -49,7 +53,7 @@ export class Poller extends EventEmitter<PollerEvents> {
   private timer: NodeJS.Timeout | null = null;
   private inFlight: Promise<Snapshot | null> | null = null;
   private running = false;
-  private state: Omit<PollerCache, "breaker">;
+  private state: Omit<PollerCache, "breaker" | "polling">;
 
   constructor(opts: PollerOptions) {
     super();
@@ -70,7 +74,7 @@ export class Poller extends EventEmitter<PollerEvents> {
   }
 
   get cache(): PollerCache {
-    return { ...this.state, breaker: this.gateway.breaker.status };
+    return { ...this.state, breaker: this.gateway.breaker.status, polling: this.inFlight !== null };
   }
 
   /**
@@ -82,6 +86,7 @@ export class Poller extends EventEmitter<PollerEvents> {
     const snap = this.state.snapshot;
     if (!snap) return;
     this.state.snapshot = { ...snap, reservations, reservationMax: max ?? snap.reservationMax };
+    this.emit("change");
   }
 
   /** Atualiza o Wi-Fi do cache com o que uma escrita acabou de reler. */
@@ -89,6 +94,7 @@ export class Poller extends EventEmitter<PollerEvents> {
     const snap = this.state.snapshot;
     if (!snap) return;
     this.state.snapshot = { ...snap, wifi };
+    this.emit("change");
   }
 
   /**
@@ -97,6 +103,7 @@ export class Poller extends EventEmitter<PollerEvents> {
    */
   pause(ms: number): void {
     this.state.pausedUntil = new Date(this.now().getTime() + ms).toISOString();
+    this.emit("change");
   }
 
   start(): void {
@@ -119,9 +126,12 @@ export class Poller extends EventEmitter<PollerEvents> {
 
   /** Poll imediato. Se já houver um em andamento, espera o mesmo. */
   pollNow(): Promise<Snapshot | null> {
-    this.inFlight ??= this.poll().finally(() => {
+    if (this.inFlight) return this.inFlight;
+    this.inFlight = this.poll().finally(() => {
       this.inFlight = null;
+      this.emit("change");
     });
+    this.emit("change");
     return this.inFlight;
   }
 
@@ -130,6 +140,7 @@ export class Poller extends EventEmitter<PollerEvents> {
     if (!this.running) return;
     this.timer = setTimeout(() => void this.tick(), this.intervalMs);
     this.state.nextPollAt = new Date(this.now().getTime() + this.intervalMs).toISOString();
+    this.emit("change");
   }
 
   private async poll(): Promise<Snapshot | null> {

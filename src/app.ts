@@ -16,6 +16,7 @@ import { SystemService } from "./core/system.js";
 import { LiveDecoApi } from "./deco-client/live.js";
 import { MockDecoApi } from "./deco-client/mock.js";
 import type { DecoApi } from "./deco-client/types.js";
+import type { LiveTopic } from "./server/api-types.js";
 import { AlertRepo } from "./db/alerts.js";
 import { AuditRepo } from "./db/audit.js";
 import { EventRepo } from "./db/events.js";
@@ -46,6 +47,10 @@ export interface App {
   alertEngine: AlertEngine;
   /** Escuta eventos novos (alertas). */
   onEvents(listener: (events: NetEvent[]) => void): void;
+  /** Avisa que dados mudaram (canal ao vivo da UI). */
+  notify(topics: LiveTopic[]): void;
+  /** Escuta mudanças; devolve a função que para de escutar. */
+  onChange(listener: (topics: LiveTopic[]) => void): () => void;
   /** Para o poller, espera o poll em andamento (e o logout) e fecha o banco. */
   close(): Promise<void>;
 }
@@ -138,10 +143,24 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
   });
   detector.prime(store.latestSnapshot());
   const listeners: ((events: NetEvent[]) => void)[] = [];
+  const changeListeners = new Set<(topics: LiveTopic[]) => void>();
+  const notify = (topics: LiveTopic[]) => {
+    for (const l of changeListeners) {
+      try {
+        l(topics);
+      } catch (err) {
+        log.error(`ouvinte de mudanças falhou: ${(err as Error).message}`);
+      }
+    }
+  };
+  poller.on("change", () => notify(["status"]));
 
   poller.on("snapshot", (snap, previous) => {
     const found = detector.next(snap);
-    void alertEngine.process(found, snap, previous).catch(() => undefined);
+    void alertEngine
+      .process(found, snap, previous)
+      .then((sent) => sent.length && notify(["alerts"]))
+      .catch(() => undefined);
     events.insert(found);
     if (found.length) log.debug(`eventos: ${found.map((e) => e.type).join(", ")}`);
     for (const l of listeners) {
@@ -152,6 +171,7 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
       }
     }
     pruneIfDue(snap.takenAt);
+    notify(["snapshot"]);
   });
 
   function pruneIfDue(nowIso: string) {
@@ -178,6 +198,11 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
     alerts,
     alertEngine,
     onEvents: (l) => listeners.push(l),
+    notify,
+    onChange(l) {
+      changeListeners.add(l);
+      return () => changeListeners.delete(l);
+    },
     async close() {
       await poller.stop();
       await alertEngine.idle();

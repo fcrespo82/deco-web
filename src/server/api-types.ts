@@ -12,11 +12,24 @@ export interface StatusView {
   /** Leituras suspensas até esta hora (gateway reiniciando). */
   pausedUntil: string | null;
   lastError: { message: string; at: string } | null;
+  /** Há uma leitura do Deco em andamento agora. */
+  polling: boolean;
   breaker: "closed" | "open" | "locked";
   /** Snapshot mais velho que 3 intervalos de poll (ou inexistente). */
   stale: boolean;
   pollIntervalSeconds: number;
   mode: { mock: boolean; allowWrite: boolean; allowDangerous: boolean; wifiWrite: boolean };
+}
+
+/**
+ * O que mudou, avisado pelo canal ao vivo (GET /api/live). A UI relê só as
+ * telas que dependem desses tópicos.
+ */
+export type LiveTopic = "status" | "snapshot" | "inventory" | "ipplan" | "reservations" | "alerts" | "audit";
+
+export interface LiveMessage {
+  topics: LiveTopic[];
+  status: StatusView;
 }
 
 export interface NodeView extends MeshNode {

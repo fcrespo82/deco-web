@@ -28,6 +28,7 @@ import { registerDataRoutes } from "./routes.js";
 import { registerOpsRoutes } from "./ops-routes.js";
 import { registerSystemRoutes } from "./system-routes.js";
 import { buildMetrics } from "./metrics.js";
+import { registerLiveRoutes, topicsForWrite } from "./live.js";
 import { buildClients, buildOverview, buildStatus } from "./views.js";
 
 export const WEB_DIST = fileURLToPath(new URL("../../web/dist", import.meta.url));
@@ -165,7 +166,15 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
     }
   });
 
+  // Escrita bem-sucedida: avisa as outras abas (e esta) pelo canal ao vivo.
+  server.addHook("onResponse", async (req, reply) => {
+    if (req.method === "GET" || reply.statusCode >= 400) return;
+    const topics = topicsForWrite(req.url.split("?")[0]!);
+    if (topics.length) app.notify(topics);
+  });
+
   server.get("/api/status", async () => status());
+  registerLiveRoutes(server, app, status);
 
   server.get("/api/overview", async () =>
     buildOverview(app.poller.cache.snapshot, app.store.nodeSeen(), status()),
