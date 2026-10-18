@@ -20,7 +20,7 @@ Francesco Fullone; ver [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
 | Tela | O quê |
 |---|---|
 | Visão geral | Nós (modelo, firmware, backhaul, sinal do uplink, online desde), internet/WAN, Wi-Fi, CPU/memória, totais por banda; reiniciar nó (com `DECO_ALLOW_DANGEROUS=1`) |
-| Clientes | Online e offline já vistos, filtros, IP, nó, banda, taxa atual, primeira/última vez; "Fixar IP" |
+| Clientes | Online e offline já vistos, filtros, IP, nó, banda, taxa atual, primeira/última vez, fabricante pelo MAC; "Fixar IP" |
 | Reservas | Reservas de DHCP do Deco: criar, mudar IP, remover (com `DECO_ALLOW_WRITE=1`) |
 | Inventário | Apelido, dono, tipo, tags, notas; vários MACs num mesmo dispositivo (cabo + Wi-Fi) |
 | Plano de IPs | Faixas nomeadas (`.8/29`, `.20-.39`, `.100+`), mapa do /24, anomalias, próximo IP livre |
@@ -327,6 +327,11 @@ npm run typecheck
   alertas, backup.
 - `src/db/` — SQLite (migrações por `user_version`) e repositórios.
 - `src/server/` — API (Fastify). `web/` — interface (Preact + Vite).
+- `npm run update-oui` atualiza `oui/ieee-oui.tsv.gz`, a base de fabricantes
+  por MAC (registros públicos do IEEE). A consulta é local: nenhum MAC sai da
+  rede. MACs administrados localmente (celulares com endereço privado, VMs)
+  aparecem como "MAC privado". Com o fabricante e a categoria do Deco, o
+  inventário sugere o tipo de cada aparelho novo.
 - `npm run probe` lista, só com leituras, o que o seu Deco responde; grava
   `probe-output.json` (contém dados da sua rede; está no `.gitignore`).
 

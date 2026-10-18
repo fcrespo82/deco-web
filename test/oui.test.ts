@@ -53,6 +53,9 @@ describe("suggestType", () => {
     expect(s("OmniBook3-Tha^s", "Computer")).toBe("notebook");
     expect(s("nas-fcrespo82", "Network")).toBe("servidor");
     expect(s("cachyos", "Computer")).toBe("pc");
+    expect(s("proxmox", "Computer", "REALTEK SEMICONDUCTOR CORP.")).toBe("servidor");
+    expect(s("homeassistant", "Computer")).toBe("servidor");
+    expect(s("adguard2", "Computer")).toBe("servidor");
   });
 
   it("pelo fabricante", () => {

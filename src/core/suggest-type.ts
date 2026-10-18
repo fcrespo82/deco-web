@@ -38,7 +38,12 @@ const RULES: [DeviceType, (h: { name: string; deco: string; vendor: string }) =>
       /\btv\b|-tv|chromecast|roku|appletv|apple-tv|firetv|fire-tv|playstation|xbox/.test(h.name),
   ],
   ["notebook", (h) => /laptop|notebook/.test(h.deco) || /macbook|notebook|laptop|omnibook|thinkpad|zenbook|vivobook|ideapad|latitude|\bxps\b/.test(h.name)],
-  ["servidor", (h) => /server|nas/.test(h.deco) || /\bnas\b|^nas-|server|servidor/.test(h.name)],
+  [
+    "servidor",
+    (h) =>
+      /server|nas/.test(h.deco) ||
+      /\bnas\b|^nas-|server|servidor|proxmox|^pve|adguard|pihole|pi-hole|homeassistant|home-assistant|hassio|truenas|unraid|docker|portainer|traefik/.test(h.name),
+  ],
   ["rede", (h) => /network|router|access point|repeater|switch/.test(h.deco)],
   ["pc", (h) => /computer|desktop|pc/.test(h.deco)],
 ];
