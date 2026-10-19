@@ -8,3 +8,6 @@ probe-output.json
 secrets/
 # Ajustes locais do compose (ver compose.override.example.yaml).
 compose.override.yaml
+
+# Pacotes gerados por scripts/package-release.sh.
+release/

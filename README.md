@@ -368,17 +368,42 @@ npm run typecheck
 
 ## Proxmox (com cópias no Synology)
 
-O painel é leve (poucas dezenas de MB de RAM, CPU quase parada) e cabe num **container LXC**
-pequeno:
+O painel é leve (poucas dezenas de MB de RAM, CPU quase parada) e cabe num
+**container LXC** pequeno. Os scripts em `proxmox/` seguem o padrão do
+[community-scripts](https://community-scripts.org): usam o mesmo motor
+(`community-scripts/core`: menus, criação do CT, motd, comando `update`), com os
+scripts deste app vindos deste repositório.
 
-1. Crie um LXC Debian 12 **sem privilégios**, com 1 vCPU, 512 MB de RAM e 4 GB
-   de disco **local** (`local-lvm` ou ZFS do próprio Proxmox). Em *Options →
-   Features*, ligue `nesting` (e `keyctl`, se usar Docker).
-2. Dentro dele, instale Podman (`apt install podman podman-compose`) ou Docker
-   e siga a [Instalação](#instalação-docker--podman).
-3. Use IP fixo na LAN, por reserva de DHCP (dá para fazer pelo próprio painel)
-   ou na configuração de rede do LXC, e ligue a porta a esse IP no
-   `compose.override.yaml`.
+**Instalar** — no shell do Proxmox (nó, não dentro de um CT):
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/fcrespo82/deco-web/main/proxmox/ct/deco-web.sh)"
+```
+
+Cria um CT Debian 13 sem privilégios (1 vCPU, 512 MB, 4 GB; "Advanced" muda
+tudo), instala Node.js 22 e o release mais recente, e pergunta o IP do Deco, a
+senha do Deco e uma senha para a interface (vazia = gera uma e mostra no fim).
+O painel fica em `http://IP-DO-CT:8080`, rodando nativo (systemd, usuário
+`deco-web`), sem Docker.
+
+**Atualizar** — dentro do CT, rode `update` (ou o mesmo comando de instalar,
+dentro do CT). Ele confere o release mais novo no GitHub e, se houver:
+para o serviço (que espera o poll em andamento deslogar do Deco), faz backup do
+banco em `/var/lib/deco-web/backups/` (guarda os 5 últimos), instala, sobe e
+confere `/api/health`. Se não subir em 30 s, volta para a versão anterior.
+
+| O quê | Onde |
+|---|---|
+| Configuração (`DECO_HOST`, escrita, alertas…) | `/etc/deco-web/deco-web.env` → `systemctl restart deco-web` |
+| Senhas do Deco e da interface | `/etc/deco-web/deco_password`, `/etc/deco-web/ui_password` |
+| Banco, imagens, planta | `/var/lib/deco-web/` |
+| Programa | `/opt/deco-web/` (substituído a cada update) |
+| Logs | `journalctl -u deco-web -f` |
+
+Use IP fixo para o CT (reserva de DHCP, que dá para fazer pelo próprio painel,
+ou IP estático no "Advanced"). Prefere container? A
+[instalação com Docker/Podman](#instalação-docker--podman) também funciona num
+LXC com `nesting` ligado.
 
 **Onde ficam os dados.** O volume `/data` (SQLite) fica no disco local do LXC,
 **nunca em NFS/SMB**: o modo WAL do SQLite depende de travas que
@@ -390,7 +415,7 @@ guarda as **cópias**:
   backup diário do LXC no modo *snapshot*. Isso leva o banco, os segredos e a
   configuração.
 - *Só os dados do painel:* monte uma pasta NFS do Synology no LXC e agende
-  `sqlite3 /caminho/do/volume/deco-web.sqlite ".backup /mnt/synology/deco-web-$(date +%F).sqlite"`,
+  `sqlite3 /var/lib/deco-web/deco-web.sqlite ".backup /mnt/synology/deco-web-$(date +%F).sqlite"`,
   ou baixe o JSON da tela Backup.
 
 Uma VM também funciona, mas gasta mais memória para o mesmo resultado.
@@ -400,6 +425,15 @@ Uma VM também funciona, mas gasta mais memória para o mesmo resultado.
 - **OIDC / SSO.** O caminho previsto é um proxy na frente (oauth2-proxy,
   Authelia, Authentik) e um modo que confie no usuário enviado por ele em vez
   de `UI_PASSWORD`; a auditoria já tem o campo "quem" para registrar o nome.
+
+## Releases
+
+1. Ajuste `version` no `package.json` (ex.: `1.1.0`) e faça o commit.
+2. `git tag v1.1.0 && git push origin v1.1.0`.
+
+O workflow `.github/workflows/release.yml` roda typecheck e testes, gera o
+pacote com `scripts/package-release.sh` (build pronto, sem `node_modules`) e
+publica o release. Os CTs passam a ver a versão nova no próximo `update`.
 
 ## Licença
 

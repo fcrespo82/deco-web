@@ -1,0 +1,47 @@
+# Release: ao enviar uma tag v* (ex.: git tag v1.0.0 && git push origin v1.0.0),
+# roda os testes, gera o pacote com scripts/package-release.sh e publica o
+# release com o .tar.gz e o .sha256. O CT do Proxmox instala e atualiza a
+# partir do release mais recente (proxmox/ct/deco-web.sh).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Confere que a tag bate com o package.json
+        run: |
+          pkg="v$(node -p 'require("./package.json").version')"
+          if [ "$pkg" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME não bate com package.json ($pkg)" >&2
+            exit 1
+          fi
+
+      - name: Gera o pacote
+        run: SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" scripts/package-release.sh "$GITHUB_REF_NAME"
+
+      - name: Publica o release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "release/deco-web-${GITHUB_REF_NAME#v}.tar.gz" \
+            "release/deco-web-${GITHUB_REF_NAME#v}.tar.gz.sha256" \
+            --title "$GITHUB_REF_NAME" --generate-notes
