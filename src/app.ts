@@ -81,7 +81,8 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
   const deco =
     api ??
     (config.mock
-      ? new MockDecoApi({ liveTraffic: true })
+      ? // DECO_MOCK_LATENCY_MS simula a lentidão do Deco real (desenvolvimento).
+        new MockDecoApi({ liveTraffic: true, latencyMs: Number(process.env.DECO_MOCK_LATENCY_MS) || 0 })
       : new LiveDecoApi({
           host: config.deco.host,
           username: config.deco.username,

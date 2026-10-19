@@ -1,17 +1,20 @@
 /**
  * Criar, mudar ou remover a reserva de DHCP de um aparelho. Sempre em duas
  * etapas: escolher → confirmar (antes/depois). Só a confirmação escreve no
- * Deco, e a escrita leva ~15–30 s (uma sessão inteira: login, leitura,
- * escrita, releitura, logout), então o diálogo mostra o tempo decorrido e não
- * deixa reenviar. O resultado chega às telas pelo canal ao vivo.
+ * Deco, e a escrita leva ~15–30 s. Ela é otimista (lib/reservation-write): a
+ * lista muda na hora com o selo "gravando…" e o diálogo fecha; o resultado
+ * chega como aviso. Recusas imediatas (validação, conflito antes de ir ao
+ * Deco) continuam aparecendo aqui.
  */
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { ArrowRight } from "lucide-preact";
 import { api, type IpSuggestion, type ReservationResult } from "./api";
+import { Loader, CircleHelp } from "lucide-preact";
+import { usePendingReservations, writeReservation } from "./lib/reservation-write";
 import { toast } from "./lib/toast";
-import { Banner, Button, cx, Dialog, Field } from "./ui";
-import { OUTCOME_TONE, resultOf, useElapsed, WorkingNote, type Step } from "./writes";
+import { Badge, Banner, Button, cx, Dialog, Field } from "./ui";
+import { OUTCOME_TONE, useElapsed, WorkingNote, type Step } from "./writes";
 
 interface Props {
   mac: string;
@@ -47,29 +50,33 @@ export function ReservationDialog({ mac, name, current, currentIp, mode = "edit"
     );
   }, [mac]);
 
+  const busy = usePendingReservations().has(mac);
+
   async function confirm() {
     setStep("working");
     setError(null);
-    try {
-      const r = removing
-        ? await api.removeReservation(mac)
-        : current
-          ? await api.moveReservation(mac, ip.trim())
-          : await api.addReservation(mac, ip.trim());
-      setResult(r);
-      setStep("done");
-      if (r.ok) toast(removing ? `Reserva de ${name} removida` : `${name} reservado em ${ip.trim()}`);
-    } catch (e) {
-      const body = resultOf<ReservationResult>(e);
-      if (body) {
-        setResult(body);
-        setStep("done");
-      } else {
-        // Recusado antes de chegar ao Deco (validação, conflito no cache, breaker).
-        setError(e instanceof Error ? e.message : "Falha ao gravar.");
-        setStep(removing ? "confirm" : "choose");
-      }
+    const target = removing ? null : ip.trim();
+    const h = writeReservation({ mac, name, op: removing ? "remove" : current ? "move" : "add", ip: target });
+    // Recusa imediata (antes de ir ao Deco) volta para cá; se demorar, segue em segundo plano.
+    const first = await Promise.race([h.done, new Promise<null>((r) => setTimeout(() => r(null), 800))]);
+    if (first === null) {
+      h.detach();
+      toast(removing ? `Removendo a reserva de ${name}…` : `Gravando ${name} em ${target}…`, {
+        tone: "info",
+        detail: "A lista já mostra a mudança; a confirmação do Deco chega em uns 20 s.",
+        ms: 5000,
+      });
+      onClose(true);
+      return;
     }
+    if (first.kind === "error") {
+      setError(first.message);
+      setStep(removing || presetIp ? "confirm" : "choose");
+      return;
+    }
+    if (first.result) setResult(first.result);
+    setStep("done");
+    if (first.kind === "ok") toast(removing ? `Reserva de ${name} removida` : `${name} reservado em ${target}`);
   }
 
   const close = () => {
@@ -108,7 +115,7 @@ export function ReservationDialog({ mac, name, current, currentIp, mode = "edit"
         <Button onClick={() => (removing || presetIp ? close() : setStep("choose"))} disabled={step === "working"}>
           {removing || presetIp ? "Cancelar" : "Voltar"}
         </Button>
-        <Button variant={removing ? "danger-solid" : "primary"} onClick={confirm} loading={step === "working"}>
+        <Button variant={removing ? "danger-solid" : "primary"} onClick={confirm} loading={step === "working"} disabled={busy && step !== "working"}>
           {removing ? "Remover do Deco" : "Gravar no Deco"}
         </Button>
       </>
@@ -149,7 +156,11 @@ export function ReservationDialog({ mac, name, current, currentIp, mode = "edit"
 
       {(step === "confirm" || step === "working") && (
         <div class="grid gap-4">
-          <Banner tone="warn">Isto altera o Deco. Confira antes de confirmar.</Banner>
+          {busy && step !== "working" ? (
+            <Banner tone="accent">Já há uma gravação em andamento para este aparelho. Espere ela terminar.</Banner>
+          ) : (
+            <Banner tone="warn">Isto altera o Deco. Confira antes de confirmar.</Banner>
+          )}
           <div class="grid items-center gap-2 sm:grid-cols-[1fr_auto_1fr]">
             <div class="rounded-xl border border-line bg-surface-2/50 px-3.5 py-3">
               <div class="text-[11.5px] font-semibold uppercase tracking-wide text-muted">Antes</div>
@@ -183,5 +194,20 @@ export function ReservationDialog({ mac, name, current, currentIp, mode = "edit"
         </div>
       )}
     </Dialog>
+  );
+}
+
+/** Selo de gravação pendente ("gravando…" / "a confirmar") para um aparelho. */
+export function PendingReservationBadge({ mac }: { mac: string }) {
+  const p = usePendingReservations().get(mac);
+  if (!p) return null;
+  return p.phase === "saving" ? (
+    <Badge tone="accent" title="Gravando no Deco; a lista já mostra o resultado esperado">
+      <Loader class="size-3 animate-spin" /> gravando…
+    </Badge>
+  ) : (
+    <Badge tone="warn" title="O Deco não confirmou; a próxima leitura completa mostra o estado real">
+      <CircleHelp class="size-3" /> a confirmar
+    </Badge>
   );
 }

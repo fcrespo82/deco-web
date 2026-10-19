@@ -12,7 +12,8 @@ import { useClients, useImages, useStatus } from "./data";
 import { removeImage, UploadButton } from "./ImageDialogs";
 import { DeviceEditor } from "./DeviceEditor";
 import { BAND_LABEL, INVENTORY_TYPE_LABEL, NETWORK_LABEL, ago, dateTime, deviceType, rate } from "./format";
-import { ReservationDialog } from "./ReservationDialog";
+import { usePendingReservations } from "./lib/reservation-write";
+import { PendingReservationBadge, ReservationDialog } from "./ReservationDialog";
 import { Badge, Button, Dialog, Kv } from "./ui";
 
 export const clientLabel = (c: ClientView) => c.device?.alias ?? c.name;
@@ -33,6 +34,7 @@ export function RateBar({ kBps, tone }: { kBps: number; tone: "down" | "up" }) {
 export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void }) {
   const { data } = useClients();
   const images = useImages();
+  const pending = usePendingReservations();
   const status = useStatus();
   const [mode, setMode] = useState<"view" | "edit" | "reserve">("view");
   const c = data?.clients.find((x) => x.mac === mac);
@@ -79,7 +81,7 @@ export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void
             {c.device ? "Editar no inventário" : "Cadastrar no inventário"}
           </Button>
           {allowWrite && (c.online || c.reservation) && (
-            <Button icon={<Lock class="size-4" />} onClick={() => setMode("reserve")}>
+            <Button icon={<Lock class="size-4" />} onClick={() => setMode("reserve")} disabled={pending.has(c.mac)}>
               {c.reservation ? "Mudar reserva" : "Fixar IP"}
             </Button>
           )}
@@ -125,7 +127,12 @@ export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void
           ["MAC", c.mac, "font-mono text-[12.5px]"],
           [
             "Reserva",
-            c.reservation ? (
+            pending.has(c.mac) ? (
+              <span class="flex flex-wrap items-center gap-1.5">
+                {c.reservation && <span class="font-mono text-[12.5px]">{c.reservation.ip}</span>}
+                <PendingReservationBadge mac={c.mac} />
+              </span>
+            ) : c.reservation ? (
               <Badge tone={c.reservation.matchesCurrentIp === false ? "warn" : "ok"}>
                 <Lock class="size-3" /> {c.reservation.ip}
                 {c.reservation.matchesCurrentIp === false && " (aguardando renovação)"}

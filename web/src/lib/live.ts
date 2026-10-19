@@ -6,8 +6,15 @@
  * cada 30 s, e ao reconectar relê tudo (pode ter perdido avisos).
  */
 import { useEffect, useState } from "preact/hooks";
-import type { LiveMessage, StatusView } from "../api";
+import type { LiveMessage, LiveTopic, StatusView } from "../api";
 import { invalidate } from "./query";
+
+const topicListeners = new Set<(topics: readonly LiveTopic[]) => void>();
+/** Avisa quem precisa reagir a um tópico além de reler (ex.: reservas pendentes). */
+export function onLiveTopics(listener: (topics: readonly LiveTopic[]) => void): () => void {
+  topicListeners.add(listener);
+  return () => topicListeners.delete(listener);
+}
 
 export type LiveState = "connecting" | "open" | "offline";
 
@@ -57,6 +64,7 @@ function open() {
     set({ status: msg.status });
     const topics = msg.topics.filter((t) => t !== "status");
     if (topics.length) invalidate(topics);
+    for (const l of topicListeners) l(msg.topics);
   });
   es.addEventListener("error", () => {
     set({ state: "offline" });

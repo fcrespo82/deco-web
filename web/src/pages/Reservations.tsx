@@ -4,7 +4,8 @@ import type { ClientView } from "../api";
 import { categoryOf, DeviceArt } from "../art/devices";
 import { useClients, useReservations } from "../data";
 import { INVENTORY_TYPE_LABEL, ago, deviceType } from "../format";
-import { ReservationDialog } from "../ReservationDialog";
+import { usePendingReservations } from "../lib/reservation-write";
+import { PendingReservationBadge, ReservationDialog } from "../ReservationDialog";
 import { Badge, Banner, Button, Dialog, Dot, Empty, PageLoading, SectionTitle, TableCard } from "../ui";
 
 const label = (c: ClientView) => c.device?.alias ?? c.name;
@@ -13,6 +14,7 @@ const ipKey = (ip: string) => ip.split(".").reduce((acc, part) => acc * 256 + Nu
 type Editing = { client: ClientView; mode: "edit" | "remove" };
 
 function State({ c }: { c: ClientView }) {
+  if (usePendingReservations().has(c.mac)) return <PendingReservationBadge mac={c.mac} />;
   if (!c.online) {
     return <span class="text-[12.5px] text-muted">{c.lastSeen ? `offline · visto ${ago(c.lastSeen)}` : "nunca visto por este painel"}</span>;
   }
@@ -64,6 +66,7 @@ export function Reservations() {
   const { data, error } = useReservations();
   const [editing, setEditing] = useState<Editing | null>(null);
   // "Nova reserva" pela paleta de comandos chega como #/reservas?nova=1.
+  const pending = usePendingReservations();
   const [picking, setPicking] = useState(() => /[?&]nova=1/.test(location.hash));
   useEffect(() => {
     if (picking && location.hash.includes("nova=1")) history.replaceState(null, "", "#/reservas");
@@ -153,10 +156,10 @@ export function Reservations() {
                   {data.allowWrite && (
                     <td class="cell-actions">
                       <div class="flex justify-end gap-1.5">
-                        <Button size="sm" onClick={() => setEditing({ client: c, mode: "edit" })}>
+                        <Button size="sm" onClick={() => setEditing({ client: c, mode: "edit" })} disabled={pending.has(c.mac)}>
                           Mudar IP
                         </Button>
-                        <Button size="sm" variant="danger" onClick={() => setEditing({ client: c, mode: "remove" })} aria-label={`Remover reserva de ${label(c)}`}>
+                        <Button size="sm" variant="danger" onClick={() => setEditing({ client: c, mode: "remove" })} disabled={pending.has(c.mac)} aria-label={`Remover reserva de ${label(c)}`}>
                           Remover
                         </Button>
                       </div>

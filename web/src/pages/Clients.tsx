@@ -6,7 +6,8 @@ import { DeviceEditor } from "../DeviceEditor";
 import { BAND_LABEL, INVENTORY_TYPE_LABEL, NETWORK_LABEL, ago, dateTime, deviceType, rate } from "../format";
 import { useNow } from "../hooks";
 import { openClient } from "../lib/ui-state";
-import { ReservationDialog } from "../ReservationDialog";
+import { usePendingReservations } from "../lib/reservation-write";
+import { PendingReservationBadge, ReservationDialog } from "../ReservationDialog";
 import { Badge, Button, Check, cx, Dot, Empty, FilterChips, PageLoading, Segmented, TableCard } from "../ui";
 import { Bubbles } from "../views/Bubbles";
 import { Gallery } from "../views/Gallery";
@@ -106,6 +107,7 @@ function matches(c: ClientView, f: Filters): boolean {
 }
 
 function Reservation({ c }: { c: ClientView }) {
+  if (usePendingReservations().has(c.mac)) return <PendingReservationBadge mac={c.mac} />;
   if (!c.reservation) return <span class="text-muted">—</span>;
   if (c.reservation.matchesCurrentIp === false) {
     return (
@@ -129,6 +131,7 @@ export function Clients() {
   const [sort, setSort] = useState<SortKey | null>(null);
   const [editing, setEditing] = useState<ClientView | null>(null);
   const [reserving, setReserving] = useState<ClientView | null>(null);
+  const pending = usePendingReservations();
   const [view, setView] = usePref<View>("clients.view", "gallery", ["gallery", "bubbles", "table"]);
   const [groupBy, setGroupBy] = usePref<GroupBy | "none">("clients.group", "node", ["none", "node", "category", "band", "network", "vendor", "owner"]);
   const [bySize, setBySize] = usePref<"traffic" | "equal">("clients.size", "traffic", ["traffic", "equal"]);
@@ -320,7 +323,7 @@ export function Clients() {
                   <td data-label="Reserva">
                     <div class="flex flex-wrap items-center gap-1.5">
                       <Reservation c={c} />
-                      {allowWrite && (c.online || c.reservation) && (
+                      {allowWrite && (c.online || c.reservation) && !pending.has(c.mac) && (
                         <Button size="sm" variant="ghost" onClick={() => setReserving(c)} aria-label={c.reservation ? `Mudar reserva de ${label(c)}` : `Fixar IP de ${label(c)}`}>
                           {c.reservation ? "Mudar" : "Fixar IP"}
                         </Button>
