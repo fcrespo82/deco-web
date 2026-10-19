@@ -33,6 +33,8 @@ export interface MockDecoOptions {
   now?: () => Date;
   /** Atraso artificial por chamada, para simular a lentidão do Deco. */
   latencyMs?: number;
+  /** Inventa tráfego a cada leitura (o fixture tem quase tudo zerado). */
+  liveTraffic?: boolean;
 }
 
 export class MockDecoApi implements DecoApi {
@@ -49,11 +51,13 @@ export class MockDecoApi implements DecoApi {
   private listFailures: Error[] = [];
   private readonly now: () => Date;
   private readonly latencyMs: number;
+  private readonly liveTraffic: boolean;
 
   constructor(opts: MockDecoOptions = {}) {
     this.raw = structuredClone(opts.raw ?? loadFixture());
     this.now = opts.now ?? (() => new Date());
     this.latencyMs = opts.latencyMs ?? 0;
+    this.liveTraffic = opts.liveTraffic ?? false;
   }
 
   /** Altera o estado cru que o próximo fetchSnapshot vai devolver. */
@@ -204,6 +208,15 @@ export class MockDecoApi implements DecoApi {
     if (this.latencyMs) await new Promise((r) => setTimeout(r, this.latencyMs));
     const failure = this.failures.shift();
     if (failure) throw failure;
-    return parseSnapshot(structuredClone(this.raw), this.now());
+    const snapshot = parseSnapshot(structuredClone(this.raw), this.now());
+    if (this.liveTraffic) {
+      for (const c of snapshot.clients) {
+        // Uns poucos aparelhos ativos de cada vez, em rajadas.
+        const busy = Math.random() < 0.3;
+        c.downKBps = busy ? Math.round(20 + Math.random() ** 3 * 6000) : Math.round(Math.random() * 4);
+        c.upKBps = busy ? Math.round(5 + Math.random() ** 3 * 900) : Math.round(Math.random() * 2);
+      }
+    }
+    return snapshot;
   }
 }

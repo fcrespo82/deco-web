@@ -81,7 +81,7 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
   const deco =
     api ??
     (config.mock
-      ? new MockDecoApi()
+      ? new MockDecoApi({ liveTraffic: true })
       : new LiveDecoApi({
           host: config.deco.host,
           username: config.deco.username,

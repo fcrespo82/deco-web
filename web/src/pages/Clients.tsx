@@ -1,12 +1,38 @@
-import { useMemo, useState } from "preact/hooks";
-import { ArrowDownUp, Lock, MonitorSmartphone, Search, X } from "lucide-preact";
+import { useEffect, useMemo, useState } from "preact/hooks";
+import { ArrowDownUp, Bubbles as BubblesIcon, LayoutGrid, Lock, MonitorSmartphone, Search, Table2, X } from "lucide-preact";
 import type { Band, ClientView } from "../api";
 import { useClients, useStatus } from "../data";
 import { DeviceEditor } from "../DeviceEditor";
 import { BAND_LABEL, INVENTORY_TYPE_LABEL, NETWORK_LABEL, ago, dateTime, deviceType, rate } from "../format";
 import { useNow } from "../hooks";
+import { ClientSheet } from "../ClientSheet";
 import { ReservationDialog } from "../ReservationDialog";
-import { Badge, Button, cx, Dot, Empty, FilterChips, PageLoading, TableCard } from "../ui";
+import { Badge, Button, Check, cx, Dot, Empty, FilterChips, PageLoading, Segmented, TableCard } from "../ui";
+import { Bubbles } from "../views/Bubbles";
+import { Gallery } from "../views/Gallery";
+import { GROUP_LABEL, type GroupBy } from "../views/grouping";
+
+type View = "gallery" | "bubbles" | "table";
+
+/** Preferências de visualização lembradas neste navegador. */
+function usePref<T extends string>(key: string, initial: T, valid: readonly T[]): [T, (v: T) => void] {
+  const [v, setV] = useState<T>(() => {
+    try {
+      const saved = localStorage.getItem(key) as T | null;
+      return saved && valid.includes(saved) ? saved : initial;
+    } catch {
+      return initial;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, v);
+    } catch {
+      // Sem storage: vale só nesta visita.
+    }
+  }, [key, v]);
+  return [v, setV];
+}
 
 /** Apelido do inventário, ou o nome que o Deco dá. */
 const label = (c: ClientView) => c.device?.alias ?? c.name;
@@ -103,6 +129,10 @@ export function Clients() {
   const [sort, setSort] = useState<SortKey | null>(null);
   const [editing, setEditing] = useState<ClientView | null>(null);
   const [reserving, setReserving] = useState<ClientView | null>(null);
+  const [opened, setOpened] = useState<string | null>(null);
+  const [view, setView] = usePref<View>("clients.view", "gallery", ["gallery", "bubbles", "table"]);
+  const [groupBy, setGroupBy] = usePref<GroupBy | "none">("clients.group", "node", ["none", "node", "category", "band", "network", "vendor", "owner"]);
+  const [bySize, setBySize] = usePref<"traffic" | "equal">("clients.size", "traffic", ["traffic", "equal"]);
 
   const clients = data?.clients ?? [];
   const nodes = useMemo(() => {
@@ -200,8 +230,43 @@ export function Clients() {
         )}
       </div>
 
+      <div class="mb-4 flex flex-wrap items-center gap-2">
+        <Segmented
+          label="Visualização"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "gallery", label: <span class="inline-flex items-center gap-1.5"><LayoutGrid class="size-3.5" />Galeria</span> },
+            { value: "bubbles", label: <span class="inline-flex items-center gap-1.5"><BubblesIcon class="size-3.5" />Bolhas</span> },
+            { value: "table", label: <span class="inline-flex items-center gap-1.5"><Table2 class="size-3.5" />Tabela</span> },
+          ]}
+        />
+        {view !== "table" && (
+          <label class="flex items-center gap-2 text-[13px] text-muted">
+            agrupar por
+            <select class="field w-auto py-1.5" value={groupBy} onChange={(e) => setGroupBy((e.target as HTMLSelectElement).value as GroupBy | "none")} aria-label="Agrupar por">
+              {view === "gallery" && <option value="none">nada</option>}
+              {(Object.keys(GROUP_LABEL) as GroupBy[]).map((k) => (
+                <option value={k}>{GROUP_LABEL[k].toLowerCase()}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        {view === "bubbles" && (
+          <Check checked={bySize === "traffic"} onChange={() => setBySize(bySize === "traffic" ? "equal" : "traffic")}>
+            tamanho pelo tráfego
+          </Check>
+        )}
+      </div>
+
       {rows.length === 0 ? (
         <Empty icon={<MonitorSmartphone />}>Nenhum cliente com esses filtros.</Empty>
+      ) : view === "gallery" ? (
+        <Gallery clients={rows} groupBy={groupBy === "none" ? null : groupBy} onOpen={(c) => setOpened(c.mac)} now={now} />
+      ) : view === "bubbles" ? (
+        <div class="hero-glow rounded-2xl border border-line bg-surface p-3 shadow-card sm:p-5">
+          <Bubbles clients={rows} groupBy={groupBy === "none" ? "node" : groupBy} byTraffic={bySize === "traffic"} onOpen={(c) => setOpened(c.mac)} />
+        </div>
       ) : (
         <TableCard>
           <table class="rtable">
@@ -280,6 +345,7 @@ export function Clients() {
           </table>
         </TableCard>
       )}
+      {opened && <ClientSheet mac={opened} onClose={() => setOpened(null)} />}
       {editing && (
         <DeviceEditor
           mac={editing.mac}

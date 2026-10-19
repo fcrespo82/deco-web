@@ -2,6 +2,7 @@ import { useMemo, useState } from "preact/hooks";
 import { Boxes, Plus, Search } from "lucide-preact";
 import type { DeviceMacView, DeviceView } from "../api";
 import { useInventory } from "../data";
+import { categoryOf, DeviceArt } from "../art/devices";
 import { DeviceEditor } from "../DeviceEditor";
 import { BAND_LABEL, INVENTORY_TYPE_LABEL, ago } from "../format";
 import { Badge, Button, Dot, Empty, PageLoading, SectionTitle, TableCard } from "../ui";
@@ -79,15 +80,21 @@ export function Inventory() {
               {devices.map((d) => (
                 <tr key={d.id} class={d.online ? "" : "is-off"}>
                   <td class="cell-primary">
-                    <div class="flex items-center gap-2">
-                      <Dot tone={d.online ? "ok" : "off"} />
-                      <button type="button" class="truncate text-left font-medium text-fg hover:text-accent hover:underline" onClick={() => setEditing({ deviceId: d.id })}>
-                        {d.alias}
-                      </button>
-                    </div>
-                    <div class="mt-0.5 flex flex-wrap gap-1 pl-4 text-[12px] text-muted">
-                      {d.type && <span>{INVENTORY_TYPE_LABEL[d.type]}</span>}
-                      {!d.approved && <Badge tone="warn">não aprovado</Badge>}
+                    <div class="flex items-center gap-3">
+                      <DeviceArt
+                        size="sm"
+                        online={d.online}
+                        category={categoryOf({ name: d.macs[0]?.decoName ?? d.alias, deviceType: null, vendor: null, suggestedType: null, device: d })}
+                      />
+                      <div class="min-w-0">
+                        <button type="button" class="block max-w-full truncate text-left font-medium text-fg hover:text-accent hover:underline" onClick={() => setEditing({ deviceId: d.id })}>
+                          {d.alias}
+                        </button>
+                        <div class="flex flex-wrap gap-1 text-[12px] text-muted">
+                          {d.type && <span>{INVENTORY_TYPE_LABEL[d.type]}</span>}
+                          {!d.approved && <Badge tone="warn">não aprovado</Badge>}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td data-label="Dono">{d.owner ?? <span class="text-muted">—</span>}</td>
