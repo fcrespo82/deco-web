@@ -21,7 +21,7 @@ import {
 import { NotFoundError, ValidationError } from "../db/errors.js";
 import type { ImageKind, ImagesView, OfficialResult } from "./api-types.js";
 
-export const IMAGE_KINDS: readonly ImageKind[] = ["decos", "categories", "devices"];
+export const IMAGE_KINDS: readonly ImageKind[] = ["decos", "categories", "devices", "floorplan"];
 const EXT: Record<ImageType, string> = { png: "png", jpeg: "jpg", webp: "webp" };
 const MIME: Record<string, string> = { png: "image/png", jpg: "image/jpeg", webp: "image/webp" };
 const NAME_RE = /^[A-Za-z0-9_-]{1,40}$/;
@@ -55,7 +55,7 @@ export class ImageStore {
   }
 
   manifest(): ImagesView {
-    const out: ImagesView = { decos: {}, categories: {}, devices: {} };
+    const out: ImagesView = { decos: {}, categories: {}, devices: {}, floorplan: {} };
     for (const kind of IMAGE_KINDS) {
       let files: string[] = [];
       try {

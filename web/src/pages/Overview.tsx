@@ -12,6 +12,7 @@ import { BAND_LABEL, NETWORK_LABEL, WIFI_KIND_LABEL, rate, shortFirmware, since 
 import { useNow } from "../hooks";
 import { useTrafficHistory, useTrafficRecorder } from "../lib/traffic";
 import { Sparkline } from "../views/Sparkline";
+import { Counter } from "../Counter";
 import { BAND_COLOR, Topology, TopologyLegend } from "../Topology";
 import { Badge, Button, Card, cx, Empty, Kv, PageLoading, SectionTitle } from "../ui";
 
@@ -89,19 +90,19 @@ function Hero({ data, clients }: { data: OverviewView; clients: ClientView[] }) 
       <Tile label="Tráfego agora" icon={<ArrowDown />}>
         <div class="flex flex-wrap items-baseline gap-x-3 whitespace-nowrap tabular-nums">
           <span class="text-[18px] font-display font-semibold leading-tight sm:text-[22px]" style={{ color: "var(--flow-down)" }}>
-            ↓ {rate(down)}
+            ↓ <Counter value={down} format={rate} class="glow-text" />
           </span>
           <span class="text-[13px] font-medium" style={{ color: "var(--flow-up)" }}>
-            ↑ {rate(up)}
+            ↑ <Counter value={up} format={rate} />
           </span>
         </div>
         <Sparkline points={history} />
       </Tile>
       <Tile label="Clientes online" icon={<Wifi />}>
         <div class="mb-2 text-[18px] font-display font-semibold leading-tight tabular-nums sm:text-[22px]">
-          {totals.clients}
+          <Counter value={totals.clients} class="glow-text" />
           {Object.keys(totals.byNetwork).length > 1 && (
-            <span class="ml-2 text-[12px] font-normal text-muted max-sm:hidden">
+            <span class="ml-2 font-sans text-[12px] font-normal text-muted max-sm:hidden">
               {Object.entries(totals.byNetwork)
                 .map(([k, v]) => `${NETWORK_LABEL[k] ?? k} ${v}`)
                 .join(" · ")}
@@ -113,9 +114,9 @@ function Hero({ data, clients }: { data: OverviewView; clients: ClientView[] }) 
       <Tile label="Mesh" icon={<Router />} tone={nodesOnline === nodes.length ? undefined : "bad"}>
         <div class="flex items-center justify-between gap-2">
           <div class="text-[18px] font-display font-semibold leading-tight tabular-nums sm:text-[22px]">
-            {nodesOnline}
+            <Counter value={nodesOnline} class="glow-text" />
             <span class="text-muted">/{nodes.length}</span>
-            <div class="text-[11.5px] font-normal text-muted">{nodesOnline === nodes.length ? "nós online" : `${nodes.length - nodesOnline} offline`}</div>
+            <div class="font-sans text-[11.5px] font-normal text-muted">{nodesOnline === nodes.length ? "nós online" : `${nodes.length - nodesOnline} offline`}</div>
           </div>
           {performance && (
             <div class="flex gap-3 max-sm:hidden lg:max-xl:hidden">
@@ -270,7 +271,9 @@ function NodeShelf({ nodes, selected, onSelect, now }: { nodes: NodeView[]; sele
               {n.model} · {n.online ? (n.onlineSince ? `há ${since(n.onlineSince, now)}` : "online") : "offline"}
             </div>
             <div class="mt-2 flex items-baseline gap-1">
-              <span class="font-display text-[22px] font-semibold leading-none tabular-nums">{n.clients.total}</span>
+              <span class="font-display text-[22px] font-semibold leading-none tabular-nums">
+                <Counter value={n.clients.total} />
+              </span>
               <span class="text-[11.5px] text-muted">{n.clients.total === 1 ? "cliente" : "clientes"}</span>
             </div>
             <div class="mt-2 flex h-1.5 overflow-hidden rounded-full bg-surface-2">

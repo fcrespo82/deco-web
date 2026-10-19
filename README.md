@@ -332,6 +332,16 @@ aparelho). Tudo fica em `DATA_DIR/images` (`decos/`, `categories/`,
 As fotos oficiais têm direitos autorais da TP-Link: são para uso pessoal no
 seu painel e não devem ser commitadas nem redistribuídas.
 
+## Planta da casa
+
+A tela **Casa** mostra os Decos sobre a planta baixa: envie uma imagem da
+planta (em "Posicionar Decos"), arraste cada Deco para onde ele está e informe a
+largura real da área em metros. O painel desenha a cobertura estimada de 2,4 e
+5 GHz pela distância (modelo log-distance, **sem paredes**: é uma estimativa de
+onde o sinal tende a ficar fraco, não uma medição), os aparelhos de cada nó e os
+links com o tráfego. A planta fica em `DATA_DIR/images/floorplan/` e as
+posições, no banco.
+
 ## Desenvolvimento
 
 ```sh

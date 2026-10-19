@@ -2,6 +2,7 @@ import type {
   AuditView,
   ClientView,
   EventView,
+  FloorplanView,
   ImageKind,
   ImagesView,
   InventoryView,
@@ -14,6 +15,7 @@ import type {
 } from "../../src/server/api-types";
 
 export type {
+  FloorplanView,
   PresenceView,
   ImageKind,
   ImagesView,
@@ -220,6 +222,8 @@ export const api = {
   presence: (hours: number) => request<PresenceView>("GET", `/api/history/presence${qs({ hours })}`),
   audit: (q: { limit?: number; before?: number } = {}) => request<{ entries: AuditView[] }>("GET", `/api/audit${qs(q)}`),
 
+  floorplan: () => request<FloorplanView>("GET", "/api/floorplan"),
+  saveFloorplan: (plan: FloorplanView) => request<FloorplanView>("PUT", "/api/floorplan", plan),
   images: () => request<ImagesView & { models: string[] }>("GET", "/api/images"),
   putImage: async (kind: ImageKind, name: string, blob: Blob) => {
     const res = await fetch(`/api/images/${kind}/${encodeURIComponent(name)}`, {

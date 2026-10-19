@@ -25,7 +25,7 @@ export interface StatusView {
  * O que mudou, avisado pelo canal ao vivo (GET /api/live). A UI relê só as
  * telas que dependem desses tópicos.
  */
-export type LiveTopic = "status" | "snapshot" | "inventory" | "ipplan" | "reservations" | "alerts" | "audit" | "images";
+export type LiveTopic = "status" | "snapshot" | "inventory" | "ipplan" | "reservations" | "alerts" | "audit" | "images" | "floorplan";
 
 export interface LiveMessage {
   topics: LiveTopic[];
@@ -34,10 +34,17 @@ export interface LiveMessage {
 
 // --- imagens ---
 
-export type ImageKind = "decos" | "categories" | "devices";
+export type ImageKind = "decos" | "categories" | "devices" | "floorplan";
 
 /** URL de cada imagem escolhida, por tipo e nome (modelo, categoria, id do dispositivo). */
 export type ImagesView = Record<ImageKind, Record<string, string>>;
+
+/** Planta da casa: onde cada Deco está (0–1 na largura/altura da planta) e a escala. */
+export interface FloorplanView {
+  nodes: Record<string, { x: number; y: number }>;
+  /** Largura real da área da planta, em metros (para estimar a cobertura). */
+  widthMeters: number;
+}
 
 export interface OfficialResult {
   model: string;

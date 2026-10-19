@@ -201,7 +201,7 @@ function build(nodes: NodeView[], clients: ClientView[]) {
 }
 
 /** Partículas ao longo de um caminho; a quantidade e a velocidade seguem o tráfego. */
-function Flow({ d, kBps, reverse, class: klass, r = 2.6 }: { d: string; kBps: number; reverse?: boolean; class: string; r?: number }) {
+export function Flow({ d, kBps, reverse, class: klass, r = 2.6 }: { d: string; kBps: number; reverse?: boolean; class: string; r?: number }) {
   if (kBps < 2) return null;
   const n = kBps < 60 ? 1 : kBps < 600 ? 2 : kBps < 3000 ? 3 : 4;
   const dur = Math.max(0.9, 4.2 - Math.min(3.5, Math.log10(kBps)) * 0.95);
@@ -223,7 +223,7 @@ function Flow({ d, kBps, reverse, class: klass, r = 2.6 }: { d: string; kBps: nu
   );
 }
 
-function signalTone(node: NodeView): string {
+export function signalTone(node: NodeView): string {
   const levels = (["5GHz", "2.4GHz"] as const).filter((b) => node.backhaul.includes(b)).map((b) => node.signal[b] ?? 0);
   const best = Math.max(0, ...levels);
   return best >= 3 ? "var(--ok)" : best === 2 ? "var(--warn)" : "var(--bad)";

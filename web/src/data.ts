@@ -21,6 +21,7 @@ export const KEYS = {
   events: (types: string) => `events:${types}`,
   audit: "audit",
   images: "images",
+  floorplan: "floorplan",
 } as const;
 
 const T = {
@@ -42,6 +43,7 @@ export const useInventory = () => useQuery(KEYS.inventory, api.inventory, T.inve
 export const useIpPlan = () => useQuery(KEYS.ipPlan, api.ipPlan, T.ipPlan);
 export const useAlerts = () => useQuery(KEYS.alerts, api.alerts, T.alerts);
 export const useSamples = (hours: number) => useQuery(KEYS.samples(hours), () => api.samples(hours), T.history);
+export const useFloorplan = () => useQuery(KEYS.floorplan, api.floorplan, ["floorplan"]);
 export const useImages = () => useQuery(KEYS.images, api.images, T.images);
 export const usePresence = (hours: number) => useQuery(KEYS.presence(hours), () => api.presence(hours), T.history);
 /** 30 dias em baldes de 1 h, para o mapa de calor. */

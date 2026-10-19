@@ -38,9 +38,11 @@ function Prepare({
   label,
   square,
   defaultRemoveBg,
+  max,
   onDone,
   onBack,
 }: {
+  max?: number;
   source: string | Blob;
   kind: ImageKind;
   name: string;
@@ -60,7 +62,7 @@ function Prepare({
     let alive = true;
     setResult(null);
     setError(null);
-    prepareImage(source, { removeBackground: removeBg, square, tolerance }).then(
+    prepareImage(source, { removeBackground: removeBg, square, tolerance, max }).then(
       (r) => alive && setResult(r),
       (e) => alive && setError(errorText(e, "Não consegui abrir a imagem.")),
     );
@@ -128,10 +130,10 @@ function Prepare({
 }
 
 /** Enviar arquivo do computador/celular. */
-export function UploadDialog(props: { file: File; kind: ImageKind; name: string; label: string; square?: boolean; defaultRemoveBg?: boolean; onClose: () => void }) {
+export function UploadDialog(props: { file: File; kind: ImageKind; name: string; label: string; square?: boolean; defaultRemoveBg?: boolean; max?: number; onClose: () => void }) {
   return (
     <Dialog title={`Imagem de ${props.label}`} subtitle={props.file.name} onClose={props.onClose}>
-      <Prepare source={props.file} kind={props.kind} name={props.name} label={props.label} square={props.square} defaultRemoveBg={props.defaultRemoveBg ?? false} onDone={props.onClose} />
+      <Prepare source={props.file} kind={props.kind} name={props.name} label={props.label} square={props.square} defaultRemoveBg={props.defaultRemoveBg ?? false} max={props.max} onDone={props.onClose} />
     </Dialog>
   );
 }
@@ -197,7 +199,9 @@ export function UploadButton({
   defaultRemoveBg,
   children = "Enviar arquivo",
   size = "sm",
+  max,
 }: {
+  max?: number;
   kind: ImageKind;
   name: string;
   label: string;
@@ -223,7 +227,7 @@ export function UploadButton({
           }}
         />
       </label>
-      {file && <UploadDialog file={file} kind={kind} name={name} label={label} square={square} defaultRemoveBg={defaultRemoveBg} onClose={() => setFile(null)} />}
+      {file && <UploadDialog file={file} kind={kind} name={name} label={label} square={square} defaultRemoveBg={defaultRemoveBg} max={max} onClose={() => setFile(null)} />}
     </>
   );
 }

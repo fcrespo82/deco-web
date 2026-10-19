@@ -12,9 +12,9 @@ export type Tone = "ok" | "warn" | "bad" | "accent" | "";
 
 type ButtonVariant = "default" | "primary" | "danger" | "danger-solid" | "ghost";
 const BUTTON: Record<ButtonVariant, string> = {
-  default: "border border-line bg-surface text-fg shadow-card hover:bg-surface-2",
-  primary: "btn-brand border border-transparent text-white shadow-card hover:brightness-110",
-  danger: "border border-line bg-surface text-bad shadow-card hover:bg-bad-soft",
+  default: "btn-hud border border-line bg-surface/70 text-fg hover:border-accent/60 hover:text-accent",
+  primary: "btn-brand border border-transparent text-white hover:brightness-110",
+  danger: "btn-hud border border-line bg-surface/70 text-bad hover:border-bad/60 hover:bg-bad-soft",
   "danger-solid": "border border-transparent bg-bad text-white shadow-card hover:brightness-110",
   ghost: "border border-transparent text-muted hover:bg-surface-2 hover:text-fg",
 };
@@ -76,7 +76,7 @@ const BADGE: Record<Tone, string> = {
 
 export function Badge({ tone = "", children, title, class: klass }: { tone?: Tone; children: ComponentChildren; title?: string; class?: string }) {
   return (
-    <span title={title} class={cx("inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-px text-[12px] font-medium", BADGE[tone], klass)}>
+    <span title={title} class={cx("hud-badge inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-px text-[12px] font-medium", BADGE[tone], klass)}>
       {children}
     </span>
   );
@@ -99,7 +99,7 @@ export const Spinner = ({ class: klass }: { class?: string }) => <LoaderCircle c
 
 export function Card({ children, class: klass, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div class={cx("min-w-0 rounded-xl border border-line bg-surface p-4 shadow-card", klass as string)} {...rest}>
+    <div class={cx("hud-panel min-w-0 p-4", klass as string)} {...rest}>
       {children}
     </div>
   );
@@ -108,14 +108,15 @@ export function Card({ children, class: klass, ...rest }: HTMLAttributes<HTMLDiv
 export function SectionTitle({ children, actions, class: klass }: { children: ComponentChildren; actions?: ComponentChildren; class?: string }) {
   return (
     <div class={cx("mb-3 mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 first:mt-0", klass)}>
-      <h2 class="flex-1 text-[15px] font-semibold tracking-tight">{children}</h2>
+      <h2 class="hud-title">{children}</h2>
+      <span class="hud-title-line" aria-hidden="true" />
       {actions && <div class="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }
 
 export function TableCard({ children }: { children: ComponentChildren }) {
-  return <div class="md:overflow-hidden md:rounded-xl md:border md:border-line md:bg-surface md:shadow-card">{children}</div>;
+  return <div class="table-card">{children}</div>;
 }
 
 export function Empty({ children, icon }: { children: ComponentChildren; icon?: ComponentChildren }) {

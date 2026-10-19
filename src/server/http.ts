@@ -30,6 +30,7 @@ import { registerSystemRoutes } from "./system-routes.js";
 import { buildMetrics } from "./metrics.js";
 import { registerLiveRoutes, topicsForWrite } from "./live.js";
 import { registerImageRoutes } from "./images.js";
+import { registerFloorplanRoutes } from "./floorplan.js";
 import type { FetchFn } from "../core/official-images.js";
 import { buildClients, buildOverview, buildStatus } from "./views.js";
 
@@ -198,6 +199,7 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
   registerOpsRoutes(server, app, actorOf);
   registerSystemRoutes(server, app, actorOf);
   registerImageRoutes(server, app, actorOf, { fetch: opts.fetch });
+  registerFloorplanRoutes(server, app, actorOf);
 
   server.post("/api/refresh", async (_req, reply) => {
     const last = app.poller.cache.lastAttemptAt;

@@ -23,6 +23,7 @@ export function topicsForWrite(path: string): LiveTopic[] {
   if (path.startsWith("/api/reservations")) return ["reservations", "audit"];
   if (path.startsWith("/api/alerts")) return ["alerts", "audit"];
   if (path.startsWith("/api/images")) return ["images", "audit"];
+  if (path === "/api/floorplan") return ["floorplan", "audit"];
   if (path === "/api/nodes/reboot" || path === "/api/wifi") return ["snapshot", "status", "audit"];
   // Backup e o que vier depois: relê tudo.
   return ["inventory", "ipplan", "reservations", "alerts", "audit"];

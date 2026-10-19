@@ -30,12 +30,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Fontes Inter e Bricolage Grotesque
+## Fontes Inter, Orbitron e JetBrains Mono
 
 A interface empacota as fontes [Inter](https://github.com/rsms/inter)
-(© The Inter Project Authors) e
-[Bricolage Grotesque](https://github.com/ateliertriay/bricolage)
-(© The Bricolage Grotesque Project Authors), via os pacotes
-`@fontsource-variable/inter` e `@fontsource-variable/bricolage-grotesque`.
-Ambas são distribuídas sob a SIL Open Font License 1.1; o texto completo está
-no arquivo `LICENSE` de cada pacote e em https://openfontlicense.org.
+(© The Inter Project Authors), [Orbitron](https://github.com/theleagueof/orbitron)
+(© The Orbitron Project Authors) e
+[JetBrains Mono](https://github.com/JetBrains/JetBrainsMono)
+(© The JetBrains Mono Project Authors), via os pacotes
+`@fontsource-variable/inter`, `@fontsource-variable/orbitron` e
+`@fontsource-variable/jetbrains-mono`. Todas são distribuídas sob a SIL Open
+Font License 1.1; o texto completo está no arquivo `LICENSE` de cada pacote e
+em https://openfontlicense.org.

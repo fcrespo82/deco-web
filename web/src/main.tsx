@@ -13,6 +13,7 @@ import {
   MonitorSmartphone,
   Moon,
   Network,
+  House,
   Palette,
   Search,
   Sun,
@@ -20,8 +21,10 @@ import {
   Tv as TvIcon,
 } from "lucide-preact";
 import "@fontsource-variable/inter";
-import "@fontsource-variable/bricolage-grotesque";
+import "@fontsource-variable/orbitron";
+import "@fontsource-variable/jetbrains-mono";
 import { api, ApiError } from "./api";
+import { Boot } from "./Boot";
 import { ClientSheet } from "./ClientSheet";
 import { CommandPalette } from "./CommandPalette";
 import { RebootDialog } from "./DangerDialogs";
@@ -32,6 +35,7 @@ import { useRoute, useTheme } from "./hooks";
 import { connectLive, disconnectLive } from "./lib/live";
 import { Alerts } from "./pages/Alerts";
 import { Appearance } from "./pages/Appearance";
+import { Casa } from "./pages/Casa";
 import { Backup } from "./pages/Backup";
 import { Clients } from "./pages/Clients";
 import { History } from "./pages/History";
@@ -58,6 +62,7 @@ interface Route {
 
 const ROUTES: Route[] = [
   { path: "", label: "Visão geral", short: "Início", icon: LayoutDashboard, page: Overview, tab: true, key: "v" },
+  { path: "casa", label: "Casa", icon: House, page: Casa, key: "k" },
   { path: "clientes", label: "Clientes", icon: MonitorSmartphone, page: Clients, tab: true, key: "c" },
   { path: "reservas", label: "Reservas", icon: Lock, page: Reservations, tab: true, key: "r" },
   { path: "ips", label: "Plano de IPs", short: "IPs", icon: Network, page: IpPlan, tab: true, key: "i" },
@@ -152,6 +157,21 @@ function ThemeButton({ theme, cycle, withLabel }: { theme: keyof typeof THEME_LA
     <IconButton label={THEME_LABEL[theme]} onClick={cycle}>
       <Icon class="size-[18px]" />
     </IconButton>
+  );
+}
+
+/** Relógio de HUD no topo (só em telas largas). */
+function HeaderClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span class="hidden items-center gap-2 font-mono text-[12px] tabular-nums text-muted xl:flex" aria-hidden="true">
+      <span class="mono-label">sys</span>
+      {now.toLocaleTimeString("pt-BR")}
+    </span>
   );
 }
 
@@ -252,8 +272,9 @@ function App() {
         <header class="sticky top-0 z-30 border-b border-line bg-bg/80 backdrop-blur-md">
           <div class="mx-auto flex h-14 max-w-[1240px] items-center gap-3 px-4 lg:px-8">
             <Logo class="lg:hidden" />
-            <h1 class="min-w-0 truncate font-display text-[18px] font-semibold tracking-tight lg:text-[21px]">{current.label}</h1>
+            <h1 class="page-title min-w-0 truncate text-[15px] font-semibold lg:text-[18px]">{current.label}</h1>
             <span class="flex-1" />
+            <HeaderClock />
             <IconButton label="Buscar (Ctrl+K)" class="lg:hidden" onClick={() => setUi({ palette: true })}>
               <Search class="size-[18px]" />
             </IconButton>
@@ -274,7 +295,7 @@ function App() {
 
         <main class="mx-auto max-w-[1240px] px-4 pb-28 pt-5 lg:px-8 lg:pb-12 lg:pt-6">
           <StatusBanners />
-          <div key={current.path} class="animate-fade-in">
+          <div key={current.path} class="page-view">
             <Page />
           </div>
         </main>
@@ -326,6 +347,7 @@ function App() {
         </Dialog>
       )}
       <CommandPalette routes={PALETTE_ROUTES} cycleTheme={cycleTheme} />
+      <Boot />
       {ui.client && <ClientSheet mac={ui.client} onClose={() => openClient(null)} />}
       {ui.reboot && <GlobalReboot mac={ui.reboot} />}
       <Toaster />
