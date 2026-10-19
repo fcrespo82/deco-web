@@ -50,7 +50,7 @@ export function SvgDeco({ model, online, active, uid, art }: { model: string; on
   if (art) {
     return (
       <g class={online ? "" : "topo-photo-off"}>
-        {art.opaque && <rect x="-30" y="-46" width="60" height="70" rx="14" class="topo-photo-pedestal" />}
+        {art.opaque && <rect x="-31" y="-47" width="62" height="72" rx="14" class="topo-photo-pedestal" />}
         <image
           href={art.src}
           x="-28"
@@ -58,7 +58,7 @@ export function SvgDeco({ model, online, active, uid, art }: { model: string; on
           width="56"
           height="70"
           preserveAspectRatio="xMidYMid meet"
-          style={art.opaque ? { mixBlendMode: "multiply" } : { filter: "drop-shadow(0 6px 6px rgb(15 23 42 / 0.25))" }}
+          style={art.opaque ? undefined : { filter: "drop-shadow(0 6px 6px rgb(15 23 42 / 0.25))" }}
         />
         {online && <circle cx="18" cy="18" r="9" fill="var(--led-on)" opacity="0.35" class="deco-led-glow" />}
         <circle cx="18" cy="18" r="4" fill={online ? "var(--led-on)" : "var(--led-off)"} stroke="var(--surface)" stroke-width="1.5" class={online ? "deco-led" : ""} />

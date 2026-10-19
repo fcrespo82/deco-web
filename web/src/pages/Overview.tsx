@@ -4,8 +4,9 @@ import { ArrowDown, ArrowUp, Cable, Globe, Power, Router, Search, Wifi, X } from
 import type { Band, ClientView, NodeView, OverviewView, WifiKind, WifiNetwork } from "../api";
 import { DecoArt } from "../art/DecoArt";
 import { categoryOf, DeviceArt } from "../art/devices";
-import { ClientSheet, clientLabel, RateBar } from "../ClientSheet";
-import { RebootDialog, WifiDialog } from "../DangerDialogs";
+import { clientLabel, RateBar } from "../ClientSheet";
+import { WifiDialog } from "../DangerDialogs";
+import { openClient as openClientSheet, selectNode, setUi, useUi } from "../lib/ui-state";
 import { useClients, useOverview, useStatus } from "../data";
 import { BAND_LABEL, NETWORK_LABEL, WIFI_KIND_LABEL, rate, shortFirmware, since } from "../format";
 import { useNow } from "../hooks";
@@ -100,7 +101,7 @@ function Hero({ data, clients }: { data: OverviewView; clients: ClientView[] }) 
   return (
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Tile label="Internet" icon={<Globe />} tone={internet ? (internet.ipv4Online ? "ok" : "bad") : undefined}>
-        <div class="text-[18px] font-semibold leading-tight sm:text-[22px]">{internet ? (internet.ipv4Online ? "Online" : "Fora do ar") : "—"}</div>
+        <div class="text-[18px] font-display font-semibold leading-tight sm:text-[22px]">{internet ? (internet.ipv4Online ? "Online" : "Fora do ar") : "—"}</div>
         <div class="mt-1 truncate text-[12px] text-muted">
           {internet && (
             <>
@@ -111,7 +112,7 @@ function Hero({ data, clients }: { data: OverviewView; clients: ClientView[] }) 
       </Tile>
       <Tile label="Tráfego agora" icon={<ArrowDown />}>
         <div class="flex flex-wrap items-baseline gap-x-3 whitespace-nowrap tabular-nums">
-          <span class="text-[18px] font-semibold leading-tight sm:text-[22px]" style={{ color: "var(--flow-down)" }}>
+          <span class="text-[18px] font-display font-semibold leading-tight sm:text-[22px]" style={{ color: "var(--flow-down)" }}>
             ↓ {rate(down)}
           </span>
           <span class="text-[13px] font-medium" style={{ color: "var(--flow-up)" }}>
@@ -121,7 +122,7 @@ function Hero({ data, clients }: { data: OverviewView; clients: ClientView[] }) 
         <Sparkline points={history} />
       </Tile>
       <Tile label="Clientes online" icon={<Wifi />}>
-        <div class="mb-2 text-[18px] font-semibold leading-tight tabular-nums sm:text-[22px]">
+        <div class="mb-2 text-[18px] font-display font-semibold leading-tight tabular-nums sm:text-[22px]">
           {totals.clients}
           {Object.keys(totals.byNetwork).length > 1 && (
             <span class="ml-2 text-[12px] font-normal text-muted max-sm:hidden">
@@ -135,7 +136,7 @@ function Hero({ data, clients }: { data: OverviewView; clients: ClientView[] }) 
       </Tile>
       <Tile label="Mesh" icon={<Router />} tone={nodesOnline === nodes.length ? undefined : "bad"}>
         <div class="flex items-center justify-between gap-2">
-          <div class="text-[18px] font-semibold leading-tight tabular-nums sm:text-[22px]">
+          <div class="text-[18px] font-display font-semibold leading-tight tabular-nums sm:text-[22px]">
             {nodesOnline}
             <span class="text-muted">/{nodes.length}</span>
             <div class="text-[11.5px] font-normal text-muted">{nodesOnline === nodes.length ? "nós online" : `${nodes.length - nodesOnline} offline`}</div>
@@ -293,7 +294,7 @@ function NodeShelf({ nodes, selected, onSelect, now }: { nodes: NodeView[]; sele
               {n.model} · {n.online ? (n.onlineSince ? `há ${since(n.onlineSince, now)}` : "online") : "offline"}
             </div>
             <div class="mt-2 flex items-baseline gap-1">
-              <span class="text-[22px] font-semibold leading-none tabular-nums">{n.clients.total}</span>
+              <span class="font-display text-[22px] font-semibold leading-none tabular-nums">{n.clients.total}</span>
               <span class="text-[11.5px] text-muted">{n.clients.total === 1 ? "cliente" : "clientes"}</span>
             </div>
             <div class="mt-2 flex h-1.5 overflow-hidden rounded-full bg-surface-2">
@@ -348,10 +349,9 @@ export function Overview() {
   const { data, error } = useOverview();
   const clientsQ = useClients();
   const status = useStatus();
-  const [selected, setSelected] = useState<string | null>(null);
-  const [opened, setOpened] = useState<string | null>(null);
+  const { node: selected } = useUi();
+  const setSelected = selectNode;
   const [q, setQ] = useState("");
-  const [rebooting, setRebooting] = useState<NodeView | null>(null);
   const [editingWifi, setEditingWifi] = useState<WifiKind | null>(null);
 
   const clients = clientsQ.data?.clients ?? [];
@@ -378,14 +378,12 @@ export function Overview() {
   const dangerous = mode.allowDangerous;
   const wifiWrite = dangerous && mode.wifiWrite;
   const node = data.nodes.find((n) => n.mac === selected) ?? null;
-  const openClient = (c: ClientView) => setOpened(c.mac);
+  const openClient = (c: ClientView) => openClientSheet(c.mac);
   const matches = highlight ? clients.filter((c) => c.online && highlight(c)).length : 0;
 
   return (
     <>
-      {rebooting && <RebootDialog node={rebooting} onClose={() => setRebooting(null)} />}
       {editingWifi && <WifiDialog kind={editingWifi} rows={(data.wifi ?? []).filter((w) => w.kind === editingWifi)} onClose={() => setEditingWifi(null)} />}
-      {opened && <ClientSheet mac={opened} onClose={() => setOpened(null)} />}
 
       <div class="flex flex-col gap-3">
       <div class="max-sm:order-2">
@@ -415,7 +413,7 @@ export function Overview() {
         </Card>
         <Card class="lg:sticky lg:top-[72px] lg:self-start">
           {node ? (
-            <NodePanel node={node} clients={clients} now={now} onReboot={dangerous ? () => setRebooting(node) : undefined} onOpen={openClient} onClose={() => setSelected(null)} />
+            <NodePanel node={node} clients={clients} now={now} onReboot={dangerous ? () => setUi({ reboot: node.mac }) : undefined} onOpen={openClient} onClose={() => setSelected(null)} />
           ) : (
             <TopTalkers clients={clients} onOpen={openClient} />
           )}

@@ -29,3 +29,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Fontes Inter e Bricolage Grotesque
+
+A interface empacota as fontes [Inter](https://github.com/rsms/inter)
+(© The Inter Project Authors) e
+[Bricolage Grotesque](https://github.com/ateliertriay/bricolage)
+(© The Bricolage Grotesque Project Authors), via os pacotes
+`@fontsource-variable/inter` e `@fontsource-variable/bricolage-grotesque`.
+Ambas são distribuídas sob a SIL Open Font License 1.1; o texto completo está
+no arquivo `LICENSE` de cada pacote e em https://openfontlicense.org.

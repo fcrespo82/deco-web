@@ -13,7 +13,7 @@ export type Tone = "ok" | "warn" | "bad" | "accent" | "";
 type ButtonVariant = "default" | "primary" | "danger" | "danger-solid" | "ghost";
 const BUTTON: Record<ButtonVariant, string> = {
   default: "border border-line bg-surface text-fg shadow-card hover:bg-surface-2",
-  primary: "border border-transparent bg-accent text-accent-fg shadow-card hover:brightness-110",
+  primary: "btn-brand border border-transparent text-white shadow-card hover:brightness-110",
   danger: "border border-line bg-surface text-bad shadow-card hover:bg-bad-soft",
   "danger-solid": "border border-transparent bg-bad text-white shadow-card hover:brightness-110",
   ghost: "border border-transparent text-muted hover:bg-surface-2 hover:text-fg",

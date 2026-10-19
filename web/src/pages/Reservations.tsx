@@ -1,4 +1,4 @@
-import { useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import { Lock, Plus, Search } from "lucide-preact";
 import type { ClientView } from "../api";
 import { categoryOf, DeviceArt } from "../art/devices";
@@ -63,7 +63,11 @@ function PickClient({ onPick, onCancel }: { onPick: (c: ClientView) => void; onC
 export function Reservations() {
   const { data, error } = useReservations();
   const [editing, setEditing] = useState<Editing | null>(null);
-  const [picking, setPicking] = useState(false);
+  // "Nova reserva" pela paleta de comandos chega como #/reservas?nova=1.
+  const [picking, setPicking] = useState(() => /[?&]nova=1/.test(location.hash));
+  useEffect(() => {
+    if (picking && location.hash.includes("nova=1")) history.replaceState(null, "", "#/reservas");
+  }, []);
 
   const rows = useMemo(() => [...(data?.clients ?? [])].sort((a, b) => ipKey(a.reservation!.ip) - ipKey(b.reservation!.ip)), [data]);
 

@@ -14,10 +14,20 @@ import {
   Moon,
   Network,
   Palette,
+  Search,
   Sun,
   SunMoon,
+  Tv,
 } from "lucide-preact";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/bricolage-grotesque";
 import { api, ApiError } from "./api";
+import { ClientSheet } from "./ClientSheet";
+import { CommandPalette } from "./CommandPalette";
+import { RebootDialog } from "./DangerDialogs";
+import { useOverview } from "./data";
+import { openClient, setUi, useUi } from "./lib/ui-state";
+import { MeshBackground } from "./MeshBackground";
 import { useRoute, useTheme } from "./hooks";
 import { connectLive, disconnectLive } from "./lib/live";
 import { Alerts } from "./pages/Alerts";
@@ -41,19 +51,23 @@ interface Route {
   page: ComponentType;
   /** Aparece nas abas de baixo no celular (o resto fica em "Mais"). */
   tab?: boolean;
+  /** Atalho "g" + letra. */
+  key?: string;
 }
 
 const ROUTES: Route[] = [
-  { path: "", label: "Visão geral", short: "Início", icon: LayoutDashboard, page: Overview, tab: true },
-  { path: "clientes", label: "Clientes", icon: MonitorSmartphone, page: Clients, tab: true },
-  { path: "reservas", label: "Reservas", icon: Lock, page: Reservations, tab: true },
-  { path: "ips", label: "Plano de IPs", short: "IPs", icon: Network, page: IpPlan, tab: true },
-  { path: "inventario", label: "Inventário", icon: Boxes, page: Inventory },
-  { path: "historico", label: "Histórico", icon: Clock, page: History },
-  { path: "alertas", label: "Alertas", icon: Bell, page: Alerts },
-  { path: "backup", label: "Backup", icon: DatabaseBackup, page: Backup },
-  { path: "aparencia", label: "Aparência", icon: Palette, page: Appearance },
+  { path: "", label: "Visão geral", short: "Início", icon: LayoutDashboard, page: Overview, tab: true, key: "v" },
+  { path: "clientes", label: "Clientes", icon: MonitorSmartphone, page: Clients, tab: true, key: "c" },
+  { path: "reservas", label: "Reservas", icon: Lock, page: Reservations, tab: true, key: "r" },
+  { path: "ips", label: "Plano de IPs", short: "IPs", icon: Network, page: IpPlan, tab: true, key: "i" },
+  { path: "inventario", label: "Inventário", icon: Boxes, page: Inventory, key: "n" },
+  { path: "historico", label: "Histórico", icon: Clock, page: History, key: "h" },
+  { path: "alertas", label: "Alertas", icon: Bell, page: Alerts, key: "a" },
+  { path: "backup", label: "Backup", icon: DatabaseBackup, page: Backup, key: "b" },
+  { path: "aparencia", label: "Aparência", icon: Palette, page: Appearance, key: "p" },
 ];
+
+const PALETTE_ROUTES = [...ROUTES.map(({ path, label, icon, key }) => ({ path, label, icon, key })), { path: "tv", label: "Modo TV", icon: Tv, key: "t" }];
 
 const THEME_LABEL = { auto: "Tema: automático", light: "Tema: claro", dark: "Tema: escuro" } as const;
 const THEME_ICON = { auto: SunMoon, light: Sun, dark: Moon } as const;
@@ -80,15 +94,12 @@ function Login({ onDone }: { onDone: () => void }) {
     }
   }
   return (
-    <div class="flex min-h-dvh items-center justify-center bg-[radial-gradient(ellipse_at_top,var(--accent-soft),transparent_60%)] px-4">
-      <form onSubmit={submit} class="w-full max-w-sm animate-slide-up rounded-2xl border border-line bg-surface p-6 shadow-pop">
-        <div class="mb-6 flex items-center gap-3">
-          <Logo class="size-10" />
-          <div>
-            <h1 class="text-[17px] font-semibold tracking-tight">Deco Dashboard</h1>
-            <p class="text-[13px] text-muted">Entre para gerenciar a rede</p>
-          </div>
-        </div>
+    <div class="login-bg relative flex min-h-dvh items-center justify-center overflow-hidden px-4">
+      <MeshBackground class="absolute inset-0 size-full" />
+      <form onSubmit={submit} class="glass relative w-full max-w-sm animate-slide-up rounded-3xl p-7">
+        <Logo class="size-12 shadow-pop" />
+        <h1 class="mt-5 font-display text-[28px] font-semibold leading-tight tracking-tight">Sua rede, ao vivo.</h1>
+        <p class="mb-6 mt-1 text-[13.5px] text-muted">Entre para ver o mapa, os aparelhos e o que está acontecendo agora.</p>
         <input
           type="password"
           class="field"
@@ -143,11 +154,19 @@ function ThemeButton({ theme, cycle, withLabel }: { theme: keyof typeof THEME_LA
   );
 }
 
+/** Diálogo de reinício aberto pela paleta ou pelo painel do nó. */
+function GlobalReboot({ mac }: { mac: string }) {
+  const node = useOverview().data?.nodes.find((n) => n.mac === mac);
+  if (!node) return null;
+  return <RebootDialog node={node} onClose={() => setUi({ reboot: null })} />;
+}
+
 function App() {
   const route = useRoute();
   const [theme, cycleTheme] = useTheme();
   const [auth, setAuth] = useState<{ authRequired: boolean; authenticated: boolean } | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
+  const ui = useUi();
 
   const checkAuth = () => api.me().then(setAuth, () => setAuth({ authRequired: true, authenticated: false }));
   useEffect(() => {
@@ -177,15 +196,33 @@ function App() {
   return (
     <div class="min-h-dvh lg:grid lg:grid-cols-[248px_1fr]">
       {/* Barra lateral (desktop) */}
-      <aside class="sticky top-0 hidden h-dvh flex-col border-r border-line bg-surface lg:flex">
+      <aside class="sidebar sticky top-0 hidden h-dvh flex-col border-r border-line bg-surface lg:flex">
         <div class="flex items-center gap-2.5 px-5 py-5">
           <Logo />
-          <span class="text-[15px] font-semibold tracking-tight">Deco Dashboard</span>
+          <span class="font-display text-[17px] font-semibold tracking-tight">Deco Dashboard</span>
+        </div>
+        <div class="px-3 pb-3">
+          <button
+            type="button"
+            onClick={() => setUi({ palette: true })}
+            class="flex w-full items-center gap-2 rounded-lg border border-line bg-bg/60 px-3 py-2 text-[13px] text-muted transition hover:border-accent/40 hover:text-fg"
+          >
+            <Search class="size-4" />
+            Buscar…
+            <span class="ml-auto flex gap-0.5">
+              <kbd class="kbd">Ctrl</kbd>
+              <kbd class="kbd">K</kbd>
+            </span>
+          </button>
         </div>
         <nav class="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3" aria-label="Principal">
           {ROUTES.map((r) => (
             <NavLink route={r} current={r === current} />
           ))}
+          <a href="#/tv" class="mt-2 flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium text-muted transition hover:bg-surface-2 hover:text-fg">
+            <Tv class="size-[18px] shrink-0" />
+            Modo TV
+          </a>
         </nav>
         <div class="grid gap-3 border-t border-line p-4">
           <ModeBadge />
@@ -205,8 +242,11 @@ function App() {
         <header class="sticky top-0 z-30 border-b border-line bg-bg/80 backdrop-blur-md">
           <div class="mx-auto flex h-14 max-w-[1240px] items-center gap-3 px-4 lg:px-8">
             <Logo class="lg:hidden" />
-            <h1 class="min-w-0 truncate text-[16px] font-semibold tracking-tight lg:text-[18px]">{current.label}</h1>
+            <h1 class="min-w-0 truncate font-display text-[18px] font-semibold tracking-tight lg:text-[21px]">{current.label}</h1>
             <span class="flex-1" />
+            <IconButton label="Buscar (Ctrl+K)" class="lg:hidden" onClick={() => setUi({ palette: true })}>
+              <Search class="size-[18px]" />
+            </IconButton>
             <div class="hidden sm:block">
               <StatusPill />
             </div>
@@ -256,6 +296,10 @@ function App() {
             {ROUTES.filter((r) => !r.tab).map((r) => (
               <NavLink route={r} current={r === current} onNavigate={() => setMoreOpen(false)} />
             ))}
+            <a href="#/tv" class="flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium text-muted transition hover:bg-surface-2 hover:text-fg">
+              <Tv class="size-[18px] shrink-0" />
+              Modo TV
+            </a>
           </nav>
           <div class="mt-3 grid gap-0.5 border-t border-line pt-3">
             <ThemeButton theme={theme} cycle={cycleTheme} withLabel />
@@ -271,6 +315,9 @@ function App() {
           </div>
         </Dialog>
       )}
+      <CommandPalette routes={PALETTE_ROUTES} cycleTheme={cycleTheme} />
+      {ui.client && <ClientSheet mac={ui.client} onClose={() => openClient(null)} />}
+      {ui.reboot && <GlobalReboot mac={ui.reboot} />}
       <Toaster />
     </div>
   );

@@ -5,7 +5,7 @@ import { useClients, useStatus } from "../data";
 import { DeviceEditor } from "../DeviceEditor";
 import { BAND_LABEL, INVENTORY_TYPE_LABEL, NETWORK_LABEL, ago, dateTime, deviceType, rate } from "../format";
 import { useNow } from "../hooks";
-import { ClientSheet } from "../ClientSheet";
+import { openClient } from "../lib/ui-state";
 import { ReservationDialog } from "../ReservationDialog";
 import { Badge, Button, Check, cx, Dot, Empty, FilterChips, PageLoading, Segmented, TableCard } from "../ui";
 import { Bubbles } from "../views/Bubbles";
@@ -129,7 +129,6 @@ export function Clients() {
   const [sort, setSort] = useState<SortKey | null>(null);
   const [editing, setEditing] = useState<ClientView | null>(null);
   const [reserving, setReserving] = useState<ClientView | null>(null);
-  const [opened, setOpened] = useState<string | null>(null);
   const [view, setView] = usePref<View>("clients.view", "gallery", ["gallery", "bubbles", "table"]);
   const [groupBy, setGroupBy] = usePref<GroupBy | "none">("clients.group", "node", ["none", "node", "category", "band", "network", "vendor", "owner"]);
   const [bySize, setBySize] = usePref<"traffic" | "equal">("clients.size", "traffic", ["traffic", "equal"]);
@@ -262,10 +261,10 @@ export function Clients() {
       {rows.length === 0 ? (
         <Empty icon={<MonitorSmartphone />}>Nenhum cliente com esses filtros.</Empty>
       ) : view === "gallery" ? (
-        <Gallery clients={rows} groupBy={groupBy === "none" ? null : groupBy} onOpen={(c) => setOpened(c.mac)} now={now} />
+        <Gallery clients={rows} groupBy={groupBy === "none" ? null : groupBy} onOpen={(c) => openClient(c.mac)} now={now} />
       ) : view === "bubbles" ? (
         <div class="hero-glow rounded-2xl border border-line bg-surface p-3 shadow-card sm:p-5">
-          <Bubbles clients={rows} groupBy={groupBy === "none" ? "node" : groupBy} byTraffic={bySize === "traffic"} onOpen={(c) => setOpened(c.mac)} />
+          <Bubbles clients={rows} groupBy={groupBy === "none" ? "node" : groupBy} byTraffic={bySize === "traffic"} onOpen={(c) => openClient(c.mac)} />
         </div>
       ) : (
         <TableCard>
@@ -345,7 +344,6 @@ export function Clients() {
           </table>
         </TableCard>
       )}
-      {opened && <ClientSheet mac={opened} onClose={() => setOpened(null)} />}
       {editing && (
         <DeviceEditor
           mac={editing.mac}

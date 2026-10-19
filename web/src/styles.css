@@ -13,9 +13,11 @@
   --line: #e3e6eb;
   --text: #14171c;
   --muted: #5f6875;
-  --accent: #2563eb;
-  --accent-soft: #e6eefe;
+  --accent: #5b4bf0;
+  --accent-soft: #eceaff;
   --accent-text: #ffffff;
+  --brand-from: #0fb5a6;
+  --brand-to: #7c5cff;
   --ok: #15803d;
   --ok-soft: #dcfce7;
   --warn: #a16207;
@@ -33,7 +35,7 @@
   --deco-light: #ffffff; --deco-mid: #eef1f5; --deco-shade: #c9d1db; --deco-floor: rgb(15 23 42 / 0.12);
   --deco-cap: #39404a; --deco-cap-top: #4b535e;
   --hero-from: #e8f0ff; --hero-to: #f5f6f8;
-  --deco-pedestal: transparent;
+  --deco-pedestal: #ffffff;
   color-scheme: light;
 }
 
@@ -46,9 +48,11 @@
     --line: #262c36;
     --text: #e8ebef;
     --muted: #97a1ae;
-    --accent: #5b9cf8;
-    --accent-soft: #172741;
-    --accent-text: #0a1220;
+    --accent: #9a8cff;
+    --accent-soft: #221d4a;
+    --accent-text: #0d0b1f;
+    --brand-from: #2dd4bf;
+    --brand-to: #8b6dff;
     --ok: #4ade80;
     --ok-soft: #10291a;
     --warn: #facc15;
@@ -77,9 +81,11 @@
   --line: #262c36;
   --text: #e8ebef;
   --muted: #97a1ae;
-  --accent: #5b9cf8;
-  --accent-soft: #172741;
-  --accent-text: #0a1220;
+  --accent: #9a8cff;
+  --accent-soft: #221d4a;
+  --accent-text: #0d0b1f;
+  --brand-from: #2dd4bf;
+  --brand-to: #8b6dff;
   --ok: #4ade80;
   --ok-soft: #10291a;
   --warn: #facc15;
@@ -117,7 +123,8 @@
   --color-warn-soft: var(--warn-soft);
   --color-bad: var(--bad);
   --color-bad-soft: var(--bad-soft);
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --shadow-card: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 1px 1px hsl(var(--shadow-color) / 0.04);
   --shadow-pop: 0 10px 30px -8px hsl(var(--shadow-color) / 0.3), 0 2px 6px hsl(var(--shadow-color) / 0.12);
@@ -144,6 +151,7 @@
   }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   ::selection { background: var(--accent-soft); }
+  h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.01em; }
   code {
     font-family: var(--font-mono); font-size: 12px;
     background: var(--surface-2); padding: 1px 5px; border-radius: 4px;
@@ -298,24 +306,51 @@
   /* Foto de Deco escolhida pelo usuário. */
   .deco-photo { position: relative; display: block; aspect-ratio: 4 / 5; }
   .deco-photo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 10px rgb(15 23 42 / 0.22)); }
-  .deco-photo.is-opaque img { mix-blend-mode: multiply; filter: none; }
+  .deco-photo.is-opaque { background: var(--deco-pedestal); border-radius: 22%; padding: 7%; box-shadow: 0 0 0 1px var(--line), var(--shadow-card); }
+  .deco-photo.is-opaque img { filter: none; }
   .deco-photo.is-off img { filter: grayscale(1); opacity: 0.6; }
   .deco-photo-led { position: absolute; right: 10%; bottom: 8%; width: 9px; height: 9px; border-radius: 999px; background: var(--led-off); box-shadow: 0 0 0 2px var(--surface); }
   .deco-photo-led.deco-led { background: var(--led-on); box-shadow: 0 0 0 2px var(--surface), 0 0 10px var(--led-on); }
-  .topo-photo-pedestal { fill: var(--deco-pedestal); }
+  .topo-photo-pedestal { fill: var(--deco-pedestal); stroke: var(--line); }
   .topo-photo-off { filter: grayscale(1); opacity: 0.6; }
+
+  /* Identidade: gradiente da marca, vidro, teclas. */
+  .btn-brand { background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to)); }
+  .text-brand { background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .kbd {
+    @apply inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] border border-line bg-surface px-1 font-sans text-[10.5px] font-medium text-muted;
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+  .glass {
+    background: color-mix(in srgb, var(--surface) 72%, transparent);
+    backdrop-filter: blur(18px) saturate(1.4);
+    border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+    box-shadow: 0 30px 60px -20px hsl(var(--shadow-color) / 0.35);
+  }
+  .login-bg {
+    background:
+      radial-gradient(60% 50% at 15% 10%, color-mix(in srgb, var(--brand-from) 22%, transparent), transparent 70%),
+      radial-gradient(60% 60% at 90% 90%, color-mix(in srgb, var(--brand-to) 22%, transparent), transparent 70%),
+      var(--bg);
+  }
+  .sidebar { background-image: radial-gradient(120% 40% at 0% 0%, color-mix(in srgb, var(--brand-to) 9%, transparent), transparent 70%); }
+  .sidebar nav a[aria-current="page"] { position: relative; }
+  .sidebar nav a[aria-current="page"]::before {
+    content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0;
+    background-image: linear-gradient(var(--brand-from), var(--brand-to));
+  }
+
+  /* Paleta de comandos: no alto da tela, não no centro. */
+  dialog.palette { @apply mx-auto mt-[12vh] w-[calc(100%-24px)] max-w-[620px] border-0 bg-transparent p-0 text-fg; }
+  dialog.palette[open] { animation: palette-in 0.16s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  dialog.palette::backdrop { background: rgb(5 8 12 / 0.45); backdrop-filter: blur(3px); }
+  @media (max-width: 639px) { dialog.palette { @apply mt-3; } }
 
   /* Fundo do topo das telas principais. */
   .hero-glow { background: radial-gradient(120% 90% at 50% 0%, var(--hero-from), transparent 70%); }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .deco-photo.is-opaque { background: #eef1f5; border-radius: 22%; padding: 7%; }
-  :root:not([data-theme="light"]) .deco-photo.is-opaque img { mix-blend-mode: normal; }
-}
-:root[data-theme="dark"] .deco-photo.is-opaque { background: #eef1f5; border-radius: 22%; padding: 7%; }
-:root[data-theme="dark"] .deco-photo.is-opaque img { mix-blend-mode: normal; }
-
+@keyframes palette-in { from { opacity: 0; transform: translateY(-8px) scale(0.98); } }
 @keyframes dash-run { to { stroke-dashoffset: -18; } }
 @keyframes halo { 0% { opacity: 0.35; transform: scale(0.7); } 70%, 100% { opacity: 0; transform: scale(1.5); } }
 @keyframes spin { to { transform: rotate(360deg); } }
