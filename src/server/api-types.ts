@@ -25,11 +25,26 @@ export interface StatusView {
  * O que mudou, avisado pelo canal ao vivo (GET /api/live). A UI relê só as
  * telas que dependem desses tópicos.
  */
-export type LiveTopic = "status" | "snapshot" | "inventory" | "ipplan" | "reservations" | "alerts" | "audit";
+export type LiveTopic = "status" | "snapshot" | "inventory" | "ipplan" | "reservations" | "alerts" | "audit" | "images";
 
 export interface LiveMessage {
   topics: LiveTopic[];
   status: StatusView;
+}
+
+// --- imagens ---
+
+export type ImageKind = "decos" | "categories" | "devices";
+
+/** URL de cada imagem escolhida, por tipo e nome (modelo, categoria, id do dispositivo). */
+export type ImagesView = Record<ImageKind, Record<string, string>>;
+
+export interface OfficialResult {
+  model: string;
+  status: "ok" | "not-found" | "failed";
+  page: string | null;
+  url: string | null;
+  error: string | null;
 }
 
 export interface NodeView extends MeshNode {

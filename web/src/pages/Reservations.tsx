@@ -47,7 +47,7 @@ function PickClient({ onPick, onCancel }: { onPick: (c: ClientView) => void; onC
         {options.map((c) => (
           <li>
             <button type="button" onClick={() => onPick(c)} class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-surface-2">
-              <DeviceArt size="sm" category={categoryOf(c)} />
+              <DeviceArt size="sm" category={categoryOf(c)} deviceId={c.device?.id} />
               <span class="min-w-0 flex-1 truncate font-medium">{label(c)}</span>
               <span class="font-mono text-[12px] text-muted">{c.ip}</span>
             </button>
@@ -133,7 +133,7 @@ export function Reservations() {
                   </td>
                   <td data-label="Aparelho">
                     <div class="flex items-center gap-2.5">
-                      <DeviceArt size="sm" category={categoryOf(c)} online={c.online} class="max-md:hidden" />
+                      <DeviceArt size="sm" category={categoryOf(c)} online={c.online} deviceId={c.device?.id} class="max-md:hidden" />
                       <div class="min-w-0">
                         <div class="font-medium text-fg">{label(c)}</div>
                         <div class="text-[12px] text-muted">{c.device?.type ? INVENTORY_TYPE_LABEL[c.device.type] : deviceType(c.deviceType)}</div>

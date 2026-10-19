@@ -25,6 +25,7 @@ import {
 } from "lucide-preact";
 import type { ClientView } from "../api";
 import { cx } from "../ui";
+import { useArtImages } from "./images";
 
 export type Category =
   | "phone"
@@ -171,24 +172,41 @@ export function DeviceArt({
   size = "md",
   online = true,
   vendor,
+  deviceId,
   class: klass,
 }: {
   category: Category;
   size?: keyof typeof SIZES;
   online?: boolean;
   vendor?: string | null;
+  /** Dispositivo do inventário, para usar a foto dele (tela Aparência). */
+  deviceId?: number | null;
   class?: string;
 }) {
   const meta = CATEGORY[category];
   const Icon = meta.icon;
   const mark = size !== "sm" ? vendorMark(vendor ?? null) : null;
+  const { images, device } = useArtImages();
+  const photo = device(category, deviceId);
+  const own = photo && deviceId != null && images?.devices[String(deviceId)] === photo.src;
   return (
     <span
-      class={cx("device-art relative inline-flex shrink-0 items-center justify-center text-white", SIZES[size], !online && "opacity-45 grayscale", klass)}
-      style={{ backgroundImage: `linear-gradient(135deg, ${meta.from}, ${meta.to})` }}
+      class={cx(
+        "device-art relative inline-flex shrink-0 items-center justify-center text-white",
+        SIZES[size],
+        photo && "bg-white ring-1 ring-line",
+        !online && "opacity-45 grayscale",
+        klass,
+      )}
+      style={photo ? undefined : { backgroundImage: `linear-gradient(135deg, ${meta.from}, ${meta.to})` }}
       title={meta.label}
     >
-      <Icon stroke-width={1.75} />
+      {photo ? (
+        // Foto do próprio aparelho preenche; imagem de categoria (recorte de produto) fica inteira.
+        <img src={photo.src} alt="" loading="lazy" decoding="async" class={cx("size-full rounded-[inherit]", own ? "object-cover" : "object-contain p-[12%]")} />
+      ) : (
+        <Icon stroke-width={1.75} />
+      )}
       {mark && (
         <span class="absolute -bottom-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-surface bg-fg px-1 text-[9px] font-bold leading-none text-bg">
           {mark}

@@ -13,6 +13,7 @@ import {
   MonitorSmartphone,
   Moon,
   Network,
+  Palette,
   Sun,
   SunMoon,
 } from "lucide-preact";
@@ -20,6 +21,7 @@ import { api, ApiError } from "./api";
 import { useRoute, useTheme } from "./hooks";
 import { connectLive, disconnectLive } from "./lib/live";
 import { Alerts } from "./pages/Alerts";
+import { Appearance } from "./pages/Appearance";
 import { Backup } from "./pages/Backup";
 import { Clients } from "./pages/Clients";
 import { History } from "./pages/History";
@@ -50,6 +52,7 @@ const ROUTES: Route[] = [
   { path: "historico", label: "Histórico", icon: Clock, page: History },
   { path: "alertas", label: "Alertas", icon: Bell, page: Alerts },
   { path: "backup", label: "Backup", icon: DatabaseBackup, page: Backup },
+  { path: "aparencia", label: "Aparência", icon: Palette, page: Appearance },
 ];
 
 const THEME_LABEL = { auto: "Tema: automático", light: "Tema: claro", dark: "Tema: escuro" } as const;

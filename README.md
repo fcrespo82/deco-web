@@ -314,6 +314,24 @@ exigem `DECO_ALLOW_WRITE=1` e são recusadas se o backup for de outra rede.
 O banco inteiro (histórico incluído) está em `/data/deco-web.sqlite`. Para
 copiá-lo com o painel rodando: `sqlite3 /data/deco-web.sqlite ".backup cópia.sqlite"`.
 
+## Imagens
+
+A tela **Aparência** troca os desenhos por imagens suas: dos modelos Deco, de
+cada categoria de aparelho e de aparelhos do inventário (pela ficha do
+aparelho). Tudo fica em `DATA_DIR/images` (`decos/`, `categories/`,
+`devices/`), fora do git; só PNG, JPEG e WebP.
+
+- **Buscar fotos oficiais** lê a página de produto de cada modelo no site da
+  TP-Link, escolhe uma foto de uma unidade quando consegue e tira o fundo
+  branco no navegador. **Escolher oficial** mostra a galeria inteira para você
+  escolher. O servidor só baixa de `static.tp-link.com` e precisa de internet.
+- Sem a interface: `npm run fetch-images` (ou, no container,
+  `docker compose run --rm deco-web node dist/fetch-images.js`) baixa uma foto
+  por modelo do último snapshot, sem remover o fundo.
+
+As fotos oficiais têm direitos autorais da TP-Link: são para uso pessoal no
+seu painel e não devem ser commitadas nem redistribuídas.
+
 ## Desenvolvimento
 
 ```sh

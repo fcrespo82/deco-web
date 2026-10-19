@@ -7,6 +7,8 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ClientView } from "../api";
 import { CATEGORY, CategoryGradients, categoryOf } from "../art/devices";
+import { useArtImages } from "../art/images";
+import { PhotoDefs, SvgAvatar } from "../art/svg";
 import { clientLabel } from "../ClientSheet";
 import { BAND_LABEL, rate } from "../format";
 import { cx } from "../ui";
@@ -31,6 +33,7 @@ export function Bubbles({ clients, groupBy, byTraffic, onOpen }: { clients: Clie
   const bodies = useRef(new Map<string, Body>());
   const [, setFrame] = useState(0);
   const [hover, setHover] = useState<string | null>(null);
+  const art = useArtImages();
 
   useEffect(() => {
     const ro = new ResizeObserver(([e]) => setWidth(e!.contentRect.width));
@@ -140,6 +143,7 @@ export function Bubbles({ clients, groupBy, byTraffic, onOpen }: { clients: Clie
       {width > 0 && (
         <svg viewBox={`0 0 ${layout.W} ${layout.H}`} class="block w-full select-none" role="img" aria-label={`${clients.length} aparelhos agrupados`}>
           <CategoryGradients />
+          <PhotoDefs />
           {layout.groups.map((g) => (
             <g key={`g-${g.name}`}>
               <circle cx={g.x} cy={g.y} r={g.R} class="bubble-group" />
@@ -154,8 +158,6 @@ export function Bubbles({ clients, groupBy, byTraffic, onOpen }: { clients: Clie
               if (!b) return null;
               const r = radius(c, byTraffic);
               const cat = categoryOf(c);
-              const Icon = CATEGORY[cat].icon;
-              const icon = Math.max(10, Math.min(22, r * 0.85));
               return (
                 <g
                   key={c.mac}
@@ -170,8 +172,7 @@ export function Bubbles({ clients, groupBy, byTraffic, onOpen }: { clients: Clie
                   onPointerLeave={() => setHover((h) => (h === c.mac ? null : h))}
                 >
                   <g class="bubble-body">
-                    <circle r={r} fill={`url(#cat-${cat})`} />
-                    <Icon x={-icon / 2} y={-icon / 2} size={icon} color="white" stroke-width={1.9} />
+                    <SvgAvatar category={cat} r={r} art={art.device(cat, c.device?.id)} own={c.device != null && art.images?.devices[String(c.device.id)] != null} ring={false} />
                   </g>
                 </g>
               );

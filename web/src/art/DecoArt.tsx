@@ -4,6 +4,7 @@
  * (M5/M9/P9). O LED muda de cor com o estado e "respira" quando online.
  */
 import { cx } from "../ui";
+import { useArtImages, type Art } from "./images";
 
 export type DecoShape = "tower" | "tall" | "puck";
 
@@ -92,7 +93,20 @@ export function DecoShapeSvg({ model, online, active, uid }: Omit<Props, "class"
   );
 }
 
+/** Foto escolhida na tela Aparência, com o LED de estado por cima. */
+function DecoPhoto({ art, online, class: klass }: { art: Art; online: boolean; class?: string }) {
+  return (
+    <span class={cx("deco-photo", art.opaque && "is-opaque", !online && "is-off", klass)} aria-hidden="true">
+      <img src={art.src} alt="" loading="lazy" decoding="async" />
+      <span class={cx("deco-photo-led", online && "deco-led")} />
+    </span>
+  );
+}
+
 export function DecoArt({ class: klass, ...props }: Props) {
+  const { deco } = useArtImages();
+  const photo = deco(props.model);
+  if (photo) return <DecoPhoto art={photo} online={props.online} class={klass} />;
   return (
     <svg viewBox="0 0 64 80" class={cx("block", !props.online && "opacity-70 grayscale", klass)} aria-hidden="true">
       <DecoShapeSvg {...props} />

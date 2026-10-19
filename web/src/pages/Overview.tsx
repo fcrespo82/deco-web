@@ -172,7 +172,7 @@ function Uplink({ node }: { node: NodeView }) {
 function ClientRow({ c, onOpen, right }: { c: ClientView; onOpen: (c: ClientView) => void; right?: ComponentChildren }) {
   return (
     <button type="button" onClick={() => onOpen(c)} class="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition hover:bg-surface-2">
-      <DeviceArt category={categoryOf(c)} size="sm" online={c.online} />
+      <DeviceArt category={categoryOf(c)} size="sm" online={c.online} deviceId={c.device?.id} />
       <span class="min-w-0 flex-1">
         <span class="block truncate text-[13px] font-medium">{clientLabel(c)}</span>
         <span class="block truncate text-[11.5px] text-muted">{[c.ip, c.band && BAND_LABEL[c.band]].filter(Boolean).join(" · ")}</span>

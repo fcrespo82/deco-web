@@ -8,7 +8,8 @@ import { useState } from "preact/hooks";
 import { ArrowDown, ArrowUp, Lock, Pencil } from "lucide-preact";
 import type { ClientView } from "./api";
 import { CATEGORY, categoryOf, DeviceArt } from "./art/devices";
-import { useClients, useStatus } from "./data";
+import { useClients, useImages, useStatus } from "./data";
+import { removeImage, UploadButton } from "./ImageDialogs";
 import { DeviceEditor } from "./DeviceEditor";
 import { BAND_LABEL, INVENTORY_TYPE_LABEL, NETWORK_LABEL, ago, dateTime, deviceType, rate } from "./format";
 import { ReservationDialog } from "./ReservationDialog";
@@ -31,6 +32,7 @@ export function RateBar({ kBps, tone }: { kBps: number; tone: "down" | "up" }) {
 
 export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void }) {
   const { data } = useClients();
+  const images = useImages();
   const status = useStatus();
   const [mode, setMode] = useState<"view" | "edit" | "reserve">("view");
   const c = data?.clients.find((x) => x.mac === mac);
@@ -59,7 +61,7 @@ export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void
     <Dialog
       title={
         <span class="flex items-center gap-4">
-          <DeviceArt category={cat} size="lg" online={c.online} vendor={c.vendor} />
+          <DeviceArt category={cat} size="lg" online={c.online} vendor={c.vendor} deviceId={c.device?.id} />
           <span class="min-w-0">
             <span class="block truncate">{clientLabel(c)}</span>
             <span class="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12.5px] font-normal text-muted">
@@ -80,6 +82,18 @@ export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void
             <Button icon={<Lock class="size-4" />} onClick={() => setMode("reserve")}>
               {c.reservation ? "Mudar reserva" : "Fixar IP"}
             </Button>
+          )}
+          {c.device && (
+            <>
+              <UploadButton kind="devices" name={String(c.device.id)} label={clientLabel(c)} square size="md">
+                {images.data?.devices[String(c.device.id)] ? "Trocar foto" : "Foto"}
+              </UploadButton>
+              {images.data?.devices[String(c.device.id)] && (
+                <Button variant="ghost" onClick={() => removeImage("devices", String(c.device!.id), clientLabel(c))}>
+                  Tirar foto
+                </Button>
+              )}
+            </>
           )}
           <span class="flex-1" />
           <Button variant="ghost" onClick={onClose}>

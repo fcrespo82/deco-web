@@ -23,7 +23,7 @@ function Tile({ c, onOpen, now }: { c: ClientView; onOpen: (c: ClientView) => vo
     >
       <span class="pointer-events-none absolute inset-x-0 top-0 h-16 opacity-[0.14] transition-opacity group-hover:opacity-25" style={{ background: `linear-gradient(135deg, ${meta.from}, ${meta.to})` }} />
       <span class="relative">
-        <DeviceArt category={cat} size="lg" online={c.online} vendor={c.vendor} class={cx("transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3", busy && "shadow-[0_0_0_4px_color-mix(in_srgb,var(--flow-down)_30%,transparent)]")} />
+        <DeviceArt category={cat} size="lg" online={c.online} vendor={c.vendor} deviceId={c.device?.id} class={cx("transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3", busy && "shadow-[0_0_0_4px_color-mix(in_srgb,var(--flow-down)_30%,transparent)]")} />
         {c.reservation && (
           <span class="absolute -left-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full border-2 border-surface bg-accent text-accent-fg" title={`IP reservado ${c.reservation.ip}`}>
             <Lock class="size-2.5" />

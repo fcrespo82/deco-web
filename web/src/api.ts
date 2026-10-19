@@ -2,14 +2,20 @@ import type {
   AuditView,
   ClientView,
   EventView,
+  ImageKind,
+  ImagesView,
   InventoryView,
   IpPlan,
+  OfficialResult,
   OverviewView,
   SamplePoint,
   StatusView,
 } from "../../src/server/api-types";
 
 export type {
+  ImageKind,
+  ImagesView,
+  OfficialResult,
   Anomaly,
   AuditView,
   CellStatus,
@@ -210,4 +216,23 @@ export const api = {
   samples: (hours: number) =>
     request<{ from: string; to: string; bucketMs: number; points: SamplePoint[] }>("GET", `/api/history/samples${qs({ hours })}`),
   audit: (q: { limit?: number; before?: number } = {}) => request<{ entries: AuditView[] }>("GET", `/api/audit${qs(q)}`),
+
+  images: () => request<ImagesView & { models: string[] }>("GET", "/api/images"),
+  putImage: async (kind: ImageKind, name: string, blob: Blob) => {
+    const res = await fetch(`/api/images/${kind}/${encodeURIComponent(name)}`, {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: { "content-type": blob.type },
+      body: blob,
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) throw new ApiError(res.status, data.error ?? `Erro ${res.status}`, data);
+  },
+  deleteImage: (kind: ImageKind, name: string) => request("DELETE", `/api/images/${kind}/${encodeURIComponent(name)}`),
+  officialCandidates: (model: string) =>
+    request<{ model: string; page: string | null; candidates: string[] }>("GET", `/api/images/official/candidates${qs({ model })}`),
+  officialAuto: () => request<{ results: OfficialResult[] }>("POST", "/api/images/official/auto"),
 };
+
+/** Caminho da foto oficial passando pelo servidor (mesma origem, editável em canvas). */
+export const officialProxy = (url: string) => `/api/images/official/proxy${qs({ url })}`;

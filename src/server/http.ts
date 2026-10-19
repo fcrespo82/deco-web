@@ -29,6 +29,8 @@ import { registerOpsRoutes } from "./ops-routes.js";
 import { registerSystemRoutes } from "./system-routes.js";
 import { buildMetrics } from "./metrics.js";
 import { registerLiveRoutes, topicsForWrite } from "./live.js";
+import { registerImageRoutes } from "./images.js";
+import type { FetchFn } from "../core/official-images.js";
 import { buildClients, buildOverview, buildStatus } from "./views.js";
 
 export const WEB_DIST = fileURLToPath(new URL("../../web/dist", import.meta.url));
@@ -44,6 +46,8 @@ export interface HttpOptions {
   metricsToken?: string | null;
   webDist?: string;
   now?: () => Date;
+  /** fetch para buscar fotos oficiais (testes). */
+  fetch?: FetchFn;
 }
 
 export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
@@ -161,7 +165,10 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
     if (!path.startsWith("/api/") || path === "/api/health" || path.startsWith("/api/auth/")) return;
     if (!isAuthenticated(req)) return reply.code(401).send({ error: "Não autenticado." });
     // POST só com JSON: junto com SameSite=Strict, barra formulários de outros sites.
-    if (req.method !== "GET" && !String(req.headers["content-type"] ?? "").startsWith("application/json")) {
+    // Exceção: envio de imagem (image/* também não é "simples", então exige CORS).
+    const type = String(req.headers["content-type"] ?? "");
+    if (req.method === "PUT" && path.startsWith("/api/images/") && /^image\/(png|jpeg|webp)$/.test(type)) return;
+    if (req.method !== "GET" && !type.startsWith("application/json")) {
       return reply.code(415).send({ error: "Use Content-Type: application/json." });
     }
   });
@@ -190,6 +197,7 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
   registerDataRoutes(server, app, actorOf);
   registerOpsRoutes(server, app, actorOf);
   registerSystemRoutes(server, app, actorOf);
+  registerImageRoutes(server, app, actorOf, { fetch: opts.fetch });
 
   server.post("/api/refresh", async (_req, reply) => {
     const last = app.poller.cache.lastAttemptAt;

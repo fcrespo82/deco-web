@@ -18,6 +18,7 @@ export const KEYS = {
   samples: (hours: number) => `samples:${hours}`,
   events: (types: string) => `events:${types}`,
   audit: "audit",
+  images: "images",
 } as const;
 
 const T = {
@@ -29,6 +30,7 @@ const T = {
   alerts: ["snapshot", "inventory", "alerts"],
   history: ["snapshot", "reservations"],
   audit: ["audit"],
+  images: ["images", "snapshot"],
 } satisfies Record<string, LiveTopic[]>;
 
 export const useOverview = () => useQuery(KEYS.overview, api.overview, T.overview);
@@ -38,6 +40,7 @@ export const useInventory = () => useQuery(KEYS.inventory, api.inventory, T.inve
 export const useIpPlan = () => useQuery(KEYS.ipPlan, api.ipPlan, T.ipPlan);
 export const useAlerts = () => useQuery(KEYS.alerts, api.alerts, T.alerts);
 export const useSamples = (hours: number) => useQuery(KEYS.samples(hours), () => api.samples(hours), T.history);
+export const useImages = () => useQuery(KEYS.images, api.images, T.images);
 export const useAudit = () => useQuery(KEYS.audit, () => api.audit({ limit: 50 }), T.audit);
 
 /**

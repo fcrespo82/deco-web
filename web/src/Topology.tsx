@@ -9,8 +9,9 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { Globe, Maximize, Minus, Plus } from "lucide-preact";
 import type { Band, ClientView, NodeView } from "./api";
 import type { InternetStatus } from "../../src/deco-client/types";
-import { DecoShapeSvg } from "./art/DecoArt";
 import { CATEGORY, CategoryGradients, categoryOf } from "./art/devices";
+import { useArtImages } from "./art/images";
+import { PhotoDefs, SvgAvatar, SvgDeco } from "./art/svg";
 import { BAND_LABEL, rate } from "./format";
 import { cx, IconButton } from "./ui";
 
@@ -265,6 +266,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
   const wrap = useRef<HTMLDivElement>(null);
   const width = useWidth(wrap);
   const layout = useMemo(() => build(nodes, clients), [nodes, clients]);
+  const art = useArtImages();
   const [view, setView] = useState({ k: 1, x: 0, y: 0 });
   const drag = useRef<{ px: number; py: number; x: number; y: number; moved: boolean } | null>(null);
   const [hover, setHover] = useState<string | null>(null);
@@ -332,6 +334,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
         onDblClick={() => setView({ k: 1, x: 0, y: 0 })}
       >
         <CategoryGradients />
+        <PhotoDefs />
         <defs>
           <radialGradient id="topo-net" cx="0.35" cy="0.3" r="0.9">
             <stop offset="0" stop-color={netOnline ? "#7dd3fc" : "#fca5a5"} />
@@ -440,9 +443,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
                 <circle r="46" class="topo-node-hit" />
                 {p.node.online && <circle r="40" class="topo-halo" />}
                 {isSel && <circle r="50" class="topo-select" />}
-                <svg x="-30" y="-48" width="60" height="75" viewBox="0 0 64 80" overflow="visible">
-                  <DecoShapeSvg model={p.node.model} online={p.node.online} active={isSel} uid={uid} />
-                </svg>
+                <SvgDeco model={p.node.model} online={p.node.online} active={isSel} uid={uid} art={art.deco(p.node.model)} />
                 <text y={31 + 13 * textScale} class="topo-name" text-anchor="middle">
                   {p.node.name}
                 </text>
@@ -458,7 +459,6 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
           {placed.map((p) =>
             p.clients.map(({ c, x, y }) => {
               const cat = categoryOf(c);
-              const Icon = CATEGORY[cat].icon;
               const kBps = c.downKBps + c.upKBps;
               const busy = kBps >= 50;
               return (
@@ -481,8 +481,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
                 >
                   <g class="topo-client-body">
                     {busy && <circle r={AV + 3 + Math.min(6, Math.log10(kBps) * 1.6)} class="topo-busy" />}
-                    <circle r={AV} fill={`url(#cat-${cat})`} stroke="var(--surface)" stroke-width="2" />
-                    <Icon x={-6.5} y={-6.5} size={13} color="white" stroke-width={2} />
+                    <SvgAvatar category={cat} r={AV} art={art.device(cat, c.device?.id)} own={c.device != null && art.images?.devices[String(c.device.id)] != null} />
                   </g>
                 </g>
               );

@@ -33,6 +33,7 @@
   --deco-light: #ffffff; --deco-mid: #eef1f5; --deco-shade: #c9d1db; --deco-floor: rgb(15 23 42 / 0.12);
   --deco-cap: #39404a; --deco-cap-top: #4b535e;
   --hero-from: #e8f0ff; --hero-to: #f5f6f8;
+  --deco-pedestal: transparent;
   color-scheme: light;
 }
 
@@ -64,6 +65,7 @@
     --deco-light: #f4f6f9; --deco-mid: #d9dee5; --deco-shade: #9aa4b1; --deco-floor: rgb(0 0 0 / 0.45);
     --deco-cap: #2a3038; --deco-cap-top: #3a414b;
     --hero-from: #101b2e; --hero-to: #0c0f13;
+    --deco-pedestal: #eef1f5;
     color-scheme: dark;
   }
 }
@@ -94,6 +96,7 @@
   --deco-light: #f4f6f9; --deco-mid: #d9dee5; --deco-shade: #9aa4b1; --deco-floor: rgb(0 0 0 / 0.45);
   --deco-cap: #2a3038; --deco-cap-top: #3a414b;
   --hero-from: #101b2e; --hero-to: #0c0f13;
+  --deco-pedestal: #eef1f5;
   color-scheme: dark;
 }
 
@@ -292,9 +295,26 @@
   .bubble:hover .bubble-body, .bubble:focus-visible .bubble-body { transform: scale(1.15); }
   .bubble:focus-visible circle { stroke: var(--accent); stroke-width: 3; }
 
+  /* Foto de Deco escolhida pelo usuário. */
+  .deco-photo { position: relative; display: block; aspect-ratio: 4 / 5; }
+  .deco-photo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 10px rgb(15 23 42 / 0.22)); }
+  .deco-photo.is-opaque img { mix-blend-mode: multiply; filter: none; }
+  .deco-photo.is-off img { filter: grayscale(1); opacity: 0.6; }
+  .deco-photo-led { position: absolute; right: 10%; bottom: 8%; width: 9px; height: 9px; border-radius: 999px; background: var(--led-off); box-shadow: 0 0 0 2px var(--surface); }
+  .deco-photo-led.deco-led { background: var(--led-on); box-shadow: 0 0 0 2px var(--surface), 0 0 10px var(--led-on); }
+  .topo-photo-pedestal { fill: var(--deco-pedestal); }
+  .topo-photo-off { filter: grayscale(1); opacity: 0.6; }
+
   /* Fundo do topo das telas principais. */
   .hero-glow { background: radial-gradient(120% 90% at 50% 0%, var(--hero-from), transparent 70%); }
 }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .deco-photo.is-opaque { background: #eef1f5; border-radius: 22%; padding: 7%; }
+  :root:not([data-theme="light"]) .deco-photo.is-opaque img { mix-blend-mode: normal; }
+}
+:root[data-theme="dark"] .deco-photo.is-opaque { background: #eef1f5; border-radius: 22%; padding: 7%; }
+:root[data-theme="dark"] .deco-photo.is-opaque img { mix-blend-mode: normal; }
 
 @keyframes dash-run { to { stroke-dashoffset: -18; } }
 @keyframes halo { 0% { opacity: 0.35; transform: scale(0.7); } 70%, 100% { opacity: 0; transform: scale(1.5); } }

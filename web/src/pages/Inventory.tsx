@@ -83,6 +83,7 @@ export function Inventory() {
                     <div class="flex items-center gap-3">
                       <DeviceArt
                         size="sm"
+                        deviceId={d.id}
                         online={d.online}
                         category={categoryOf({ name: d.macs[0]?.decoName ?? d.alias, deviceType: null, vendor: null, suggestedType: null, device: d })}
                       />
