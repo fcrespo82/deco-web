@@ -27,9 +27,9 @@ export type ThemePref = "auto" | "light" | "dark";
 function readTheme(): ThemePref {
   try {
     const v = localStorage.getItem("theme");
-    return v === "light" || v === "auto" ? v : "dark";
+    return v === "dark" || v === "auto" ? v : "light";
   } catch {
-    return "dark";
+    return "light";
   }
 }
 
@@ -43,6 +43,6 @@ export function useTheme(): [ThemePref, () => void] {
       // Sem storage (aba privada): o tema vale só nesta visita.
     }
   }, [theme]);
-  const cycle = () => setTheme((t) => (t === "dark" ? "light" : t === "light" ? "auto" : "dark"));
+  const cycle = () => setTheme((t) => (t === "light" ? "dark" : t === "dark" ? "auto" : "light"));
   return [theme, cycle];
 }

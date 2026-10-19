@@ -23,9 +23,8 @@
     "update-oui": "node scripts/update-oui.mjs"
   },
   "devDependencies": {
-    "@fontsource-variable/inter": "^5.3.0",
-    "@fontsource-variable/jetbrains-mono": "^5.3.0",
-    "@fontsource-variable/orbitron": "^5.3.0",
+    "@fontsource-variable/ibm-plex-sans": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
     "@preact/preset-vite": "^2.10.6",
     "@tailwindcss/vite": "^4.3.3",
     "@types/better-sqlite3": "^9.6.0",

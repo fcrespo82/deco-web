@@ -30,14 +30,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Fontes Inter, Orbitron e JetBrains Mono
+## Fontes IBM Plex Sans e IBM Plex Mono
 
-A interface empacota as fontes [Inter](https://github.com/rsms/inter)
-(© The Inter Project Authors), [Orbitron](https://github.com/theleagueof/orbitron)
-(© The Orbitron Project Authors) e
-[JetBrains Mono](https://github.com/JetBrains/JetBrainsMono)
-(© The JetBrains Mono Project Authors), via os pacotes
-`@fontsource-variable/inter`, `@fontsource-variable/orbitron` e
-`@fontsource-variable/jetbrains-mono`. Todas são distribuídas sob a SIL Open
-Font License 1.1; o texto completo está no arquivo `LICENSE` de cada pacote e
-em https://openfontlicense.org.
+A interface empacota as fontes [IBM Plex](https://github.com/IBM/plex)
+Sans e Mono (© IBM Corp.), via os pacotes `@fontsource-variable/ibm-plex-sans`
+e `@fontsource/ibm-plex-mono`. São distribuídas sob a SIL Open Font License
+1.1; o texto completo está no arquivo `LICENSE` de cada pacote e em
+https://openfontlicense.org.

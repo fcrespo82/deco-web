@@ -19,10 +19,10 @@ export function rssiAt(band: CoverageBand, meters: number): number {
 
 /** Faixas da legenda, do melhor para o pior. */
 export const COVERAGE_STOPS = [
-  { dbm: -50, label: "Excelente", rgb: [34, 227, 255], a: 0.6 },
-  { dbm: -60, label: "Bom", rgb: [61, 255, 176], a: 0.48 },
-  { dbm: -70, label: "Razoável", rgb: [255, 210, 63], a: 0.42 },
-  { dbm: -78, label: "Fraco", rgb: [255, 77, 109], a: 0.36 },
+  { dbm: -50, label: "Excelente", rgb: [59, 130, 246], a: 0.42 },
+  { dbm: -60, label: "Bom", rgb: [34, 170, 110], a: 0.36 },
+  { dbm: -70, label: "Razoável", rgb: [235, 160, 30], a: 0.36 },
+  { dbm: -78, label: "Fraco", rgb: [220, 60, 60], a: 0.32 },
 ] as const;
 
 /** Cor RGBA (0–255) para um sinal, interpolando entre as faixas. */

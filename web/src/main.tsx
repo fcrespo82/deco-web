@@ -20,11 +20,10 @@ import {
   SunMoon,
   Tv as TvIcon,
 } from "lucide-preact";
-import "@fontsource-variable/inter";
-import "@fontsource-variable/orbitron";
-import "@fontsource-variable/jetbrains-mono";
+import "@fontsource-variable/ibm-plex-sans";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 import { api, ApiError } from "./api";
-import { Boot } from "./Boot";
 import { ClientSheet } from "./ClientSheet";
 import { CommandPalette } from "./CommandPalette";
 import { RebootDialog } from "./DangerDialogs";
@@ -100,16 +99,32 @@ function Login({ onDone }: { onDone: () => void }) {
     }
   }
   return (
-    <div class="login-bg relative flex min-h-dvh items-center justify-center overflow-hidden px-4">
-      <MeshBackground class="absolute inset-0 size-full" />
-      <form onSubmit={submit} class="glass relative w-full max-w-sm animate-slide-up rounded-3xl p-7">
-        <Logo class="size-12 shadow-pop" />
-        <h1 class="mt-5 font-display text-[28px] font-semibold leading-tight tracking-tight">Sua rede, ao vivo.</h1>
-        <p class="mb-6 mt-1 text-[13.5px] text-muted">Entre para ver o mapa, os aparelhos e o que está acontecendo agora.</p>
+    <div class="grid min-h-dvh bg-bg lg:grid-cols-[minmax(0,1fr)_480px]">
+      {/* Painel institucional (desktop) */}
+      <div class="login-brand relative hidden flex-col justify-between overflow-hidden p-12 lg:flex">
+        <MeshBackground class="absolute inset-0 size-full opacity-40" />
+        <div class="relative flex items-center gap-3 text-white">
+          <Logo class="size-9" />
+          <span class="text-[17px] font-semibold">Deco Dashboard</span>
+        </div>
+        <div class="relative max-w-md text-white">
+          <h2 class="text-[30px] font-semibold leading-tight">Gestão da rede mesh em um só lugar.</h2>
+          <p class="mt-3 text-[15px] text-white/70">Topologia, aparelhos, reservas de IP, histórico e alertas da sua rede TP-Link Deco.</p>
+        </div>
+        <p class="relative text-[12px] text-white/50">Acesso restrito. As ações ficam registradas na auditoria.</p>
+      </div>
+      <form onSubmit={submit} class="flex flex-col justify-center px-6 py-12 sm:px-12">
+        <Logo class="size-10 lg:hidden" />
+        <h1 class="mt-6 text-[22px] font-semibold tracking-tight lg:mt-0">Entrar</h1>
+        <p class="mb-6 mt-1 text-[13.5px] text-muted">Use a senha da interface configurada no servidor.</p>
+        <label class="mb-1.5 text-[13px] font-medium" for="login-password">
+          Senha
+        </label>
         <input
+          id="login-password"
           type="password"
           class="field"
-          placeholder="Senha da interface"
+          placeholder="••••••••"
           aria-label="Senha da interface"
           autocomplete="current-password"
           value={password}
@@ -157,21 +172,6 @@ function ThemeButton({ theme, cycle, withLabel }: { theme: keyof typeof THEME_LA
     <IconButton label={THEME_LABEL[theme]} onClick={cycle}>
       <Icon class="size-[18px]" />
     </IconButton>
-  );
-}
-
-/** Relógio de HUD no topo (só em telas largas). */
-function HeaderClock() {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return (
-    <span class="hidden items-center gap-2 font-mono text-[12px] tabular-nums text-muted xl:flex" aria-hidden="true">
-      <span class="mono-label">sys</span>
-      {now.toLocaleTimeString("pt-BR")}
-    </span>
   );
 }
 
@@ -226,16 +226,16 @@ function App() {
   return (
     <div class="min-h-dvh lg:grid lg:grid-cols-[248px_1fr]">
       {/* Barra lateral (desktop) */}
-      <aside class="sidebar sticky top-0 hidden h-dvh flex-col border-r border-line bg-surface lg:flex">
+      <aside class="sidebar sticky top-0 hidden h-dvh flex-col lg:flex">
         <div class="flex items-center gap-2.5 px-5 py-5">
           <Logo />
-          <span class="font-display text-[17px] font-semibold tracking-tight">Deco Dashboard</span>
+          <span class="text-[16px] font-semibold tracking-tight text-white">Deco Dashboard</span>
         </div>
         <div class="px-3 pb-3">
           <button
             type="button"
             onClick={() => setUi({ palette: true })}
-            class="flex w-full items-center gap-2 rounded-lg border border-line bg-bg/60 px-3 py-2 text-[13px] text-muted transition hover:border-accent/40 hover:text-fg"
+            class="sidebar-search flex w-full items-center gap-2 rounded-md border px-3 py-1.5 text-[13px] transition"
           >
             <Search class="size-4" />
             Buscar…
@@ -269,12 +269,14 @@ function App() {
 
       <div class="min-w-0">
         {/* Topo */}
-        <header class="sticky top-0 z-30 border-b border-line bg-bg/95">
-          <div class="mx-auto flex h-14 max-w-[1240px] items-center gap-3 px-4 lg:px-8">
+        <header class="sticky top-0 z-30 border-b border-line bg-surface">
+          <div class="mx-auto flex h-14 max-w-[1240px] lg:h-16 items-center gap-3 px-4 lg:px-8">
             <Logo class="lg:hidden" />
-            <h1 class="page-title min-w-0 truncate text-[15px] font-semibold lg:text-[18px]">{current.label}</h1>
+            <div class="min-w-0">
+              <div class="hidden text-[11.5px] text-muted lg:block">Deco Dashboard / {current.label}</div>
+              <h1 class="page-title truncate text-[15px] lg:text-[17px]">{current.label}</h1>
+            </div>
             <span class="flex-1" />
-            <HeaderClock />
             <IconButton label="Buscar (Ctrl+K)" class="lg:hidden" onClick={() => setUi({ palette: true })}>
               <Search class="size-[18px]" />
             </IconButton>
@@ -347,7 +349,6 @@ function App() {
         </Dialog>
       )}
       <CommandPalette routes={PALETTE_ROUTES} cycleTheme={cycleTheme} />
-      <Boot />
       {ui.client && <ClientSheet mac={ui.client} onClose={() => openClient(null)} />}
       {ui.reboot && <GlobalReboot mac={ui.reboot} />}
       <Toaster />
