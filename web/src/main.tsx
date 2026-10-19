@@ -269,7 +269,7 @@ function App() {
 
       <div class="min-w-0">
         {/* Topo */}
-        <header class="sticky top-0 z-30 border-b border-line bg-bg/80 backdrop-blur-md">
+        <header class="sticky top-0 z-30 border-b border-line bg-bg/95">
           <div class="mx-auto flex h-14 max-w-[1240px] items-center gap-3 px-4 lg:px-8">
             <Logo class="lg:hidden" />
             <h1 class="page-title min-w-0 truncate text-[15px] font-semibold lg:text-[18px]">{current.label}</h1>
@@ -302,7 +302,7 @@ function App() {
       </div>
 
       {/* Abas de baixo (celular) */}
-      <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/90 pb-safe backdrop-blur-md lg:hidden" aria-label="Principal">
+      <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-safe lg:hidden" aria-label="Principal">
         <div class="mx-auto grid max-w-lg grid-cols-5">
           {ROUTES.filter((r) => r.tab).map((r) => {
             const Icon = r.icon;

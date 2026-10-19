@@ -155,8 +155,6 @@
     background:
       radial-gradient(70% 50% at 50% -10%, rgb(var(--glow) / 0.16), transparent 70%),
       radial-gradient(40% 40% at 100% 100%, color-mix(in srgb, var(--brand-to) 10%, transparent), transparent 70%),
-      linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 48px 48px,
-      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 48px 48px,
       var(--bg);
     background-attachment: fixed;
     color: var(--text);
@@ -169,14 +167,9 @@
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   ::selection { background: var(--accent-soft); }
   h1, h3 { font-family: var(--font-display); letter-spacing: 0.02em; }
-  /* Linhas de varredura bem fracas por cima de tudo (só no escuro). */
-  body::after {
-    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
-    background: repeating-linear-gradient(0deg, rgb(255 255 255 / 0.018) 0 1px, transparent 1px 3px);
-    mix-blend-mode: overlay;
-  }
-  :root[data-theme="light"] body::after { display: none; }
-  @media (prefers-color-scheme: light) { :root[data-theme="auto"] body::after { display: none; } }
+  /* (Sem camada de varredura por cima da página: o blend em tela cheia
+     derrubava a taxa de quadros e atrasava os cliques.) */
+
   code {
     font-family: var(--font-mono); font-size: 12px;
     background: var(--surface-2); padding: 1px 5px; border-radius: 4px;
@@ -234,7 +227,7 @@
     max-height: calc(100dvh - 32px);
   }
   dialog.sheet[open] { @apply animate-slide-up; }
-  dialog.sheet::backdrop { background: rgb(5 8 12 / 0.5); backdrop-filter: blur(2px); animation: fade-in 0.18s ease-out; }
+  dialog.sheet::backdrop { background: rgb(2 4 10 / 0.68); animation: fade-in 0.18s ease-out; }
   @media (max-width: 639px) {
     dialog.sheet { @apply mb-0 max-w-none; max-height: 92dvh; }
   }
@@ -344,8 +337,8 @@
     position: relative;
     border-radius: var(--radius-xl);
     border: 1px solid var(--line);
-    background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface) 78%, transparent));
-    backdrop-filter: blur(6px);
+    /* Fundo opaco, sem backdrop-filter: desfoque atrás de painéis custa caro com o mapa animado. */
+    background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface) 90%, var(--bg)));
     box-shadow: 0 0 0 1px rgb(var(--glow) / 0.03), 0 18px 40px -24px rgb(0 0 0 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.03);
     transition: border-color 0.25s, box-shadow 0.25s;
   }
@@ -360,7 +353,7 @@
   @media (min-width: 768px) {
     .table-card {
       overflow: hidden; border-radius: var(--radius-xl); border: 1px solid var(--line);
-      background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(6px);
+      background: var(--surface);
       box-shadow: 0 18px 40px -24px rgb(0 0 0 / 0.6);
     }
   }
@@ -373,12 +366,13 @@
   .glow-text { text-shadow: 0 0 18px rgb(var(--glow) / 0.55); }
   .counter { display: inline-block; transition: text-shadow 0.4s, transform 0.4s; }
   .counter.is-bump { text-shadow: 0 0 22px rgb(var(--glow) / 0.95), 0 0 2px rgb(var(--glow)); transform: translateY(-1px); }
-  .btn-hud { backdrop-filter: blur(4px); }
   .btn-hud:hover { box-shadow: 0 0 16px -4px rgb(var(--glow) / 0.45); }
   .page-title { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; }
   .mono-label { @apply font-mono text-[10.5px] uppercase tracking-[0.18em] text-muted; }
 
-  .page-view { view-transition-name: page; }
+  /* Entrada de tela: varredura de cima para baixo. Animação CSS comum (não
+     View Transitions, que bloqueia cliques enquanto dura). */
+  .page-view { animation: page-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 
   /* Casa: planta, cobertura, Decos posicionados. */
   .casa-stage {
@@ -409,7 +403,7 @@
   .casa-marker.is-selected .casa-node { filter: drop-shadow(0 0 18px rgb(var(--glow) / 0.95)); }
   .casa-label {
     position: absolute; left: 0; top: 30px; transform: translateX(-50%); z-index: 3; white-space: nowrap;
-    @apply rounded-md border border-line bg-surface/85 px-2 py-0.5 text-[11.5px] backdrop-blur;
+    @apply rounded-md border border-line bg-surface/95 px-2 py-0.5 text-[11.5px];
   }
   .casa-radar {
     position: absolute; left: -90px; top: -90px; width: 180px; height: 180px; border-radius: 999px; pointer-events: none; z-index: 1;
@@ -462,8 +456,7 @@
       var(--bg);
   }
   .sidebar {
-    background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, transparent), color-mix(in srgb, var(--surface) 70%, transparent));
-    backdrop-filter: blur(10px);
+    background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface) 85%, var(--bg)));
     box-shadow: 1px 0 0 rgb(var(--glow) / 0.08), 12px 0 40px -30px rgb(var(--glow) / 0.4);
   }
   .sidebar nav a[aria-current="page"] { text-shadow: 0 0 12px rgb(var(--glow) / 0.6); box-shadow: inset 0 0 0 1px rgb(var(--glow) / 0.25), 0 0 18px -8px rgb(var(--glow) / 0.6); }
@@ -476,7 +469,7 @@
   /* Paleta de comandos: no alto da tela, não no centro. */
   dialog.palette { @apply mx-auto mt-[12vh] w-[calc(100%-24px)] max-w-[620px] border-0 bg-transparent p-0 text-fg; }
   dialog.palette[open] { animation: palette-in 0.16s cubic-bezier(0.2, 0.8, 0.2, 1); }
-  dialog.palette::backdrop { background: rgb(5 8 12 / 0.45); backdrop-filter: blur(3px); }
+  dialog.palette::backdrop { background: rgb(2 4 10 / 0.6); }
   @media (max-width: 639px) { dialog.palette { @apply mt-3; } }
 
   /* Histórico: raias de presença, mapa de calor e linha do tempo. */
@@ -489,7 +482,7 @@
   .heat-cell.is-empty { background: var(--surface-2); }
   .heat-cell.is-now { outline: 2px solid var(--text); outline-offset: 1px; }
   .timeline { position: relative; }
-  .timeline-day { @apply sticky top-14 z-[1] -mx-4 bg-surface/90 px-4 pb-1 pt-3 text-[12px] font-semibold capitalize text-muted backdrop-blur sm:-mx-5 sm:px-5; }
+  .timeline-day { @apply sticky top-14 z-[1] -mx-4 bg-surface px-4 pb-1 pt-3 text-[12px] font-semibold capitalize text-muted sm:-mx-5 sm:px-5; }
   .timeline-item { @apply relative flex items-start gap-3 py-1; }
   .timeline-item::before { content: ""; position: absolute; left: calc(2.75rem + 0.75rem + 10px); top: 0; bottom: 0; width: 1px; background: var(--line); }
   .timeline-dot { @apply relative z-[1] mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-muted; }
@@ -506,7 +499,7 @@
     background-size: 160% 160%, 160% 160%, auto;
     animation: tv-drift 40s ease-in-out infinite alternate;
   }
-  .tv-card { @apply rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur-md; }
+  .tv-card { @apply rounded-2xl border border-white/10 bg-[#0b1324]/85 px-4 py-3; }
   .tv-bg .topo-name, .tv-bg .topo-sub { stroke: var(--bg); }
 
   /* Fundo do topo das telas principais. */
@@ -514,14 +507,9 @@
 }
 
 @keyframes tv-drift { to { background-position: 100% 60%, 0% 40%, 0 0; } }
-::view-transition-old(root), ::view-transition-new(root) { animation: none; }
-::view-transition-old(page) { animation: page-out 0.16s ease-in both; }
-::view-transition-new(page) { animation: page-in 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-@keyframes page-out { to { opacity: 0; filter: blur(3px); } }
 @keyframes page-in {
-  from { opacity: 0; clip-path: inset(0 0 100% 0); filter: brightness(1.8) saturate(1.4); }
-  60% { opacity: 1; filter: brightness(1.15); }
-  to { clip-path: inset(0); filter: none; }
+  from { opacity: 0; clip-path: inset(0 0 100% 0); }
+  to { opacity: 1; clip-path: inset(0 0 -20% 0); }
 }
 @keyframes boot-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
 @keyframes boot-bar { from { width: 0; } to { width: 100%; } }

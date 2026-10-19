@@ -515,7 +515,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
         </g>
       </svg>
 
-      <div class={cx("absolute right-2 top-2 flex flex-col gap-1 rounded-xl border border-line bg-surface/85 p-1 shadow-card backdrop-blur max-sm:hidden", ambient && "hidden")}>
+      <div class={cx("absolute right-2 top-2 flex flex-col gap-1 rounded-xl border border-line bg-surface p-1 shadow-card max-sm:hidden", ambient && "hidden")}>
         <IconButton label="Aproximar" onClick={() => zoom(1.2)}>
           <Plus class="size-4" />
         </IconButton>

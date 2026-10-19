@@ -15,20 +15,7 @@ export function useRoute(): string {
   const read = () => location.hash.replace(/^#\/?/, "").split("?")[0] || "";
   const [route, setRoute] = useState(read);
   useEffect(() => {
-    const onChange = () => {
-      const next = read();
-      // Transição entre telas (View Transitions): a página nova é revelada por
-      // uma varredura. Sem suporte ou com movimento reduzido, troca direto.
-      const doc = document as Document & { startViewTransition?: (cb: () => Promise<void>) => unknown };
-      if (!doc.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return setRoute(next);
-      doc.startViewTransition(
-        () =>
-          new Promise<void>((resolve) => {
-            setRoute(next);
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-          }),
-      );
-    };
+    const onChange = () => setRoute(read());
     addEventListener("hashchange", onChange);
     return () => removeEventListener("hashchange", onChange);
   }, []);
