@@ -24,6 +24,20 @@ export function recordTraffic(key: string | null, down: number, up: number) {
   for (const l of listeners) l();
 }
 
+/** Registra uma amostra a cada leitura nova de /api/clients. */
+export function useTrafficRecorder(data: { status: { fetchedAt: string | null }; clients: { online: boolean; downKBps: number; upKBps: number }[] } | undefined) {
+  const fetchedAt = data?.status.fetchedAt ?? null;
+  useEffect(() => {
+    if (!data) return;
+    const online = data.clients.filter((c) => c.online);
+    recordTraffic(
+      fetchedAt,
+      online.reduce((s, c) => s + c.downKBps, 0),
+      online.reduce((s, c) => s + c.upKBps, 0),
+    );
+  }, [fetchedAt, data]);
+}
+
 export function useTrafficHistory(): TrafficPoint[] {
   const [, tick] = useState(0);
   useEffect(() => {

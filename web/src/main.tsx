@@ -17,7 +17,7 @@ import {
   Search,
   Sun,
   SunMoon,
-  Tv,
+  Tv as TvIcon,
 } from "lucide-preact";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/bricolage-grotesque";
@@ -39,6 +39,7 @@ import { Inventory } from "./pages/Inventory";
 import { IpPlan } from "./pages/IpPlan";
 import { Overview } from "./pages/Overview";
 import { Reservations } from "./pages/Reservations";
+import { Tv } from "./pages/Tv";
 import { ModeBadge, RefreshButton, StatusBanners, StatusPill } from "./StatusBar";
 import { Button, cx, Dialog, IconButton, Toaster } from "./ui";
 import "./styles.css";
@@ -67,7 +68,7 @@ const ROUTES: Route[] = [
   { path: "aparencia", label: "Aparência", icon: Palette, page: Appearance, key: "p" },
 ];
 
-const PALETTE_ROUTES = [...ROUTES.map(({ path, label, icon, key }) => ({ path, label, icon, key })), { path: "tv", label: "Modo TV", icon: Tv, key: "t" }];
+const PALETTE_ROUTES = [...ROUTES.map(({ path, label, icon, key }) => ({ path, label, icon, key })), { path: "tv", label: "Modo TV", icon: TvIcon, key: "t" }];
 
 const THEME_LABEL = { auto: "Tema: automático", light: "Tema: claro", dark: "Tema: escuro" } as const;
 const THEME_ICON = { auto: SunMoon, light: Sun, dark: Moon } as const;
@@ -187,6 +188,15 @@ function App() {
 
   if (!auth) return null;
   if (!auth.authenticated) return <Login onDone={checkAuth} />;
+  if (route === "tv") {
+    return (
+      <>
+        <Tv />
+        {ui.client && <ClientSheet mac={ui.client} onClose={() => openClient(null)} />}
+        <Toaster />
+      </>
+    );
+  }
 
   const current = ROUTES.find((r) => r.path === route) ?? ROUTES[0]!;
   const Page = current.page;
@@ -220,7 +230,7 @@ function App() {
             <NavLink route={r} current={r === current} />
           ))}
           <a href="#/tv" class="mt-2 flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium text-muted transition hover:bg-surface-2 hover:text-fg">
-            <Tv class="size-[18px] shrink-0" />
+            <TvIcon class="size-[18px] shrink-0" />
             Modo TV
           </a>
         </nav>
@@ -297,7 +307,7 @@ function App() {
               <NavLink route={r} current={r === current} onNavigate={() => setMoreOpen(false)} />
             ))}
             <a href="#/tv" class="flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium text-muted transition hover:bg-surface-2 hover:text-fg">
-              <Tv class="size-[18px] shrink-0" />
+              <TvIcon class="size-[18px] shrink-0" />
               Modo TV
             </a>
           </nav>

@@ -260,9 +260,11 @@ export interface TopologyProps {
   onSelectClient: (c: ClientView) => void;
   /** Destaque de clientes (busca); os outros ficam apagados. */
   highlight?: (c: ClientView) => boolean;
+  /** Modo TV: ocupa a altura disponível, textos maiores, sem controles. */
+  ambient?: boolean;
 }
 
-export function Topology({ nodes, clients, internet, selected, onSelectNode, onSelectClient, highlight }: TopologyProps) {
+export function Topology({ nodes, clients, internet, selected, onSelectNode, onSelectClient, highlight, ambient }: TopologyProps) {
   const wrap = useRef<HTMLDivElement>(null);
   const width = useWidth(wrap);
   const layout = useMemo(() => build(nodes, clients), [nodes, clients]);
@@ -273,7 +275,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
 
   // Telas estreitas: o desenho encolhe, então os textos crescem um pouco.
   const fit = layout && width ? width / (layout.box.w + 32) : 1;
-  const textScale = Math.min(1.7, Math.max(1, 0.72 / fit));
+  const textScale = Math.min(1.7, Math.max(1, 0.72 / fit)) * (ambient ? 1.2 : 1);
 
   if (!layout) return null;
   const { placed, box, internet: net } = layout;
@@ -318,11 +320,11 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
   const hoverClient = hover ? placed.flatMap((p) => p.clients).find((x) => x.c.mac === hover) : null;
 
   return (
-    <div ref={wrap} class="topology relative">
+    <div ref={wrap} class={cx("topology relative", ambient && "h-full")}>
       <svg
         viewBox={vb}
-        class={cx("block w-full select-none", drag.current?.moved ? "cursor-grabbing" : "cursor-grab")}
-        style={{ maxHeight: width < 640 ? undefined : "80vh", "--ts": textScale, touchAction: view.k > 1 ? "none" : "pan-y" }}
+        class={cx("block w-full select-none", ambient ? "h-full" : drag.current?.moved ? "cursor-grabbing" : "cursor-grab")}
+        style={{ maxHeight: ambient || width < 640 ? undefined : "80vh", "--ts": textScale, touchAction: view.k > 1 ? "none" : "pan-y" }}
         role="img"
         aria-label={`Topologia: ${nodes.length} nós, ${clients.filter((c) => c.online).length} clientes online`}
         onPointerDown={onPointerDown}
@@ -513,7 +515,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
         </g>
       </svg>
 
-      <div class="absolute right-2 top-2 flex flex-col gap-1 rounded-xl border border-line bg-surface/85 p-1 shadow-card backdrop-blur max-sm:hidden">
+      <div class={cx("absolute right-2 top-2 flex flex-col gap-1 rounded-xl border border-line bg-surface/85 p-1 shadow-card backdrop-blur max-sm:hidden", ambient && "hidden")}>
         <IconButton label="Aproximar" onClick={() => zoom(1.2)}>
           <Plus class="size-4" />
         </IconButton>

@@ -1,5 +1,5 @@
 import type { ComponentChildren } from "preact";
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useMemo, useState } from "preact/hooks";
 import { ArrowDown, ArrowUp, Cable, Globe, Power, Router, Search, Wifi, X } from "lucide-preact";
 import type { Band, ClientView, NodeView, OverviewView, WifiKind, WifiNetwork } from "../api";
 import { DecoArt } from "../art/DecoArt";
@@ -10,36 +10,12 @@ import { openClient as openClientSheet, selectNode, setUi, useUi } from "../lib/
 import { useClients, useOverview, useStatus } from "../data";
 import { BAND_LABEL, NETWORK_LABEL, WIFI_KIND_LABEL, rate, shortFirmware, since } from "../format";
 import { useNow } from "../hooks";
-import { recordTraffic, useTrafficHistory, type TrafficPoint } from "../lib/traffic";
+import { useTrafficHistory, useTrafficRecorder } from "../lib/traffic";
+import { Sparkline } from "../views/Sparkline";
 import { BAND_COLOR, Topology, TopologyLegend } from "../Topology";
 import { Badge, Button, Card, cx, Empty, Kv, PageLoading, SectionTitle } from "../ui";
 
 const BAND_ORDER: Band[] = ["wired", "5GHz", "6GHz", "2.4GHz"];
-
-function Sparkline({ points }: { points: TrafficPoint[] }) {
-  if (points.length < 2) return <div class="flex h-9 items-end text-[11.5px] text-muted">coletando amostras…</div>;
-  const W = 200;
-  const H = 36;
-  const max = Math.max(1, ...points.map((p) => p.down + p.up));
-  const t0 = points[0]!.t;
-  const span = Math.max(1, points.at(-1)!.t - t0);
-  const xy = (p: TrafficPoint, v: number) => `${((p.t - t0) / span) * W},${H - (v / max) * (H - 3)}`;
-  const line = points.map((p) => xy(p, p.down + p.up)).join(" L");
-  const up = points.map((p) => xy(p, p.up)).join(" L");
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" class="h-9 w-full" aria-hidden="true">
-      <defs>
-        <linearGradient id="spark-fill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="var(--flow-down)" stop-opacity="0.35" />
-          <stop offset="1" stop-color="var(--flow-down)" stop-opacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={`M0,${H} L${line} L${W},${H} Z`} fill="url(#spark-fill)" />
-      <path d={`M${line}`} fill="none" stroke="var(--flow-down)" stroke-width="1.6" vector-effect="non-scaling-stroke" />
-      <path d={`M${up}`} fill="none" stroke="var(--flow-up)" stroke-width="1.2" vector-effect="non-scaling-stroke" opacity="0.8" />
-    </svg>
-  );
-}
 
 function Ring({ value, label }: { value: number; label: string }) {
   const r = 15;
@@ -355,15 +331,7 @@ export function Overview() {
   const [editingWifi, setEditingWifi] = useState<WifiKind | null>(null);
 
   const clients = clientsQ.data?.clients ?? [];
-  const fetchedAt = clientsQ.data?.status.fetchedAt ?? null;
-  useEffect(() => {
-    const online = clients.filter((c) => c.online);
-    recordTraffic(
-      fetchedAt,
-      online.reduce((s, c) => s + c.downKBps, 0),
-      online.reduce((s, c) => s + c.upKBps, 0),
-    );
-  }, [fetchedAt, clients]);
+  useTrafficRecorder(clientsQ.data);
 
   const highlight = useMemo(() => {
     const needle = q.trim().toLowerCase();
