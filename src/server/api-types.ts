@@ -146,6 +146,13 @@ export interface EventView {
   data: Record<string, unknown>;
 }
 
+/** Quando cada aparelho esteve online na janela; fim null = ainda online. */
+export interface PresenceView {
+  from: string;
+  to: string;
+  devices: { mac: string; intervals: [string, string | null][] }[];
+}
+
 export interface AuditView {
   id: number;
   at: string;

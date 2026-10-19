@@ -346,6 +346,24 @@
   dialog.palette::backdrop { background: rgb(5 8 12 / 0.45); backdrop-filter: blur(3px); }
   @media (max-width: 639px) { dialog.palette { @apply mt-3; } }
 
+  /* Histórico: raias de presença, mapa de calor e linha do tempo. */
+  .presence-bar { box-shadow: 0 0 0 1px color-mix(in srgb, var(--surface) 60%, transparent); }
+  .presence-bar.is-open::after {
+    content: ""; position: absolute; right: -3px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 999px;
+    background: var(--led-on); box-shadow: 0 0 0 2px var(--surface), 0 0 8px var(--led-on); animation: led 2s ease-in-out infinite;
+  }
+  .heat-cell { background: var(--accent); }
+  .heat-cell.is-empty { background: var(--surface-2); }
+  .heat-cell.is-now { outline: 2px solid var(--text); outline-offset: 1px; }
+  .timeline { position: relative; }
+  .timeline-day { @apply sticky top-14 z-[1] -mx-4 bg-surface/90 px-4 pb-1 pt-3 text-[12px] font-semibold capitalize text-muted backdrop-blur sm:-mx-5 sm:px-5; }
+  .timeline-item { @apply relative flex items-start gap-3 py-1; }
+  .timeline-item::before { content: ""; position: absolute; left: calc(2.75rem + 0.75rem + 10px); top: 0; bottom: 0; width: 1px; background: var(--line); }
+  .timeline-dot { @apply relative z-[1] mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-muted; }
+  .timeline-dot.is-ok { @apply border-transparent bg-ok-soft text-ok; }
+  .timeline-dot.is-warn { @apply border-transparent bg-warn-soft text-warn; }
+  .timeline-dot.is-bad { @apply border-transparent bg-bad-soft text-bad; }
+
   /* Fundo do topo das telas principais. */
   .hero-glow { background: radial-gradient(120% 90% at 50% 0%, var(--hero-from), transparent 70%); }
 }

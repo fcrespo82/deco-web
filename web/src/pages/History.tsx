@@ -1,12 +1,17 @@
+import type { ComponentType } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
-import { Clock } from "lucide-preact";
+import { ArrowLeftRight, Clock, Globe, Lock, Router, Sparkles, Wifi, WifiOff } from "lucide-preact";
 import { api, type AuditView, type EventView } from "../api";
-import { KEYS, useAudit, useSamples } from "../data";
+import { categoryOf, DeviceArt } from "../art/devices";
+import { KEYS, useAudit, useClients, useHeatSamples, usePresence, useSamples } from "../data";
+import { openClient } from "../lib/ui-state";
+import { Heatmap } from "../views/Heatmap";
+import { Presence } from "../views/Presence";
 import { EVENT_LABEL, EVENT_TONE, ago, dateTime, eventDetail } from "../format";
 import { useNow } from "../hooks";
 import { useQuery } from "../lib/query";
 import { LineChart } from "../LineChart";
-import { Badge, Button, Card, Empty, FilterChips, Segmented, SectionTitle, Skeleton, TableCard } from "../ui";
+import { Badge, Button, Card, cx, Empty, FilterChips, Segmented, SectionTitle, Skeleton, TableCard } from "../ui";
 
 const RANGES = [
   { hours: 24, label: "24 h" },
@@ -25,14 +30,42 @@ const TYPE_GROUPS: { label: string; types: string }[] = [
   { label: "Reservas", types: "reservation_added,reservation_removed,reservation_changed" },
 ];
 
+const EVENT_ICON: Record<string, ComponentType<{ class?: string }>> = {
+  client_new: Sparkles,
+  client_connected: Wifi,
+  client_disconnected: WifiOff,
+  client_ip_changed: ArrowLeftRight,
+  node_offline: Router,
+  node_online: Router,
+  internet_down: Globe,
+  internet_up: Globe,
+  reservation_added: Lock,
+  reservation_removed: Lock,
+  reservation_changed: Lock,
+};
+
+const fmtHour = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
+const fmtDayLong = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+
+function dayLabel(iso: string, now: number): string {
+  const d = new Date(iso);
+  const today = new Date(now);
+  const yesterday = new Date(now - 86_400_000);
+  if (d.toDateString() === today.toDateString()) return "Hoje";
+  if (d.toDateString() === yesterday.toDateString()) return "Ontem";
+  return fmtDayLong.format(d);
+}
+
 /**
- * Eventos: a primeira página vem do cache e se atualiza sozinha a cada
- * leitura; "Carregar mais" acrescenta páginas antigas por baixo.
+ * Eventos numa linha do tempo, agrupados por dia. A primeira página vem do
+ * cache e se atualiza sozinha a cada leitura; "Carregar mais" acrescenta
+ * páginas antigas por baixo.
  */
 function Events() {
   const now = useNow();
   const [types, setTypes] = useState("");
   const first = useQuery(KEYS.events(types), () => api.events({ type: types, limit: 100 }), ["snapshot", "reservations"]);
+  const clients = useClients().data?.clients ?? [];
   const [older, setOlder] = useState<{ events: EventView[]; next: number | null } | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -43,6 +76,7 @@ function Events() {
     const seen = new Set<number>();
     return all.filter((e) => !seen.has(e.id) && seen.add(e.id));
   }, [first.data, older]);
+  const byMac = useMemo(() => new Map(clients.map((c) => [c.mac, c])), [clients]);
   const next = older ? older.next : (first.data?.nextBefore ?? null);
 
   async function loadMore() {
@@ -56,6 +90,7 @@ function Events() {
     }
   }
 
+  let lastDay = "";
   return (
     <>
       <div class="mb-3">
@@ -67,37 +102,51 @@ function Events() {
       ) : events.length === 0 ? (
         <Empty icon={<Clock />}>Nenhum evento registrado ainda.</Empty>
       ) : (
-        <TableCard>
-          <table class="rtable">
-            <thead>
-              <tr>
-                <th>Quando</th>
-                <th>Evento</th>
-                <th>Dispositivo</th>
-                <th>Detalhe</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((e) => (
-                <tr key={e.id} class="animate-fade-in">
-                  <td class="cell-primary whitespace-nowrap text-[12.5px]" title={dateTime(e.at)}>
-                    <span class="text-fg">{dateTime(e.at)}</span> <span class="text-muted">· {ago(e.at, now)}</span>
-                  </td>
-                  <td data-label="Evento">
-                    <Badge tone={EVENT_TONE[e.type] || ""}>{EVENT_LABEL[e.type] ?? e.type}</Badge>
-                  </td>
-                  <td data-label="Dispositivo">
-                    {e.name ?? (e.mac ? <span class="font-mono text-[12.5px]">{e.mac}</span> : <span class="text-muted">rede</span>)}
-                    {e.name && e.mac && <div class="font-mono text-[11.5px] text-muted">{e.mac}</div>}
-                  </td>
-                  <td data-label="Detalhe" class="font-mono text-[12.5px]">
-                    {eventDetail(e.type, e.data)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </TableCard>
+        <Card class="p-0">
+          <ol class="timeline px-4 py-2 sm:px-5">
+            {events.map((e) => {
+              const day = dayLabel(e.at, now);
+              const header = day !== lastDay ? day : null;
+              lastDay = day;
+              const c = e.mac ? byMac.get(e.mac) : undefined;
+              const Icon = EVENT_ICON[e.type] ?? Clock;
+              const tone = EVENT_TONE[e.type] || "";
+              const detail = eventDetail(e.type, e.data);
+              return (
+                <>
+                  {header && (
+                    <li class="timeline-day">
+                      <span>{header}</span>
+                    </li>
+                  )}
+                  <li key={e.id} class="timeline-item animate-fade-in">
+                    <span class="w-11 shrink-0 pt-1 text-right text-[11.5px] tabular-nums text-muted" title={dateTime(e.at)}>
+                      {fmtHour.format(new Date(e.at))}
+                    </span>
+                    <span class={cx("timeline-dot", tone && `is-${tone}`)}>
+                      <Icon class="size-3" />
+                    </span>
+                    <button
+                      type="button"
+                      disabled={!c}
+                      onClick={() => c && openClient(c.mac)}
+                      class="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1 text-left enabled:hover:bg-surface-2"
+                    >
+                      {c ? <DeviceArt category={categoryOf(c)} size="sm" online={c.online} deviceId={c.device?.id} class="!size-7" /> : null}
+                      <span class="min-w-0">
+                        <span class="block text-[13px]">
+                          <span class="font-medium">{e.name ?? (e.mac ? e.mac : "Rede")}</span> <span class="text-muted">{(EVENT_LABEL[e.type] ?? e.type).toLowerCase()}</span>
+                        </span>
+                        {detail && <span class="block truncate font-mono text-[11.5px] text-muted">{detail}</span>}
+                      </span>
+                      <span class="ml-auto shrink-0 text-[11px] text-muted max-sm:hidden">{ago(e.at, now)}</span>
+                    </button>
+                  </li>
+                </>
+              );
+            })}
+          </ol>
+        </Card>
       )}
       {next && (
         <div class="mt-3 flex justify-center">
@@ -188,12 +237,34 @@ function Audit() {
   );
 }
 
+function PresenceSection() {
+  const [hours, setHours] = useState(24);
+  const presence = usePresence(hours);
+  const clients = useClients().data?.clients;
+  return (
+    <>
+      <SectionTitle
+        actions={<Segmented label="Janela de presença" value={hours} onChange={setHours} options={[{ value: 24, label: "24 h" }, { value: 24 * 7, label: "7 dias" }]} />}
+      >
+        Quem esteve na rede
+      </SectionTitle>
+      {presence.data && clients ? <Presence data={presence.data} clients={clients} hours={hours} /> : <Skeleton class="h-72" />}
+    </>
+  );
+}
+
 export function History() {
   const [hours, setHours] = useState(24);
   const { data: samples } = useSamples(hours);
+  const heat = useHeatSamples();
 
   return (
     <>
+      <PresenceSection />
+
+      <SectionTitle>Ritmo da casa</SectionTitle>
+      <Card>{heat.data ? <Heatmap points={heat.data.points} /> : <Skeleton class="h-48" />}</Card>
+
       <SectionTitle actions={<Segmented label="Período" value={hours} onChange={setHours} options={RANGES.map((r) => ({ value: r.hours, label: r.label }))} />}>
         Clientes online
       </SectionTitle>

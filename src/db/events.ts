@@ -57,6 +57,27 @@ export class EventRepo {
     }));
   }
 
+  /** Eventos dos tipos dados na janela [from, to], do mais antigo ao mais novo. */
+  between(fromIso: string, toIso: string, types: NetEventType[], max = 50_000): StoredEvent[] {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM events WHERE at >= ? AND at <= ? AND type IN (${types.map(() => "?").join(",")}) ORDER BY at, id LIMIT ?`,
+      )
+      .all(fromIso, toIso, ...types, max) as { id: number; at: string; type: string; mac: string | null; data: string }[];
+    return rows.map((r) => ({ id: r.id, at: r.at, type: r.type as NetEventType, mac: r.mac, data: JSON.parse(r.data) as Record<string, unknown> }));
+  }
+
+  /** Último evento (dos tipos dados) de cada MAC antes de `beforeIso`. */
+  lastBefore(beforeIso: string, types: NetEventType[]): Map<string, NetEventType> {
+    // No SQLite, colunas soltas num GROUP BY com MAX() vêm da linha do máximo.
+    const rows = this.db
+      .prepare(
+        `SELECT mac, type, MAX(at) AS at FROM events WHERE at < ? AND mac IS NOT NULL AND type IN (${types.map(() => "?").join(",")}) GROUP BY mac`,
+      )
+      .all(beforeIso, ...types) as { mac: string; type: string }[];
+    return new Map(rows.map((r) => [r.mac, r.type as NetEventType]));
+  }
+
   prune(beforeIso: string): number {
     return this.db.prepare("DELETE FROM events WHERE at < ?").run(beforeIso).changes;
   }

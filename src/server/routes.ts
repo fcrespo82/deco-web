@@ -11,8 +11,9 @@ import { buildIpPlan, lanSubnet } from "../core/ipplan.js";
 import { suggestReservationIps, type ReservationChange } from "../core/reservations.js";
 import { DEVICE_TYPES } from "../db/inventory.js";
 import { requireMac, ValidationError } from "../db/errors.js";
-import type { EventView } from "./api-types.js";
+import type { EventView, PresenceView } from "./api-types.js";
 import { bucketSamples } from "./history.js";
+import { buildPresence, PRESENCE_TYPES } from "./presence.js";
 import { buildClients, buildInventory } from "./views.js";
 
 type Id = { Params: { id: string } };
@@ -190,11 +191,37 @@ export function registerDataRoutes(server: FastifyInstance, app: App, actorOf: (
     },
   );
 
-  server.get<{ Querystring: { hours?: string } }>("/api/history/samples", async (req) => {
+  server.get<{ Querystring: { hours?: string; points?: string } }>("/api/history/samples", async (req) => {
     const hours = Math.min(Math.max(Number(req.query.hours ?? 24) || 24, 1), 24 * 365);
+    const points = Math.min(Math.max(Number(req.query.points ?? 240) || 240, 10), 2000);
     const to = Date.now();
     const from = to - hours * 3600_000;
-    return { from: new Date(from).toISOString(), to: new Date(to).toISOString(), ...bucketSamples(app.store.samples(new Date(from).toISOString()), from, to) };
+    return {
+      from: new Date(from).toISOString(),
+      to: new Date(to).toISOString(),
+      ...bucketSamples(app.store.samples(new Date(from).toISOString()), from, to, points),
+    };
+  });
+
+  server.get<{ Querystring: { hours?: string } }>("/api/history/presence", async (req): Promise<PresenceView> => {
+    const hours = Math.min(Math.max(Number(req.query.hours ?? 24) || 24, 1), 24 * 31);
+    const toMs = Date.now();
+    const fromMs = toMs - hours * 3600_000;
+    const fromIso = new Date(fromMs).toISOString();
+    const toIso = new Date(toMs).toISOString();
+    const presence = buildPresence({
+      fromMs,
+      toMs,
+      before: app.events.lastBefore(fromIso, PRESENCE_TYPES),
+      events: app.events.between(fromIso, toIso, PRESENCE_TYPES),
+      onlineNow: new Set(app.poller.cache.snapshot?.clients.map((c) => c.mac) ?? []),
+    });
+    const iso = (ms: number) => new Date(ms).toISOString();
+    return {
+      from: fromIso,
+      to: toIso,
+      devices: [...presence].map(([mac, list]) => ({ mac, intervals: list.map(([a, b]) => [iso(a), b === null ? null : iso(b)] as [string, string | null]) })),
+    };
   });
 
   server.get<{ Querystring: { limit?: string; before?: string } }>("/api/audit", async (req) => {

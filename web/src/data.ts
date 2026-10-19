@@ -16,6 +16,8 @@ export const KEYS = {
   ipPlan: "ipplan",
   alerts: "alerts",
   samples: (hours: number) => `samples:${hours}`,
+  heat: "samples:heat",
+  presence: (hours: number) => `presence:${hours}`,
   events: (types: string) => `events:${types}`,
   audit: "audit",
   images: "images",
@@ -41,6 +43,9 @@ export const useIpPlan = () => useQuery(KEYS.ipPlan, api.ipPlan, T.ipPlan);
 export const useAlerts = () => useQuery(KEYS.alerts, api.alerts, T.alerts);
 export const useSamples = (hours: number) => useQuery(KEYS.samples(hours), () => api.samples(hours), T.history);
 export const useImages = () => useQuery(KEYS.images, api.images, T.images);
+export const usePresence = (hours: number) => useQuery(KEYS.presence(hours), () => api.presence(hours), T.history);
+/** 30 dias em baldes de 1 h, para o mapa de calor. */
+export const useHeatSamples = () => useQuery(KEYS.heat, () => api.samples(24 * 30, 720), T.history);
 export const useAudit = () => useQuery(KEYS.audit, () => api.audit({ limit: 50 }), T.audit);
 
 /**

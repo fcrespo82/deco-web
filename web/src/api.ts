@@ -8,11 +8,13 @@ import type {
   IpPlan,
   OfficialResult,
   OverviewView,
+  PresenceView,
   SamplePoint,
   StatusView,
 } from "../../src/server/api-types";
 
 export type {
+  PresenceView,
   ImageKind,
   ImagesView,
   OfficialResult,
@@ -213,8 +215,9 @@ export const api = {
 
   events: (q: { limit?: number; before?: number; type?: string; mac?: string } = {}) =>
     request<{ events: EventView[]; nextBefore: number | null; types: string[] }>("GET", `/api/history/events${qs(q)}`),
-  samples: (hours: number) =>
-    request<{ from: string; to: string; bucketMs: number; points: SamplePoint[] }>("GET", `/api/history/samples${qs({ hours })}`),
+  samples: (hours: number, points?: number) =>
+    request<{ from: string; to: string; bucketMs: number; points: SamplePoint[] }>("GET", `/api/history/samples${qs({ hours, points })}`),
+  presence: (hours: number) => request<PresenceView>("GET", `/api/history/presence${qs({ hours })}`),
   audit: (q: { limit?: number; before?: number } = {}) => request<{ entries: AuditView[] }>("GET", `/api/audit${qs(q)}`),
 
   images: () => request<ImagesView & { models: string[] }>("GET", "/api/images"),
