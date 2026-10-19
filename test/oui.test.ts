@@ -41,9 +41,9 @@ describe("suggestType", () => {
 
   it("pelos nomes e categorias que o Deco dá", () => {
     expect(s("iPhone", "Mobile")).toBe("celular");
-    expect(s("iPad-de-Joao", "Tablet")).toBe("tablet");
+    expect(s("iPad-da-Crianca", "Tablet")).toBe("tablet");
     expect(s("P110", "Smart Plug")).toBe("iot");
-    expect(s("LED João", "Smart Light")).toBe("iot");
+    expect(s("LED Quarto", "Smart Light")).toBe("iot");
     expect(s("C200", "IP Camera")).toBe("iot");
     expect(s("Sala-de-TV", "Media Player")).toBe("tv");
     expect(s("Samsung", "Projector")).toBe("tv");
@@ -51,7 +51,7 @@ describe("suggestType", () => {
     expect(s("HPIFDBC49", null)).toBe("impressora");
     expect(s("Ender3V3-4D83", "Computer")).toBe("impressora");
     expect(s("OmniBook3-Tha^s", "Computer")).toBe("notebook");
-    expect(s("nas-fcrespo82", "Network")).toBe("servidor");
+    expect(s("nas-casa", "Network")).toBe("servidor");
     expect(s("cachyos", "Computer")).toBe("pc");
     expect(s("proxmox", "Computer", "REALTEK SEMICONDUCTOR CORP.")).toBe("servidor");
     expect(s("homeassistant", "Computer")).toBe("servidor");
