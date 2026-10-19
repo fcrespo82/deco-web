@@ -26,6 +26,8 @@ interface Props {
   /** Fabricante do MAC; null = MAC privado/aleatório; undefined = não informado. */
   vendor?: string | null;
   onClose: () => void;
+  /** Depois de salvar (otimista): permite encadear outra ação, como a reserva. */
+  onSaved?: (saved: { alias: string; type: string | null }) => void;
 }
 
 type Clients = { status: unknown; clients: ClientView[] };
@@ -56,7 +58,7 @@ function applyLocally(macs: string[], device: DeviceView | null, input: Required
   ];
 }
 
-export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vendor, onClose }: Props) {
+export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vendor, onClose, onSaved }: Props) {
   const { data: inventory, error: loadError } = useInventory();
   const [events, setEvents] = useState<EventView[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -101,6 +103,7 @@ export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vend
     };
     const target = device;
     onClose();
+    onSaved?.({ alias: input.alias, type: input.type });
     void mutate({
       optimistic: () => applyLocally(macs, target, input),
       run: () => (target ? api.updateDevice(target.id, input) : api.saveClientDevice(mac!, input)),

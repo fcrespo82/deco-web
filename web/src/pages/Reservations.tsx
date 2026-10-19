@@ -28,19 +28,40 @@ function State({ c }: { c: ClientView }) {
   return <Badge tone="ok">em uso</Badge>;
 }
 
-/** Escolhe um cliente sem reserva para fixar o IP. */
-function PickClient({ onPick, onCancel }: { onPick: (c: ClientView) => void; onCancel: () => void }) {
+/**
+ * Escolhe um aparelho para fixar o IP. Por padrão, só os online sem reserva;
+ * com includeReserved, também os que já têm (a reserva será mudada). Os do tipo
+ * que a faixa espera (preferTypes) vêm primeiro.
+ */
+export function PickClient({
+  onPick,
+  onCancel,
+  title = "Fixar IP de qual aparelho?",
+  subtitle = "Aparelhos online sem reserva",
+  preferTypes = [],
+  includeReserved = false,
+}: {
+  onPick: (c: ClientView) => void;
+  onCancel: () => void;
+  title?: string;
+  subtitle?: string;
+  preferTypes?: string[];
+  includeReserved?: boolean;
+}) {
   const { data } = useClients();
   const [q, setQ] = useState("");
+  const typeOf = (c: ClientView) => c.device?.type ?? c.suggestedType ?? null;
+  const matches = (c: ClientView) => preferTypes.length > 0 && preferTypes.includes(typeOf(c) ?? "");
   const options = useMemo(
     () =>
       (data?.clients ?? [])
-        .filter((c) => !c.reservation && c.online)
-        .filter((c) => !q || [label(c), c.mac, c.ip].join(" ").toLowerCase().includes(q.toLowerCase())),
-    [data, q],
+        .filter((c) => c.online && (includeReserved || !c.reservation))
+        .filter((c) => !q || [label(c), c.mac, c.ip].join(" ").toLowerCase().includes(q.toLowerCase()))
+        .sort((a, b) => Number(matches(b)) - Number(matches(a)) || label(a).localeCompare(label(b), "pt-BR", { numeric: true })),
+    [data, q, preferTypes.join(","), includeReserved],
   );
   return (
-    <Dialog title="Fixar IP de qual aparelho?" subtitle="Aparelhos online sem reserva" onClose={onCancel}>
+    <Dialog title={title} subtitle={subtitle} onClose={onCancel}>
       <div class="relative">
         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
         <input type="search" class="field pl-9" placeholder="Buscar nome, MAC, IP…" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Buscar aparelho" autofocus />
@@ -50,13 +71,21 @@ function PickClient({ onPick, onCancel }: { onPick: (c: ClientView) => void; onC
           <li>
             <button type="button" onClick={() => onPick(c)} class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-surface-2">
               <DeviceArt size="sm" category={categoryOf(c)} deviceId={c.device?.id} />
-              <span class="min-w-0 flex-1 truncate font-medium">{label(c)}</span>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate font-medium">{label(c)}</span>
+                {(matches(c) || c.reservation) && (
+                  <span class="flex flex-wrap gap-1 text-[11.5px] text-muted">
+                    {matches(c) && <Badge tone="accent">tipo da faixa</Badge>}
+                    {c.reservation && <span>reservado em {c.reservation.ip}</span>}
+                  </span>
+                )}
+              </span>
               <span class="font-mono text-[12px] text-muted">{c.ip}</span>
             </button>
           </li>
         ))}
         {!data && <li class="h-20 animate-pulse rounded-lg bg-surface-2" />}
-        {data && options.length === 0 && <li class="px-3 py-4 text-center text-muted">Nenhum aparelho online sem reserva.</li>}
+        {data && options.length === 0 && <li class="px-3 py-4 text-center text-muted">Nenhum aparelho online{includeReserved ? "" : " sem reserva"}.</li>}
       </ul>
     </Dialog>
   );

@@ -1,13 +1,18 @@
 import type { ComponentChildren } from "preact";
 import { useState } from "preact/hooks";
 import { Network, Pencil, Plus, Trash, TriangleAlert } from "lucide-preact";
-import { api, type CellStatus, type IpCell, type IpPlan as Plan, type RangeSummary } from "../api";
-import { KEYS, useIpPlan, useStatus } from "../data";
+import { api, type CellStatus, type ClientView, type IpCell, type IpPlan as Plan, type RangeSummary } from "../api";
+import { KEYS, useClients, useIpPlan, useStatus } from "../data";
 import { INVENTORY_TYPE_LABEL } from "../format";
 import { errorText, mutate } from "../lib/mutate";
-import { setQueryData } from "../lib/query";
+import { getQueryData, setQueryData } from "../lib/query";
+import { usePendingReservations } from "../lib/reservation-write";
+import { openClient } from "../lib/ui-state";
+import { categoryOf, DeviceArt } from "../art/devices";
+import { DeviceEditor } from "../DeviceEditor";
+import { PickClient } from "./Reservations";
 import { toast } from "../lib/toast";
-import { ReservationDialog } from "../ReservationDialog";
+import { PendingReservationBadge, ReservationDialog } from "../ReservationDialog";
 import { Badge, Banner, Button, Card, Check, cx, Dialog, Empty, Field, FilterChips, IconButton, Kv, PageLoading, SectionTitle, TableCard } from "../ui";
 
 /** Cores das faixas: ordem categórica fixa (validada); da 9ª em diante, cinza. */
@@ -167,7 +172,49 @@ function RangeForm({ range, onClose }: { range: RangeSummary | null; onClose: ()
   );
 }
 
-function CellDetail({ cell, range, onReserve }: { cell: IpCell; range: RangeSummary | undefined; onReserve?: () => void }) {
+/** O que o detalhe do endereço abriu: cadastro, reserva ou escolha de aparelho. */
+type Flow =
+  | { kind: "edit"; client: ClientView | null; mac: string; name: string | null; suggestedType?: string; thenReserve: boolean }
+  | { kind: "reserve"; client: ClientView; presetIp?: string }
+  | { kind: "pick"; ip: string; range: RangeSummary };
+
+/**
+ * IP para fixar um aparelho do tipo dado: o próprio endereço, se já está numa
+ * faixa fixa que aceita o tipo; senão o próximo livre da faixa fixa do tipo.
+ */
+function targetIp(plan: Plan, cell: IpCell | undefined, type: string | null): string | undefined {
+  const here = cell?.rangeId ? plan.ranges.find((r) => r.id === cell.rangeId) : undefined;
+  if (cell && here?.kind === "static" && (here.types.length === 0 || (type && here.types.includes(type)))) return cell.ip;
+  const typed = type ? plan.ranges.find((r) => r.kind === "static" && r.types.includes(type) && r.suggestion) : undefined;
+  return typed?.suggestion ?? undefined;
+}
+
+function CellDetail({
+  cell,
+  range,
+  client,
+  allowWrite,
+  onFlow,
+}: {
+  cell: IpCell;
+  range: RangeSummary | undefined;
+  client: ClientView | undefined;
+  allowWrite: boolean;
+  onFlow: (f: Flow) => void;
+}) {
+  const pending = usePendingReservations().has(cell.mac ?? "");
+  const type = client ? (client.device?.type ?? null) : null;
+  // Para cadastrar: o tipo que o painel sugere, ou o que a faixa espera.
+  const suggestedType = client?.suggestedType ?? range?.types[0];
+  const editFlow = (thenReserve: boolean): Flow => ({
+    kind: "edit",
+    client: client ?? null,
+    mac: cell.mac!,
+    name: client?.name ?? cell.name,
+    suggestedType: suggestedType ?? undefined,
+    thenReserve,
+  });
+
   return (
     <Card class="animate-fade-in" aria-live="polite">
       <div class="flex items-center gap-2">
@@ -179,24 +226,83 @@ function CellDetail({ cell, range, onReserve }: { cell: IpCell; range: RangeSumm
         class="mt-3"
         items={[
           ["Faixa", range ? `${range.name} (${range.label})` : "fora do plano"],
-          ...(cell.name ? [["Dispositivo", cell.name] as [string, string]] : []),
-          ...(cell.mac ? [["MAC", cell.mac, "font-mono text-[12.5px]"] as [string, string, string]] : []),
+          ...(range?.types.length ? [["Espera", range.types.map((t) => INVENTORY_TYPE_LABEL[t] ?? t).join(", ")] as [string, string]] : []),
+          ...(!client && cell.name ? [["Dispositivo", cell.name] as [string, string]] : []),
+          ...(!client && cell.mac ? [["MAC", cell.mac, "font-mono text-[12.5px]"] as [string, string, string]] : []),
           ...(cell.anomalies.length ? [["Atenção", <span class="text-warn">{cell.anomalies.map((a) => ANOMALY_LABEL[a] ?? a).join(", ")}</span>] as [string, ComponentChildren]] : []),
         ]}
       />
-      {onReserve && (
-        <Button class="mt-3 w-full" onClick={onReserve}>
-          Fixar este IP para o aparelho
-        </Button>
+
+      {client && (
+        <div class="mt-3 flex items-center gap-3 rounded-lg border border-line p-2.5">
+          <DeviceArt category={categoryOf(client)} size="sm" online={client.online} deviceId={client.device?.id} />
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-[13.5px] font-medium">{client.device?.alias ?? client.name}</div>
+            <div class="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
+              {client.device ? (type ? INVENTORY_TYPE_LABEL[type] : "sem tipo") : <Badge tone="warn">sem cadastro</Badge>}
+              <span class="whitespace-nowrap font-mono">{client.mac}</span>
+            </div>
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => openClient(client.mac)}>
+            Ficha
+          </Button>
+        </div>
       )}
+      {pending && cell.mac && (
+        <div class="mt-2">
+          <PendingReservationBadge mac={cell.mac} />
+        </div>
+      )}
+
+      <div class="mt-3 grid gap-2">
+        {cell.mac && !client?.device && (
+          <>
+            {allowWrite && client?.online && !client.reservation && !pending ? (
+              <>
+                <Button variant="primary" onClick={() => onFlow(editFlow(true))}>
+                  Cadastrar e fixar IP
+                </Button>
+                <Button onClick={() => onFlow(editFlow(false))}>Só cadastrar</Button>
+              </>
+            ) : (
+              <Button variant="primary" onClick={() => onFlow(editFlow(false))}>
+                Cadastrar no inventário
+              </Button>
+            )}
+          </>
+        )}
+        {cell.mac && client?.device && <Button onClick={() => onFlow(editFlow(false))}>Editar cadastro</Button>}
+        {allowWrite && client && !pending && client.device && !client.reservation && client.online && (
+          <Button variant="primary" onClick={() => onFlow({ kind: "reserve", client, presetIp: targetIp(planOf(), cell, type) })}>
+            Fixar IP…
+          </Button>
+        )}
+        {allowWrite && client?.reservation && !pending && (
+          <Button onClick={() => onFlow({ kind: "reserve", client })}>Mudar reserva…</Button>
+        )}
+        {allowWrite && !cell.mac && cell.status === "free" && range?.kind === "static" && (
+          <Button variant="primary" onClick={() => onFlow({ kind: "pick", ip: cell.ip, range })}>
+            Reservar para um aparelho…
+          </Button>
+        )}
+      </div>
+      {client && cell.anomalies.includes("type-mismatch") && range?.types.length ? (
+        <p class="mt-2 text-[12px] text-muted">
+          A faixa espera {range.types.map((t) => INVENTORY_TYPE_LABEL[t] ?? t).join(" ou ")}. Ajuste o tipo no cadastro ou mude a reserva para a faixa certa.
+        </p>
+      ) : null}
     </Card>
   );
 }
 
+/** Plano atual do cache (para o cálculo do IP alvo dentro do detalhe). */
+const planOf = () => getQueryData<Plan>(KEYS.ipPlan)!;
+
 export function IpPlan() {
   const { data, error } = useIpPlan();
   const status = useStatus();
-  const [reserving, setReserving] = useState<IpCell | null>(null);
+  const [flow, setFlow] = useState<Flow | null>(null);
+  const clients = useClients().data?.clients;
   const [anomalyFilter, setAnomalyFilter] = useState<string>("");
   const [selected, setSelected] = useState<string | null>(null);
   const [editing, setEditing] = useState<RangeSummary | "new" | null>(null);
@@ -344,7 +450,9 @@ export function IpPlan() {
                 <CellDetail
                   cell={cell}
                   range={cell.rangeId ? rangeOf.get(cell.rangeId) : undefined}
-                  onReserve={status?.mode.allowWrite && cell.status === "online" && cell.mac ? () => setReserving(cell) : undefined}
+                  client={cell.mac ? clients?.find((c) => c.mac === cell.mac) : undefined}
+                  allowWrite={Boolean(status?.mode.allowWrite)}
+                  onFlow={setFlow}
                 />
               ) : (
                 <p class="rounded-xl border border-dashed border-line px-4 py-3 text-[12.5px] text-muted">Toque num endereço para ver detalhes.</p>
@@ -433,14 +541,41 @@ export function IpPlan() {
         não expõe a tabela de leases pela API local.
       </p>
 
-      {reserving && (
+      {flow?.kind === "edit" && (
+        <DeviceEditor
+          mac={flow.mac}
+          deviceId={flow.client?.device?.id}
+          suggestedName={flow.name && flow.name !== flow.mac ? flow.name : undefined}
+          suggestedType={flow.suggestedType}
+          vendor={flow.client ? (flow.client.vendorFull ?? (flow.client.randomMac ? null : undefined)) : undefined}
+          onClose={() => setFlow(null)}
+          onSaved={(saved) => {
+            // "Cadastrar e fixar IP": com o tipo salvo, a reserva já abre no IP da faixa certa.
+            if (flow.thenReserve && flow.client) {
+              const name = saved.alias || flow.client.name;
+              setFlow({ kind: "reserve", client: { ...flow.client, name }, presetIp: targetIp(data, cell, saved.type) });
+            }
+          }}
+        />
+      )}
+      {flow?.kind === "reserve" && (
         <ReservationDialog
-          mac={reserving.mac!}
-          name={reserving.name ?? reserving.mac!}
-          current={null}
-          currentIp={reserving.ip}
-          presetIp={reserving.ip}
-          onClose={() => setReserving(null)}
+          mac={flow.client.mac}
+          name={flow.client.device?.alias ?? flow.client.name}
+          current={flow.client.reservation?.ip ?? null}
+          currentIp={flow.client.online ? flow.client.ip : null}
+          presetIp={flow.presetIp}
+          onClose={() => setFlow(null)}
+        />
+      )}
+      {flow?.kind === "pick" && (
+        <PickClient
+          title={`Reservar ${flow.ip} para…`}
+          subtitle={`Faixa ${flow.range.name}${flow.range.types.length ? ` · espera ${flow.range.types.map((t) => INVENTORY_TYPE_LABEL[t] ?? t).join(", ")}` : ""}`}
+          preferTypes={flow.range.types}
+          includeReserved
+          onCancel={() => setFlow(null)}
+          onPick={(c) => setFlow({ kind: "reserve", client: c, presetIp: flow.ip })}
         />
       )}
       {editing && <RangeForm range={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
