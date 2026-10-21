@@ -24,6 +24,8 @@ export interface PendingReservation {
 }
 
 const pending = new Map<string, PendingReservation>();
+/** Nome digitado na reserva por MAC, para a linha otimista. */
+const stubName = new Map<string, string>();
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
@@ -54,6 +56,31 @@ onLiveTopics((topics) => topics.includes("snapshot") && onSnapshotRead());
 type Clients = { status: unknown; clients: ClientView[] };
 type Reservations = { allowWrite: boolean; used: number; max: number | null; clients: ClientView[] };
 
+/** Aparelho que o painel não conhece (reserva por MAC): o mínimo para listar. */
+export function stubClient(mac: string, name?: string | null): ClientView {
+  return {
+    mac,
+    name: name?.trim() || mac,
+    device: null,
+    online: false,
+    ip: null,
+    deviceType: null,
+    vendor: null,
+    vendorFull: null,
+    randomMac: false,
+    suggestedType: null,
+    band: null,
+    network: null,
+    nodeMac: null,
+    nodeName: null,
+    upKBps: 0,
+    downKBps: 0,
+    firstSeen: null,
+    lastSeen: null,
+    reservation: null,
+  };
+}
+
 const withReservation = (c: ClientView, ip: string | null): ClientView => ({
   ...c,
   reservation: ip ? { ip, matchesCurrentIp: c.online && c.ip ? c.ip === ip : null } : null,
@@ -72,8 +99,9 @@ function applyOptimistic(mac: string, ip: string | null): () => void {
     if (!ip) clients = clients.filter((c) => c.mac !== mac);
     else if (had) clients = clients.map((c) => (c.mac === mac ? withReservation(c, ip) : c));
     else {
-      const base = client ?? d.clients.find((c) => c.mac === mac);
-      if (base) clients = [...clients, withReservation(base, ip)];
+      // Aparelho fora da lista do Deco (reserva por MAC): entra como "nunca visto".
+      const base = client ?? d.clients.find((c) => c.mac === mac) ?? stubClient(mac, stubName.get(mac));
+      clients = [...clients, withReservation(base, ip)];
     }
     return { ...d, clients, used: d.used + (clients.length - d.clients.length) };
   });
@@ -98,6 +126,7 @@ export interface WriteHandle {
 const UNCERTAIN = new Set(["unverified", "ambiguous", "lost"]);
 
 export function writeReservation(p: { mac: string; name: string; op: ReservationOp; ip: string | null }): WriteHandle {
+  stubName.set(p.mac, p.name);
   let detached = false;
   pending.set(p.mac, { op: p.op, ip: p.ip, phase: "saving" });
   emit();

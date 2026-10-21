@@ -6,13 +6,13 @@ import { KEYS, useClients, useIpPlan, useStatus } from "../data";
 import { INVENTORY_TYPE_LABEL } from "../format";
 import { errorText, mutate } from "../lib/mutate";
 import { getQueryData, setQueryData } from "../lib/query";
-import { usePendingReservations } from "../lib/reservation-write";
+import { stubClient, usePendingReservations } from "../lib/reservation-write";
 import { openClient } from "../lib/ui-state";
 import { categoryOf, DeviceArt } from "../art/devices";
 import { DeviceEditor } from "../DeviceEditor";
 import { PickClient } from "./Reservations";
 import { toast } from "../lib/toast";
-import { PendingReservationBadge, ReservationDialog } from "../ReservationDialog";
+import { ManualMacDialog, PendingReservationBadge, ReservationDialog } from "../ReservationDialog";
 import { Badge, Banner, Button, Card, Check, cx, Dialog, Empty, Field, FilterChips, IconButton, Kv, PageLoading, SectionTitle, TableCard } from "../ui";
 
 /** Cores das faixas: ordem categórica fixa (validada); da 9ª em diante, cinza. */
@@ -176,7 +176,8 @@ function RangeForm({ range, onClose }: { range: RangeSummary | null; onClose: ()
 type Flow =
   | { kind: "edit"; client: ClientView | null; mac: string; name: string | null; suggestedType?: string; thenReserve: boolean }
   | { kind: "reserve"; client: ClientView; presetIp?: string }
-  | { kind: "pick"; ip: string; range: RangeSummary };
+  | { kind: "pick"; ip: string; range: RangeSummary }
+  | { kind: "manual"; ip: string };
 
 /**
  * IP para fixar um aparelho do tipo dado: o próprio endereço, se já está numa
@@ -576,6 +577,19 @@ export function IpPlan() {
           includeReserved
           onCancel={() => setFlow(null)}
           onPick={(c) => setFlow({ kind: "reserve", client: c, presetIp: flow.ip })}
+          onManual={() => setFlow({ kind: "manual", ip: flow.ip })}
+        />
+      )}
+      {flow?.kind === "manual" && (
+        <ManualMacDialog
+          onCancel={() => setFlow(null)}
+          onNext={(mac, name) => {
+            const known = clients?.find((c) => c.mac === mac);
+            // Nunca visto: a reserva atual (se houver) vem do próprio plano.
+            const held = data.cells.find((c) => c.mac === mac && (c.status === "reserved" || c.status === "reserved-online"));
+            const client = known ?? { ...stubClient(mac, name), reservation: held ? { ip: held.ip, matchesCurrentIp: null } : null };
+            setFlow({ kind: "reserve", client, presetIp: flow.ip });
+          }}
         />
       )}
       {editing && <RangeForm range={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}

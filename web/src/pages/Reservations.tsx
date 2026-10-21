@@ -5,7 +5,8 @@ import { categoryOf, DeviceArt } from "../art/devices";
 import { useClients, useReservations } from "../data";
 import { INVENTORY_TYPE_LABEL, ago, deviceType } from "../format";
 import { usePendingReservations } from "../lib/reservation-write";
-import { PendingReservationBadge, ReservationDialog } from "../ReservationDialog";
+import { ManualMacDialog, PendingReservationBadge, ReservationDialog } from "../ReservationDialog";
+import { stubClient } from "../lib/reservation-write";
 import { Badge, Banner, Button, Dialog, Dot, Empty, PageLoading, SectionTitle, TableCard } from "../ui";
 
 const label = (c: ClientView) => c.device?.alias ?? c.name;
@@ -40,9 +41,12 @@ export function PickClient({
   subtitle = "Aparelhos online sem reserva",
   preferTypes = [],
   includeReserved = false,
+  onManual,
 }: {
   onPick: (c: ClientView) => void;
   onCancel: () => void;
+  /** "Aparelho fora da lista?": reservar digitando o MAC. */
+  onManual?: () => void;
   title?: string;
   subtitle?: string;
   preferTypes?: string[];
@@ -87,6 +91,14 @@ export function PickClient({
         {!data && <li class="h-20 animate-pulse rounded-lg bg-surface-2" />}
         {data && options.length === 0 && <li class="px-3 py-4 text-center text-muted">Nenhum aparelho online{includeReserved ? "" : " sem reserva"}.</li>}
       </ul>
+      {onManual && (
+        <p class="mt-3 border-t border-line pt-3 text-[12.5px] text-muted">
+          Aparelho fora da lista (desligado, ou que o Deco não mostra)?{" "}
+          <button type="button" class="font-medium text-accent hover:underline" onClick={onManual}>
+            Reservar por MAC
+          </button>
+        </p>
+      )}
     </Dialog>
   );
 }
@@ -96,6 +108,8 @@ export function Reservations() {
   const [editing, setEditing] = useState<Editing | null>(null);
   // "Nova reserva" pela paleta de comandos chega como #/reservas?nova=1.
   const pending = usePendingReservations();
+  const [manual, setManual] = useState(false);
+  const allClients = useClients().data?.clients;
   const [picking, setPicking] = useState(() => /[?&]nova=1/.test(location.hash));
   useEffect(() => {
     if (picking && location.hash.includes("nova=1")) history.replaceState(null, "", "#/reservas");
@@ -137,9 +151,24 @@ export function Reservations() {
       {picking && (
         <PickClient
           onCancel={() => setPicking(false)}
+          onManual={() => {
+            setPicking(false);
+            setManual(true);
+          }}
           onPick={(c) => {
             setPicking(false);
             setEditing({ client: c, mode: "edit" });
+          }}
+        />
+      )}
+      {manual && (
+        <ManualMacDialog
+          onCancel={() => setManual(false)}
+          onNext={(mac, name) => {
+            setManual(false);
+            // Já reservado (mesmo nunca visto)? Muda a reserva existente.
+            const client = data?.clients.find((c) => c.mac === mac) ?? allClients?.find((c) => c.mac === mac) ?? stubClient(mac, name);
+            setEditing({ client: client.name === client.mac ? { ...client, name } : client, mode: "edit" });
           }}
         />
       )}

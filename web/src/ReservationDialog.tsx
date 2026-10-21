@@ -12,8 +12,11 @@ import { ArrowRight } from "lucide-preact";
 import { api, type IpSuggestion, type ReservationResult } from "./api";
 import { Loader, CircleHelp } from "lucide-preact";
 import { usePendingReservations, writeReservation } from "./lib/reservation-write";
+import { useClients, useReservations } from "./data";
 import { toast } from "./lib/toast";
-import { Badge, Banner, Button, cx, Dialog, Field } from "./ui";
+import { Badge, Banner, Button, Check, cx, Dialog, Field } from "./ui";
+import { INVENTORY_TYPE_LABEL } from "./format";
+import { invalidate } from "./lib/query";
 import { OUTCOME_TONE, useElapsed, WorkingNote, type Step } from "./writes";
 
 interface Props {
@@ -209,5 +212,105 @@ export function PendingReservationBadge({ mac }: { mac: string }) {
     <Badge tone="warn" title="O Deco não confirmou; a próxima leitura completa mostra o estado real">
       <CircleHelp class="size-3" /> a confirmar
     </Badge>
+  );
+}
+
+const MAC_RE = /^([0-9A-F]{2}[-:]){5}[0-9A-F]{2}$/i;
+
+/**
+ * Reserva para um aparelho que não está na lista: digita o MAC (e um nome para
+ * reconhecer). O Deco às vezes não lista aparelhos que estão na rede, e
+ * desligados não aparecem.
+ */
+export function ManualMacDialog({ onNext, onCancel }: { onNext: (mac: string, name: string) => void; onCancel: () => void }) {
+  const [mac, setMac] = useState("");
+  const [name, setName] = useState("");
+  const [type, setType] = useState("");
+  const [register, setRegister] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const clients = useClients().data?.clients;
+  const reservations = useReservations().data?.clients;
+  const norm = mac.trim().toUpperCase().replace(/:/g, "-");
+  const valid = MAC_RE.test(mac.trim());
+  const known = valid ? clients?.find((c) => c.mac === norm) : undefined;
+  const reserved = valid ? reservations?.find((c) => c.mac === norm)?.reservation : undefined;
+  // Cadastrar guarda o nome (o Deco não conhece o aparelho) e o tipo, que
+  // decide a faixa sugerida. Aparelho já cadastrado: nada a fazer aqui.
+  const canRegister = valid && !known?.device;
+
+  async function next() {
+    if (!valid) return;
+    const label = name.trim() || known?.device?.alias || known?.name || norm;
+    if (canRegister && register && name.trim()) {
+      setSaving(true);
+      setError(null);
+      try {
+        // Antes de seguir: a sugestão de IP do próximo passo lê o tipo do inventário.
+        await api.saveClientDevice(norm, { alias: name.trim(), type: type || null, approved: true });
+        invalidate(["inventory"]);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Falha ao cadastrar.");
+        setSaving(false);
+        return;
+      }
+    }
+    onNext(norm, label);
+  }
+
+  return (
+    <Dialog
+      title="Reservar por MAC"
+      subtitle="Para aparelhos que não aparecem na lista do Deco"
+      onClose={onCancel}
+      footer={
+        <>
+          <span class="flex-1" />
+          <Button onClick={onCancel}>Cancelar</Button>
+          <Button variant="primary" type="submit" form="mac-form" disabled={!valid} loading={saving}>
+            Continuar
+          </Button>
+        </>
+      }
+    >
+      <form
+        id="mac-form"
+        class="grid gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void next();
+        }}
+      >
+        <Field label="MAC" hint="Ex.: BC:24:11:5E:F8:B8. No Proxmox: CT → Network; no aparelho: configurações de rede.">
+          <input class="field font-mono" value={mac} onInput={(e) => setMac((e.target as HTMLInputElement).value)} placeholder="AA:BB:CC:DD:EE:FF" autofocus required />
+        </Field>
+        <div class="grid gap-3 sm:grid-cols-[1fr_160px]">
+          <Field label="Nome">
+            <input class="field" value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} placeholder="deco-web" />
+          </Field>
+          <Field label="Tipo">
+            <select class="field" value={type} onChange={(e) => setType((e.target as HTMLSelectElement).value)} disabled={!canRegister || !register}>
+              <option value="">—</option>
+              {Object.entries(INVENTORY_TYPE_LABEL).map(([k, v]) => (
+                <option value={k}>{v}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        {canRegister && (
+          <Check checked={register} onChange={() => setRegister(!register)}>
+            Cadastrar no inventário com este nome e tipo (o tipo escolhe a faixa sugerida)
+          </Check>
+        )}
+        {error && <p class="text-[13px] text-bad">{error}</p>}
+        {mac.trim() && !valid && <p class="text-[13px] text-bad">MAC inválido: use 6 pares hexadecimais separados por ":" ou "-".</p>}
+        {known && (
+          <Banner tone="accent">
+            {known.device ? `Já cadastrado no inventário como "${known.device.alias}".` : `Este MAC é de "${known.name}", que está na lista de aparelhos.`}
+          </Banner>
+        )}
+        {reserved && <Banner tone="warn">Já reservado em {reserved.ip}: a reserva será mudada, não duplicada.</Banner>}
+      </form>
+    </Dialog>
   );
 }
