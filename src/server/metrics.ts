@@ -85,7 +85,7 @@ export function buildMetrics({ cache, now, pollIntervalMs, aliasOf }: MetricsInp
   const online = snap.clients;
   const byNode = new Map<string, number>();
   for (const c of online) if (c.nodeMac) byNode.set(c.nodeMac, (byNode.get(c.nodeMac) ?? 0) + 1);
-  const networks = [...new Set(online.map((c) => c.network))].sort();
+  const networks = [...new Set(online.map((c) => c.network).filter((n): n is string => n !== null))].sort();
   const name = (mac: string, fallback: string) => aliasOf?.(mac) || fallback;
 
   families.push(

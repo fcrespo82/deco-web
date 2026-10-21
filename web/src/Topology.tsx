@@ -106,7 +106,7 @@ function orbit(n: number, links: number[]): { points: [number, number][]; outer:
 }
 
 function bandRank(c: ClientView) {
-  return BAND_ORDER.indexOf(c.band ?? "wired");
+  return c.band ? BAND_ORDER.indexOf(c.band) : BAND_ORDER.length;
 }
 
 function build(nodes: NodeView[], clients: ClientView[]) {
@@ -397,11 +397,11 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
           {/* Links nó → cliente */}
           {placed.map((p) =>
             p.clients.map(({ c, x, y }) => {
-              const band = c.band ?? "wired";
               const d = `M${p.x} ${p.y - 4} L${x} ${y}`;
+              // Sem banda (visto só pelo painel): traço pontilhado neutro, nem cabo nem Wi-Fi.
               return (
                 <g key={`cl-${c.mac}`} class={cx("topo-client-link", dim(c) && "is-dim", hover === c.mac && "is-hover")}>
-                  <path d={d} stroke={BAND_COLOR[band]} class={band === "wired" ? "" : "is-wifi"} />
+                  <path d={d} stroke={c.band ? BAND_COLOR[c.band] : "var(--muted)"} class={!c.band ? "is-unknown" : c.band === "wired" ? "" : "is-wifi"} />
                   <Flow d={d} kBps={c.downKBps} class="flow-down" r={1.8} />
                 </g>
               );

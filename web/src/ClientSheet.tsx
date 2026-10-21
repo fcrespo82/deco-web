@@ -144,7 +144,7 @@ export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void
           [
             "Conectado a",
             c.viaPanel ? (
-              <span title="O Deco lista no máximo ~8 aparelhos por porta cabeada; este ficou de fora, e o painel o viu na rede.">
+              <span title="A lista do Deco às vezes omite aparelhos que estão na rede; este ficou de fora, e o painel o viu. Banda e nó só o Deco informa.">
                 fora da lista do Deco · <Badge tone="accent">visto pelo painel</Badge>
               </span>
             ) : (

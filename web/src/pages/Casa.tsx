@@ -117,7 +117,7 @@ function Marker({
             <button
               type="button"
               class={cx("casa-client", busy && "is-busy")}
-              style={{ transform: `translate(${dx}px, ${dy}px)`, "--band": BAND_COLOR[c.band ?? "wired"] }}
+              style={{ transform: `translate(${dx}px, ${dy}px)`, "--band": c.band ? BAND_COLOR[c.band] : "var(--muted)" }}
               onClick={() => openClient(c.mac)}
               title={`${clientLabel(c)} · ${c.band ? BAND_LABEL[c.band] : ""}${busy ? ` · ↓ ${rate(c.downKBps)}` : ""}`}
             >

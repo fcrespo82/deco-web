@@ -289,6 +289,7 @@
   .topo-edge-label text { fill: var(--muted); font-size: 10.5px; font-weight: 500; }
   .topo-client-link path { fill: none; stroke-width: 1.3; opacity: 0.45; transition: opacity 0.2s; }
   .topo-client-link path.is-wifi { stroke-dasharray: 2 3; }
+  .topo-client-link path.is-unknown { stroke-dasharray: 1 4; opacity: 0.35; }
   .topo-client-link.is-hover path { opacity: 1; stroke-width: 2; }
   .topo-client-link.is-dim { opacity: 0.12; }
   .flow circle { pointer-events: none; }

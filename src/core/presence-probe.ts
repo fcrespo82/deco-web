@@ -1,6 +1,6 @@
 /**
- * Presença vista pelo próprio painel. O Deco só lista um número limitado de
- * aparelhos por porta cabeada (medido: 8 atrás do host Proxmox); os demais
+ * Presença vista pelo próprio painel. A lista de clientes do Deco omite
+ * aparelhos de forma intermitente (cabeados e Wi-Fi, sem padrão claro): eles
  * funcionam, mas somem da lista. Para os MACs que esperamos ver (reservados ou
  * cadastrados) e que o Deco não listou, o painel:
  * 1. manda um datagrama UDP inofensivo (porta discard) a cada IP conhecido do
@@ -128,9 +128,10 @@ export function withPanelClients(
       name: nameOf(h.mac, h.self),
       ip: h.ip,
       deviceType: "",
-      // Visto por ARP na LAN: na prática, cabeado (é o caso que o Deco esconde).
-      band: "wired",
-      network: "main",
+      // O ARP só prova que o aparelho está na LAN: não diz banda, nó nem rede
+      // (o Deco também omite aparelhos Wi-Fi, não só cabeados).
+      band: null,
+      network: null,
       nodeMac: null,
       upKBps: 0,
       downKBps: 0,

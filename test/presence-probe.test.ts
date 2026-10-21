@@ -111,4 +111,33 @@ describe("integração com o poller", () => {
     // Listados pelo Deco não ganham a marca.
     expect(clients.filter((x) => x.viaPanel).map((x) => x.mac)).toEqual([hidden.mac]);
   });
+
+  it("Wi-Fi omitido pelo Deco não vira cabo (nem na tela, nem no histórico)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "deco-web-probe-"));
+    const api = new MockDecoApi();
+    const first = await api.fetchSnapshot();
+    const wifi = first.clients.find((c) => c.band === "2.4GHz")!;
+    const arp = `IP address HW type Flags HW address Mask Device\n${wifi.ip} 0x1 0x2 ${wifi.mac.toLowerCase().replace(/-/g, ":")} * eth0\n`;
+    const app = createApp(loadConfig({ DECO_MOCK: "1", DATA_DIR: dir }), silentLogger, {
+      api,
+      probe: { sendProbe: () => {}, readArp: () => arp, localInterfaces: () => [], wait: async () => {} },
+    });
+    opened.push({ app, dir });
+    app.inventory.upsertForMac(wifi.mac, { alias: "tomada", type: "iot" });
+
+    await app.poller.pollNow(); // o Deco lista: 2,4 GHz
+    // Próxima leitura: o Deco omite o aparelho (como acontece de verdade).
+    api.mutate((raw) => {
+      const list = (raw.clientList as { client_list: { mac: string }[] }).client_list;
+      (raw.clientList as { client_list: unknown[] }).client_list = list.filter((c) => c.mac.toUpperCase() !== wifi.mac);
+      for (const v of Object.values(raw.clientsByNode as Record<string, { client_list: { mac: string }[] | object }>)) {
+        if (Array.isArray(v.client_list)) v.client_list = v.client_list.filter((c) => c.mac.toUpperCase() !== wifi.mac);
+      }
+    });
+    await app.poller.pollNow();
+
+    const c = buildClients(app.poller.cache.snapshot, app.store.clientSeen(), app.inventory.byMac()).find((x) => x.mac === wifi.mac)!;
+    expect(c).toMatchObject({ online: true, viaPanel: true, band: null, network: null });
+    expect(app.store.clientSeen().get(wifi.mac)?.lastBand).toBe("2.4GHz");
+  });
 });

@@ -118,8 +118,8 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
   // O mock não precisa de pausa entre sessões (e os testes ficam rápidos).
   const gateway = new DecoGateway(deco, breaker, { minGapMs: config.mock ? 0 : config.deco.sessionGapMs });
   const inventory = new InventoryRepo(store.db);
-  // O Deco lista no máximo ~8 aparelhos por porta cabeada; os demais o painel
-  // confere por conta própria (ARP), só entre os reservados/cadastrados.
+  // A lista do Deco omite aparelhos de vez em quando; o painel confere por
+  // conta própria (ARP) os reservados/cadastrados que ficaram de fora.
   const probe =
     deps.probe !== undefined
       ? deps.probe

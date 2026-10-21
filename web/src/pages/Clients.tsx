@@ -332,7 +332,7 @@ export function Clients() {
                   </td>
                   <td data-label="Nó">
                     {c.viaPanel ? (
-                      <Badge tone="accent" title="O Deco não lista este aparelho (limite por porta cabeada); o painel o viu na rede">
+                      <Badge tone="accent" title="O Deco não listou este aparelho na última leitura; o painel o viu na rede">
                         visto pelo painel
                       </Badge>
                     ) : (

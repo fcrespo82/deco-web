@@ -32,9 +32,10 @@ export interface NetworkClient {
   ip: string | null;
   /** Classificação do próprio Deco: Computer, Mobile, IP Camera... */
   deviceType: string;
-  band: Band;
-  /** Rede lógica: main, iot, guest. */
-  network: string;
+  /** null só para aparelhos vistos pelo painel (source "panel"): o ARP não diz a banda. */
+  band: Band | null;
+  /** Rede lógica: main, iot, guest. null quando não se sabe (source "panel"). */
+  network: string | null;
   /** MAC do nó ao qual o cliente está conectado, quando conhecido. */
   nodeMac: string | null;
   /** Taxa instantânea, em KB/s. O firmware não tem contador acumulado. */

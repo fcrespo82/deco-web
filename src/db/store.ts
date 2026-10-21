@@ -184,7 +184,7 @@ export class Store {
         last_ip = excluded.last_ip,
         last_name = excluded.last_name,
         last_node_mac = COALESCE(excluded.last_node_mac, client_seen.last_node_mac),
-        last_band = excluded.last_band
+        last_band = COALESCE(excluded.last_band, client_seen.last_band)
     `);
     const upsertNode = this.db.prepare(`
       INSERT INTO node_seen (mac, first_seen, last_seen, online_since, last_name)
@@ -207,7 +207,7 @@ export class Store {
     `);
 
     const byBand: Record<string, number> = {};
-    for (const c of snap.clients) byBand[c.band] = (byBand[c.band] ?? 0) + 1;
+    for (const c of snap.clients) if (c.band) byBand[c.band] = (byBand[c.band] ?? 0) + 1;
 
     this.db.transaction(() => {
       for (const c of snap.clients) {
