@@ -1,6 +1,6 @@
 {
   "name": "deco-web",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "private": true,
   "description": "Interface web para gerenciar uma rede mesh TP-Link Deco pela API local",
   "type": "module",
