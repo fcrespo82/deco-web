@@ -296,7 +296,7 @@ export function Backup() {
         <>
           <SectionTitle>O que muda</SectionTitle>
           <Preview diff={diff} sections={sections} setSections={setSections} />
-          <div class="mt-4 flex flex-wrap justify-end gap-2">
+          <div class="mt-4 flex flex-wrap justify-end gap-3">
             <Button onClick={() => (setDiff(null), setFile(null))}>Cancelar</Button>
             <Button variant="primary" disabled={!anySection} onClick={() => setConfirming(true)}>
               Aplicar selecionados…

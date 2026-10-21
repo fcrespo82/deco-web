@@ -229,7 +229,7 @@ export function WifiDialog({ kind, rows, onClose }: WifiDialogProps) {
             <input class="field" value={ssid} maxLength={32} onInput={(e) => setSsid((e.target as HTMLInputElement).value)} />
           </Field>
           <Field label="Nova senha" hint="(deixe em branco para manter)">
-            <div class="flex gap-2">
+            <div class="flex gap-3">
               <input
                 class="field"
                 type={(showPassword ? "text" : "password") as "text"}

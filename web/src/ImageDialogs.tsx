@@ -114,7 +114,7 @@ function Prepare({
         {removeBg && <p class="text-[12px] text-muted">Se o fundo comer parte do aparelho, use "só branco puro"; se sobrar halo, "forte".</p>}
         {result && <p class="text-[12px] text-muted">Fica com {Math.max(1, Math.round(result.blob.size / 1024))} KB. Salva em DATA_DIR/images, fora do git.</p>}
       </div>
-      <div class="mt-4 flex flex-wrap gap-2">
+      <div class="mt-5 flex flex-wrap gap-3">
         {onBack && (
           <Button variant="ghost" onClick={onBack}>
             Voltar

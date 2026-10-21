@@ -255,7 +255,7 @@ export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vend
             ))}
           </ul>
           {others.length > 0 && (
-            <div class="mt-2 flex gap-2">
+            <div class="mt-3 flex gap-3">
               <select class="field" value={mergeInto} onChange={(e) => setMergeInto((e.target as HTMLSelectElement).value)} aria-label="Juntar com">
                 <option value="">Juntar com outro dispositivo…</option>
                 {others.map((d) => (

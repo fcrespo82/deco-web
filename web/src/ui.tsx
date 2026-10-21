@@ -267,7 +267,7 @@ export function Dialog({ title, subtitle, onClose, children, footer }: { title: 
   return (
     <dialog ref={ref} class="sheet" aria-labelledby="dialog-title" onClick={(e) => e.target === ref.current && onClose()}>
       <div class="flex max-h-[inherit] flex-col overflow-hidden rounded-t-2xl border border-line bg-surface shadow-pop sm:rounded-2xl">
-        <header class="flex items-start gap-3 border-b border-line px-5 py-4">
+        <header class="flex items-start gap-3 border-b border-line px-5 py-4 sm:px-6">
           <div class="min-w-0 flex-1">
             <h3 id="dialog-title" class="text-[16px] font-semibold tracking-tight [overflow-wrap:anywhere]">
               {title}
@@ -278,8 +278,8 @@ export function Dialog({ title, subtitle, onClose, children, footer }: { title: 
             <X class="size-4" />
           </IconButton>
         </header>
-        <div class="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <footer class="flex flex-wrap items-center gap-2 border-t border-line bg-surface-2/40 px-5 py-3 pb-safe">{footer}</footer>}
+        <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
+        {footer && <footer class="flex flex-wrap items-center gap-3 border-t border-line bg-surface-2/40 px-5 py-4 pb-safe sm:px-6 [&>button]:min-w-24">{footer}</footer>}
       </div>
     </dialog>
   );
