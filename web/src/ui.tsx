@@ -279,7 +279,7 @@ export function Dialog({ title, subtitle, onClose, children, footer }: { title: 
           </IconButton>
         </header>
         <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
-        {footer && <footer class="flex flex-wrap items-center gap-3 border-t border-line bg-surface-2/40 px-5 py-4 pb-safe sm:px-6 [&>button]:min-w-24">{footer}</footer>}
+        {footer && <footer class="flex flex-wrap items-center gap-3 border-t border-line bg-surface-2/40 px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6 [&>button]:min-w-24">{footer}</footer>}
       </div>
     </dialog>
   );
