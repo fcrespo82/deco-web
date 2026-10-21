@@ -16,7 +16,7 @@ export const GROUP_LABEL: Record<GroupBy, string> = {
 export function groupKey(c: ClientView, by: GroupBy): string {
   switch (by) {
     case "node":
-      return c.online ? (c.nodeName ?? "Sem nó") : "Offline";
+      return c.online ? (c.viaPanel ? "Visto pelo painel" : (c.nodeName ?? "Sem nó")) : "Offline";
     case "category":
       return CATEGORY[categoryOf(c)].label;
     case "band":

@@ -40,6 +40,8 @@ export interface NetworkClient {
   /** Taxa instantânea, em KB/s. O firmware não tem contador acumulado. */
   upKBps: number;
   downKBps: number;
+  /** "panel": o Deco não listou; o próprio painel viu o aparelho na rede (ARP). */
+  source?: "panel";
 }
 
 export interface Reservation {

@@ -141,6 +141,7 @@ export function buildClients(
       firstSeen: s?.firstSeen ?? null,
       lastSeen: s?.lastSeen ?? null,
       reservation: reservationFor(c.mac, c.ip),
+      ...(c.source === "panel" ? { viaPanel: true } : {}),
     });
   }
 

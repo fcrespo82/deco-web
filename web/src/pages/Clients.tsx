@@ -330,7 +330,15 @@ export function Clients() {
                       )}
                     </div>
                   </td>
-                  <td data-label="Nó">{c.nodeName ?? <span class="text-muted">—</span>}</td>
+                  <td data-label="Nó">
+                    {c.viaPanel ? (
+                      <Badge tone="accent" title="O Deco não lista este aparelho (limite por porta cabeada); o painel o viu na rede">
+                        visto pelo painel
+                      </Badge>
+                    ) : (
+                      (c.nodeName ?? <span class="text-muted">—</span>)
+                    )}
+                  </td>
                   <td data-label="Banda">{c.band ? BAND_LABEL[c.band] : "—"}</td>
                   <td data-label="Envio / receb." class="whitespace-nowrap tabular-nums">
                     {c.online && c.upKBps + c.downKBps > 0 ? `${rate(c.upKBps)} / ${rate(c.downKBps)}` : <span class="text-muted">—</span>}

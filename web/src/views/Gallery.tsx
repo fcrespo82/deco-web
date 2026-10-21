@@ -37,7 +37,7 @@ function Tile({ c, onOpen, now }: { c: ClientView; onOpen: (c: ClientView) => vo
           <>
             <span class="size-1.5 shrink-0 rounded-full" style={{ background: BAND_COLOR[c.band ?? "wired"] }} />
             <span class="truncate">
-              {c.band ? BAND_LABEL[c.band] : ""} · {c.nodeName ?? "?"}
+              {c.viaPanel ? "visto pelo painel" : `${c.band ? BAND_LABEL[c.band] : ""} · ${c.nodeName ?? "?"}`}
             </span>
           </>
         ) : (

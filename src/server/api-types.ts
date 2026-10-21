@@ -100,6 +100,8 @@ export interface ClientView {
   firstSeen: string | null;
   lastSeen: string | null;
   reservation: { ip: string; matchesCurrentIp: boolean | null } | null;
+  /** Online porque o painel o viu na rede (ARP): o Deco não o listou. */
+  viaPanel?: boolean;
 }
 
 export interface DeviceSummary {

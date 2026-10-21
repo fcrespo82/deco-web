@@ -4,6 +4,7 @@
  * repositórios (inventário, faixas, eventos, auditoria).
  */
 import { mkdirSync } from "node:fs";
+import { hostname } from "node:os";
 import { join } from "node:path";
 import { type Config, loadDecoPassword, loadNotifySecrets } from "./config.js";
 import { AlertEngine } from "./core/alerts.js";
@@ -11,11 +12,14 @@ import { CircuitBreaker, type BreakerState } from "./core/breaker.js";
 import { DecoGateway } from "./core/gateway.js";
 import { EventDetector, type NetEvent } from "./core/events.js";
 import { Poller } from "./core/poller.js";
+import { ipToInt, inSubnet } from "./core/ipmath.js";
+import { lanSubnet } from "./core/ipplan.js";
+import { presenceTargets, probePresence, systemProbeDeps, withPanelClients, type ProbeDeps } from "./core/presence-probe.js";
 import { ReservationService } from "./core/reservations.js";
 import { SystemService } from "./core/system.js";
 import { LiveDecoApi } from "./deco-client/live.js";
 import { MockDecoApi } from "./deco-client/mock.js";
-import type { DecoApi } from "./deco-client/types.js";
+import type { DecoApi, Snapshot } from "./deco-client/types.js";
 import type { LiveTopic } from "./server/api-types.js";
 import { AlertRepo } from "./db/alerts.js";
 import { AuditRepo } from "./db/audit.js";
@@ -68,6 +72,8 @@ export function channelsFromConfig(config: Config): Channel[] {
 
 export interface AppDeps {
   api?: DecoApi;
+  /** Presença vista pelo painel (ARP); null desliga. Padrão: ligado no Linux fora do mock. */
+  probe?: ProbeDeps | null;
   /** Substitui os canais de notificação (testes). */
   channels?: Channel[];
 }
@@ -111,8 +117,31 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
 
   // O mock não precisa de pausa entre sessões (e os testes ficam rápidos).
   const gateway = new DecoGateway(deco, breaker, { minGapMs: config.mock ? 0 : config.deco.sessionGapMs });
-  const poller = new Poller({ gateway, store, intervalMs: config.pollIntervalMs, logger: log });
   const inventory = new InventoryRepo(store.db);
+  // O Deco lista no máximo ~8 aparelhos por porta cabeada; os demais o painel
+  // confere por conta própria (ARP), só entre os reservados/cadastrados.
+  const probe =
+    deps.probe !== undefined
+      ? deps.probe
+      : config.mock || process.platform !== "linux" || process.env.PRESENCE_PROBE === "0"
+        ? null
+        : systemProbeDeps;
+  const augment = probe
+    ? async (snap: Snapshot): Promise<Snapshot> => {
+        const lan = lanSubnet(snap);
+        if (!lan) return snap;
+        const seen = store.clientSeen();
+        const targets = presenceTargets(snap, (mac) => seen.get(mac)?.lastIp ?? null, inventory.byMac().keys());
+        const hits = await probePresence(targets, probe);
+        return withPanelClients(
+          snap,
+          hits,
+          (ip) => inSubnet(ipToInt(ip), lan.subnet),
+          (mac, self) => inventory.findByMac(mac)?.alias ?? seen.get(mac)?.lastName ?? (self ? hostname() : mac),
+        );
+      }
+    : undefined;
+  const poller = new Poller({ gateway, store, intervalMs: config.pollIntervalMs, logger: log, augment });
   const ranges = new IpRangeRepo(store.db);
   const events = new EventRepo(store.db);
   const audit = new AuditRepo(store.db);

@@ -42,6 +42,8 @@ export interface PollerOptions {
   intervalMs: number;
   logger: Logger;
   now?: () => Date;
+  /** Completa o snapshot antes de publicar (ex.: aparelhos vistos pelo painel). Não deve lançar. */
+  augment?: (snapshot: Snapshot) => Promise<Snapshot>;
 }
 
 export class Poller extends EventEmitter<PollerEvents> {
@@ -50,6 +52,7 @@ export class Poller extends EventEmitter<PollerEvents> {
   private readonly intervalMs: number;
   private readonly log: Logger;
   private readonly now: () => Date;
+  private readonly augment: PollerOptions["augment"];
   private timer: NodeJS.Timeout | null = null;
   private inFlight: Promise<Snapshot | null> | null = null;
   private running = false;
@@ -57,6 +60,7 @@ export class Poller extends EventEmitter<PollerEvents> {
 
   constructor(opts: PollerOptions) {
     super();
+    this.augment = opts.augment;
     this.gateway = opts.gateway;
     this.store = opts.store;
     this.intervalMs = opts.intervalMs;
@@ -160,7 +164,8 @@ export class Poller extends EventEmitter<PollerEvents> {
 
     this.state.lastAttemptAt = this.now().toISOString();
     try {
-      const snapshot = await this.gateway.fetchSnapshot();
+      const fetched = await this.gateway.fetchSnapshot();
+      const snapshot = this.augment ? await this.augment(fetched).catch(() => fetched) : fetched;
       const previous = this.state.snapshot;
       this.store.recordSnapshot(snapshot);
       this.state.snapshot = snapshot;

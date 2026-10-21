@@ -104,7 +104,7 @@ export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void
         </>
       }
     >
-      {c.online && (
+      {c.online && !c.viaPanel && (
         <div class="mb-4 grid grid-cols-2 gap-3">
           {(["down", "up"] as const).map((dir) => {
             const v = dir === "down" ? c.downKBps : c.upKBps;
@@ -141,7 +141,16 @@ export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void
               "—"
             ),
           ],
-          ["Conectado a", c.nodeName ?? "—"],
+          [
+            "Conectado a",
+            c.viaPanel ? (
+              <span title="O Deco lista no máximo ~8 aparelhos por porta cabeada; este ficou de fora, e o painel o viu na rede.">
+                fora da lista do Deco · <Badge tone="accent">visto pelo painel</Badge>
+              </span>
+            ) : (
+              (c.nodeName ?? "—")
+            ),
+          ],
           ["Banda", c.band ? BAND_LABEL[c.band] : "—"],
           ["Rede", c.network ? (NETWORK_LABEL[c.network] ?? c.network) : "—"],
           ...(c.device?.owner ? ([["Dono", c.device.owner]] as [string, string][]) : []),
