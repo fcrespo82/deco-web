@@ -128,6 +128,110 @@ secrets). Segredos nunca vão para o banco, para os logs ou para o navegador.
 
 Sem canal configurado, os alertas aparecem só na tela de Alertas.
 
+## Personalização, favoritos e diagnóstico
+
+Em **Configurações → Aparência**, escolha Profissional Claro, Catppuccin Latte,
+Catppuccin Mocha, Dracula ou Profissional Escuro (grafite). Automático acompanha o
+sistema entre Profissional Claro e Profissional Escuro. As paletas vêm de
+[Catppuccin](https://catppuccin.com/palette/) e
+[Dracula](https://draculatheme.com/spec), adaptadas aos componentes do painel.
+Os profissionais aparecem juntos na lista e usam acabamento clássico inspirado
+no Windows NT: cantos retos, cores sólidas, bordas definidas e controles com
+relevo discreto. Catppuccin e Dracula preservam suas identidades.
+Densidade compacta reduz tabelas/listas no desktop; animações podem seguir o
+sistema ou ser reduzidas. Preferências antigas de claro/escuro são migradas.
+A rota antiga `#/aparencia` leva à nova página. Fotos padrão por modelo são
+opcionais: arquivos `deco-<modelo>.png` (ou `.jpg`/`.webp`) em
+`web/src/art/decos/` entram no build e são usados por padrão, inclusive nos
+mapas. Eles ficam **fora do git** — as fotos oficiais têm direitos da TP-Link —,
+então builds do CI/release não as trazem. Uma imagem personalizada tem
+prioridade; removê-la restaura a foto padrão. Sem foto padrão, o modelo usa o
+desenho SVG com status.
+
+Configurações também mostra atualização, alertas, sistema e dados. Os valores
+operacionais são **somente consulta**, definidos no ambiente do servidor.
+Temas e filtros são locais ao navegador e sincronizados entre abas. Clientes
+lembra filtros, ordenação e visualização; Inventário lembra busca, tipo e
+favoritos; Histórico lembra tipos de eventos e períodos. Limpar filtros ou
+restaurar preferências locais não altera os cadastros compartilhados.
+
+Favoritos são compartilhados, podem ser alternados no inventário ou ficha e
+aparecem na visão geral com as interfaces e o link de gerenciamento. O estado
+online do cadastro considera todos os seus MACs. Favoritos entram no backup;
+arquivos antigos sem esse campo preservam os valores locais. Na mesclagem,
+se o cadastro de origem desaparecer, seu favorito é preservado no destino.
+Separar uma interface não a torna favorita automaticamente.
+
+A aba **Histórico** da ficha reúne eventos dos MACs atuais do cadastro, com
+paginação. Mudanças de nó só são registradas quando uma nova coleta detalhada
+confirma a mudança entre nós conhecidos e a interface permaneceu observada
+pelo Deco. Não são reconstruídas mudanças anteriores. Presença confirmada pelo
+painel via ARP é identificada; banda, nó e taxas não são inventados a partir
+dessa observação. Os horários representam observações periódicas.
+
+**Configurações → Atualização** exibe o diagnóstico: duração total da tentativa,
+incluindo espera na fila e complementação local, média, sucessos e falhas. Até
+200 tentativas concluídas ficam no SQLite, com as últimas 100 na tela. Pausas
+e bloqueios que impedem iniciar uma consulta não contam como falhas. O histórico
+de diagnóstico persiste entre reinícios e não entra no backup de cadastros.
+
+Endpoints autenticados como as demais APIs:
+
+- `GET /api/settings`: projeção explícita de valores efetivos, versão,
+  capacidades e indicadores de canais configurados; sem credenciais ou URLs
+  de notificação.
+- `GET /api/diagnostics/polls`: últimas 100 tentativas e resumo, sem respostas
+  brutas nem mensagens de erro privadas.
+- As APIs de dispositivos e o backup aceitam `favorite: boolean`; a API de
+  eventos inclui `client_node_changed` com nó anterior e atual.
+
+Essas consultas usam cache/SQLite e não abrem sessões no Deco. A frequência da
+coleta e as proteções de acesso permanecem inalteradas.
+
+## Links de gerenciamento
+
+No cadastro do dispositivo, **URL de gerenciamento** aceita um endereço completo
+HTTP/HTTPS com IP ou hostname, porta e caminho (ex.: `https://nas.local:5001/`).
+O link **Abrir gerenciamento** aparece no inventário e na ficha do cliente, em
+outra aba. Campo vazio remove o endereço; credenciais na URL não são aceitas.
+O painel apenas guarda o link: não descobre portas nem consulta esse endereço.
+Exportação e restauração incluem o campo; backups antigos sem ele preservam o
+link dos dispositivos existentes.
+
+## Frequência e idade dos dados
+
+A interface já usa SSE para receber mudanças assim que a coleta termina.
+Isso não torna a coleta do equipamento em tempo real: o acesso inspecionado é
+por consultas periódicas, sem canal de eventos do Deco identificado no código.
+
+`POLL_INTERVAL=90` é a espera **após** terminar cada coleta, não o período entre
+inícios. Com os ~13 s por leitura relatados abaixo, o ciclo seria ~103 s.
+Essa é uma estimativa, sem nova medição da instalação atual; duração, filas,
+falhas e pausas podem aumentar a espera.
+
+Cada coleta lê nós, lista geral de clientes, reservas, internet e WAN. Já a
+associação cliente→nó, configuração Wi-Fi e CPU/memória são lidas na primeira
+coleta e, depois, a cada `POLL_DETAIL_EVERY=5` ciclos; entre elas o painel reutiliza
+os detalhes anteriores. Com ciclos de ~103 s, detalhes podem ter cerca de
+8,6 minutos entre atualizações. Clientes e taxas vêm da lista geral a cada ciclo,
+mas a relação com os nós pode continuar desatualizada até a coleta detalhada.
+
+Alternativas, sem alteração da configuração neste pedido:
+
+- `POLL_INTERVAL=60`: ciclo estimado de ~73 s.
+- `POLL_INTERVAL=30`: mínimo permitido; ciclo estimado de ~43 s.
+- `POLL_DETAIL_EVERY` menor: detalhes mais frequentes, com mais chamadas e
+  possível aumento da duração da coleta.
+
+Diminuir a espera gera mais logins administrativos e pode interferir mais no
+aplicativo Deco. A fila única, sessões curtas e circuit breaker devem ser
+preservados. Consultar o cache mais vezes no navegador não acelera a coleta.
+
+**Melhoria sugerida:** a barra de status já mostra a idade da coleta, dos detalhes
+e avisos de dados antigos. Tornar a próxima coleta mais visível e explicar quais
+campos dependem dos detalhes ajudaria a distinguir informação antiga de um
+aparelho offline. Sugestão para evolução futura, sem mudança nesta entrega.
+
 ## Como ele fala com o Deco
 
 O Deco aceita **uma única sessão de administrador por vez**: enquanto o painel
@@ -319,11 +423,12 @@ copiá-lo com o painel rodando: `sqlite3 /data/deco-web.sqlite ".backup cópia.s
 A tela **Aparência** troca os desenhos por imagens suas: dos modelos Deco, de
 cada categoria de aparelho e de aparelhos do inventário (pela ficha do
 aparelho). Tudo fica em `DATA_DIR/images` (`decos/`, `categories/`,
-`devices/`), fora do git; só PNG, JPEG e WebP.
+`devices/`), fora do git; PNG, JPEG e WebP, e SVG só para os modelos Deco
+(sanitizado, com o LED ligado ao nó — veja "Enviar seu próprio SVG").
 
 - **Buscar fotos oficiais** lê a página de produto de cada modelo no site da
   TP-Link, escolhe uma foto de uma unidade quando consegue e tira o fundo
-  branco no navegador. **Escolher oficial** mostra a galeria inteira para você
+  branco no navegador. **Escolher foto → Buscar fotos oficiais** mostra a galeria inteira para você
   escolher. O servidor só baixa de `static.tp-link.com` e precisa de internet.
 - Sem a interface: `npm run fetch-images` (ou, no container,
   `docker compose run --rm deco-web node dist/fetch-images.js`) baixa uma foto
@@ -439,3 +544,162 @@ publica o release. Os CTs passam a ver a versão nova no próximo `update`.
 
 MIT. Inclui código do [deco-mcp](https://github.com/fullo/deco-mcp)
 (MIT, © Francesco Fullone) — ver [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+### Desenho ou foto dos nós
+
+Em **Configurações → Aparência → Escolher foto**, cada modelo permite selecionar
+**Desenho com status**, **Foto padrão** (X50/M5/M4R) ou a foto personalizada já
+enviada. A escolha é compartilhada, persiste no servidor e não apaga fotos ao
+alternar. O SVG conserva seu LED verde/vermelho; a foto usa o indicador
+sobreposto. A busca externa por fotos oficiais só ocorre quando solicitada.
+Enviar uma nova foto passa a usá-la; remover a personalizada restaura o padrão.
+
+### Como criar um desenho SVG com LED de status
+
+Os desenhos reativos são componentes TSX em `web/src/art/DecoArt.tsx`.
+Para usar um SVG seu sem mexer no código, envie o arquivo pelo painel (veja
+"Enviar seu próprio SVG" abaixo). Os passos a seguir são para incluir um
+desenho novo no próprio projeto.
+
+1. Desenhe o corpo no sistema de coordenadas `viewBox="0 0 64 80"`.
+   `x` cresce para a direita e `y` para baixo. O mesmo desenho será escalado
+   nos cartões e na topologia: não use pixels da tela para posicionar o LED.
+2. Mantenha corpo e LED separados. Localize o centro do LED nas coordenadas
+   do desenho e use o componente `DecoStatusLed`, passando `online` e `active`.
+3. Acrescente a família ao tipo `DecoShape`, reconheça o modelo em
+   `decoShape()` e adicione seu ramo em `DecoShapeSvg()` antes do desenho padrão.
+   Por exemplo, use `if (/^EXEMPLO/.test(m)) return "custom"` para uma família
+   hipotética `custom`, adicionada ao tipo.
+4. Use os gradientes `defs`/`body` e a sombra existentes. Os IDs recebem `uid`
+   para evitar conflitos quando há vários nós na mesma tela.
+
+Exemplo de ramo em `DecoShapeSvg` para a família hipotética:
+
+```tsx
+if (shape === "custom") {
+  return (
+    <g>
+      {defs}
+      {shadow}
+      <rect x={14} y={10} width={36} height={64} rx={6}
+        fill={`url(#${body})`} />
+      <DecoStatusLed cx={32} cy={64} rx={2} ry={1.3}
+        online={online} active={active} />
+    </g>
+  );
+}
+```
+
+`cx` e `cy` definem o centro; `rx` e `ry` são os raios horizontal e vertical.
+Se o LED real estiver mais acima ou ao lado, altere somente essas coordenadas
+no mesmo sistema do corpo. Se importar um SVG com outro `viewBox`, normalize
+corpo **e LED** para 64×80 ou envolva os dois no mesmo grupo transformado.
+
+Posições dos desenhos atuais:
+
+| Família | Centro do LED | Raios | Exemplos |
+| --- | --- | --- | --- |
+| Disco (`puck`) | `(32, 44)` | `3.2 × 1.2` | M5/M9/P9 |
+| Cilindro (`tall`) | `(32, 63)` | `1.8 × 1.2` | M4/M4R/E4 |
+| Torre (`tower`) | `(32, 12)` | `2.6 × 1` | X50/X20/X55 |
+
+`DecoStatusLed` escolhe `--led-on` ou `--led-off` conforme `online`; os temas
+definem as cores. Online adiciona pulsação/brilho, respeitando movimento
+reduzido. `active` destaca um nó selecionado. O estado vem do dashboard:
+não coloque temporizadores, consultas de rede ou uma cor verde fixa no SVG.
+
+Depois, selecione **Desenho com status** em **Configurações → Aparência →
+Escolher foto**. Confira online, offline, seleção, movimento reduzido e os
+temas claro/escuro, tanto no cartão quanto na topologia. Execute `npm run
+typecheck`, `npm test` e `npm run build` antes de entregar.
+
+### Enviar seu próprio SVG
+
+Em **Configurações → Aparência**, use **Enviar** no modelo (ou **Escolher foto →
+Enviar outra foto**) e escolha um `.svg`. O diálogo mostra a prévia online e
+offline e o que foi removido; **Salvar SVG** passa a usá-lo nos cartões, na
+Casa, no modo TV e na topologia.
+
+Requisitos:
+
+- Raiz `<svg>` com `viewBox` (qualquer sistema de coordenadas; o desenho é
+  encaixado na mesma caixa dos desenhos internos).
+- **Exatamente um** elemento com `id="status-led"`, numa forma (`path`,
+  `circle`, `ellipse`, `rect`, `polygon`…) ou num `<g>`. O painel troca o
+  preenchimento dele (e das formas dentro do `<g>`) por `--led-on`/`--led-off`
+  do tema, adiciona a pulsação quando online e destaca o nó selecionado. A cor
+  que estiver no arquivo não importa.
+- Até 256 KB, 5.000 elementos e 32 níveis de aninhamento.
+
+O arquivo é **reconstruído por lista de permissões**, no servidor ao enviar e de
+novo no navegador ao desenhar: ficam só formas, grupos, gradientes, máscaras,
+recortes, filtros simples e texto, com atributos de geometria e aparência.
+São removidos `<script>`, `<foreignObject>`, `<image>`, links, animações,
+eventos (`on…`), metadados e atributos de editor (Inkscape/Sodipodi);
+`url(...)` e `href` só podem apontar para um `id` do próprio arquivo.
+DOCTYPE/ENTITY, CDATA e instruções de processamento recusam o arquivo.
+`style="..."` vira atributos; de `<style>`, só regras `.classe { … }` (o
+formato do Illustrator) são aplicadas — no Illustrator, prefira exportar com
+"Atributos de apresentação". O arquivo é servido com
+`Content-Security-Policy: default-src 'none'`, então abrir a URL direto também
+não executa nada. A lógica está em `src/core/svg-sanitize.ts`.
+
+Para também oferecer uma foto padrão do novo modelo, salve o arquivo como
+`web/src/art/decos/deco-<modelo>.png` (o nome vira a chave normalizada, por
+exemplo `deco-x50.png` → `X50`) e gere o build de novo. O arquivo não vai para
+o git. Isso não altera as coordenadas do desenho SVG.
+
+## Editor, importação e exportação de temas
+
+**Configurações → Editor de temas** permite ajustar cores, fontes, tamanhos,
+raios dos controles/painéis/diálogos/indicadores/ícones, espessura das bordas,
+sombras, relevo, gradientes e brilho. A prévia é imediata e temporária:
+**Salvar e aplicar** persiste no navegador; **Cancelar prévia** ou sair da tela
+restaura o tema selecionado. Temas incluídos são preservados; editar um deles
+começa uma cópia com identificador próprio.
+
+**Exportar JSON** baixa um arquivo completo e versionado. **Importar JSON**
+valida o formato e aplica o tema; se já existir o identificador, cria uma cópia.
+O limite é 64 KB por arquivo e 50 temas personalizados por navegador. Os temas
+personalizados sincronizam entre abas e podem ser transferidos por arquivo;
+não são enviados ao servidor nem incluídos no backup dos cadastros.
+Restaurar preferências locais não apaga os arquivos de temas personalizados.
+
+Os cinco temas incluídos também são arquivos em `web/src/themes/*.json`.
+Para adicionar um tema distribuído junto do painel, copie um JSON exportado
+para essa pasta, atribua `id` único e `label` e execute o build. O Vite descobre
+os arquivos automaticamente: não é necessário criar uma classe CSS ou alterar
+um componente para cada tema. Arquivos inválidos aparecem como aviso em
+Configurações e são ignorados, preservando os temas válidos.
+
+O formato é `deco-web-theme`, versão `1`:
+
+- `id`, `label`, `description`, `mode`, `order`: identificação e apresentação.
+- `colors`: paleta completa de superfícies, textos, navegação, estados,
+  gráficos, rede e ilustrações; cores hexadecimais `#RRGGBB` ou `#RRGGBBAA`.
+- `geometry`: raios em pixels e espessura das bordas. Zero produz cantos retos.
+- `typography`: família de fonte e tamanho base do texto.
+- `effects`: gradientes, brilho, relevo clássico e ícones coloridos.
+- `shadow`: `none`, `soft` ou `hard`.
+
+O contrato validado está em `src/core/theme-config.ts`. Não são aceitos CSS,
+URLs ou fontes externas arbitrárias. É mais simples exportar um tema existente
+e ajustar os campos do que escrever o arquivo completo do zero.
+
+O modo TV agora **segue o tema selecionado**, inclusive claro/escuro, medidas e
+efeitos. Painéis da TV, avatares e controles usam as mesmas variáveis de
+acabamento; círculos funcionais do mapa e indicadores de status continuam
+círculos, independentemente do raio dos painéis.
+
+### Par do modo Automático
+
+Ao selecionar **Automático** em **Configurações → Aparência**, escolha **Tema
+para modo claro** e **Tema para modo escuro**. Cada lista inclui os temas
+correspondentes, inclusive os personalizados. A preferência do sistema define
+qual dos dois é aplicado, também no modo TV. As escolhas ficam preservadas ao
+usar um tema manual e sincronizam entre abas deste navegador.
+
+As preferências antigas usam Profissional Claro/Escuro. Se um tema escolhido
+for removido ou mudar entre claro e escuro, apenas essa faixa volta ao padrão.
+O par pertence às preferências do navegador; exportar um tema continua gerando
+somente o JSON do tema individual efetivamente aplicado.
