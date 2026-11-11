@@ -160,10 +160,10 @@ export function CategoryGradients() {
 }
 
 const SIZES = {
-  sm: "size-8 rounded-[10px] [&>svg]:size-4",
-  md: "size-11 rounded-[13px] [&>svg]:size-5",
-  lg: "size-16 rounded-[18px] [&>svg]:size-7",
-  xl: "size-24 rounded-[26px] [&>svg]:size-11",
+  sm: "size-8 theme-icon [&>svg]:size-4",
+  md: "size-11 theme-icon [&>svg]:size-5",
+  lg: "size-16 theme-icon [&>svg]:size-7",
+  xl: "size-24 theme-icon [&>svg]:size-11",
 } as const;
 
 /** Avatar quadrado arredondado, com selo do fabricante e ponto de status. */

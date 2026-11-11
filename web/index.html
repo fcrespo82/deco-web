@@ -5,6 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      try {
+        var p = JSON.parse(localStorage.getItem('dashboard.preferences') || 'null') || {};
+        var old = localStorage.getItem('theme');
+        var selected = p.theme === 'neutral' || p.theme === 'light' ? 'professional-light' : p.theme === 'professional' || p.theme === 'dark' ? 'professional-dark' : p.theme;
+        selected = typeof selected === 'string' ? selected : old === 'dark' ? 'professional-dark' : old === 'auto' ? 'auto' : 'professional-light';
+        var cached = JSON.parse(localStorage.getItem('dashboard.theme-cache') || 'null');
+        var root = document.documentElement;
+        var systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
+        var expectedId = selected === 'auto' ? (systemDark ? p.autoDarkTheme || 'professional-dark' : p.autoLightTheme || 'professional-light') : selected;
+        if (cached && cached.preference === selected && cached.id === expectedId && (selected !== 'auto' || cached.mode === (systemDark ? 'dark' : 'light')) && cached.variables && typeof cached.variables === 'object') {
+          for (var key in cached.variables) {
+            var value = cached.variables[key];
+            if (/^--[a-z0-9-]+$/.test(key) && typeof value === 'string' && value.length < 300 && !/url|expression|[{}<>;]/i.test(value)) root.style.setProperty(key,value);
+          }
+          root.dataset.colorMode = cached.mode === 'dark' ? 'dark' : 'light';
+          root.style.colorScheme = root.dataset.colorMode;
+          root.dataset.theme = cached.id;
+          for (var option of ['gradients','glow','bevel','colorfulIcons']) if (cached.effects) root.dataset[option] = String(cached.effects[option] === true);
+        }
+        root.dataset.density = p.density === 'compact' ? 'compact' : 'comfortable';
+        root.dataset.motion = p.motion === 'reduced' ? 'reduced' : 'system';
+      } catch (_) {}
+    </script>
     <title>Deco Dashboard</title>
   </head>
   <body>

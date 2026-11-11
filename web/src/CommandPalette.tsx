@@ -134,7 +134,7 @@ function Palette({ routes, cycleTheme, onClose }: { routes: PaletteRoute[]; cycl
         keywords: "ler deco refresh",
         run: () => api.refresh().then(() => toast("Lendo o Deco…"), (e) => toast("Não deu para atualizar", { tone: "bad", detail: errorText(e) })),
       },
-      { id: "a-theme", group: "Ações", label: "Alternar tema", hint: "t", icon: <SunMoon class="size-4" />, keywords: "claro escuro dark light", run: cycleTheme },
+      { id: "a-theme", group: "Ações", label: "Escolher tema", hint: "t", icon: <SunMoon class="size-4" />, keywords: "claro escuro catppuccin dracula tema configurações", run: cycleTheme },
       { id: "a-tv", group: "Ações", label: "Abrir modo TV", icon: <Monitor class="size-4" />, keywords: "quiosque tela cheia parede", run: () => go("tv") },
     );
     if (mode?.allowWrite) {

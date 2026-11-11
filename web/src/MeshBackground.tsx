@@ -1,3 +1,4 @@
+import { useReducedMotion, usePreferences } from "./lib/preferences";
 /**
  * Fundo da tela de login: uma malha de nós que derivam devagar e se ligam
  * quando ficam perto, com pulsos correndo pelos links. Canvas, ~40 nós;
@@ -14,6 +15,8 @@ interface Node {
 }
 
 export function MeshBackground({ class: klass }: { class?: string }) {
+  const reduced = useReducedMotion();
+  const [preferences] = usePreferences();
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -22,7 +25,6 @@ export function MeshBackground({ class: klass }: { class?: string }) {
     const css = getComputedStyle(document.documentElement);
     const from = css.getPropertyValue("--brand-from").trim() || "#14b8a6";
     const to = css.getPropertyValue("--brand-to").trim() || "#7c5cff";
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     let w = 0;
     let h = 0;
     let nodes: Node[] = [];
@@ -114,7 +116,7 @@ export function MeshBackground({ class: klass }: { class?: string }) {
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, []);
+  }, [reduced, preferences]);
 
   return <canvas ref={ref} class={klass} aria-hidden="true" />;
 }

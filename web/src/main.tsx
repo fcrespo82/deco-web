@@ -11,13 +11,10 @@ import {
   Lock,
   LogOut,
   MonitorSmartphone,
-  Moon,
   Network,
   House,
   Palette,
   Search,
-  Sun,
-  SunMoon,
   Tv as TvIcon,
 } from "lucide-preact";
 import "@fontsource-variable/ibm-plex-sans";
@@ -30,10 +27,11 @@ import { RebootDialog } from "./DangerDialogs";
 import { useOverview } from "./data";
 import { openClient, setUi, useUi } from "./lib/ui-state";
 import { MeshBackground } from "./MeshBackground";
-import { useRoute, useTheme } from "./hooks";
+import { useRoute } from "./hooks";
 import { connectLive, disconnectLive } from "./lib/live";
 import { Alerts } from "./pages/Alerts";
-import { Appearance } from "./pages/Appearance";
+import { Settings } from "./pages/Settings";
+import { THEMES, usePreferences } from "./lib/preferences";
 import { Casa } from "./pages/Casa";
 import { Backup } from "./pages/Backup";
 import { Clients } from "./pages/Clients";
@@ -69,13 +67,10 @@ const ROUTES: Route[] = [
   { path: "historico", label: "Histórico", icon: Clock, page: History, key: "h" },
   { path: "alertas", label: "Alertas", icon: Bell, page: Alerts, key: "a" },
   { path: "backup", label: "Backup", icon: DatabaseBackup, page: Backup, key: "b" },
-  { path: "aparencia", label: "Aparência", icon: Palette, page: Appearance, key: "p" },
+  { path: "configuracoes", label: "Configurações", icon: Palette, page: Settings, key: "p" },
 ];
 
 const PALETTE_ROUTES = [...ROUTES.map(({ path, label, icon, key }) => ({ path, label, icon, key })), { path: "tv", label: "Modo TV", icon: TvIcon, key: "t" }];
-
-const THEME_LABEL = { auto: "Tema: automático", light: "Tema: claro", dark: "Tema: escuro" } as const;
-const THEME_ICON = { auto: SunMoon, light: Sun, dark: Moon } as const;
 
 function Logo({ class: klass }: { class?: string }) {
   return <img src="/favicon.svg" alt="" class={cx("size-7 rounded-lg", klass)} />;
@@ -140,6 +135,9 @@ function Login({ onDone }: { onDone: () => void }) {
   );
 }
 
+/** Item da navegação lateral/menu: links e ações usam a mesma aparência. */
+const navItem = (current = false, ...extra: string[]) => cx("flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition", current ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-2 hover:text-fg", ...extra);
+
 function NavLink({ route, current, onNavigate }: { route: Route; current: boolean; onNavigate?: () => void }) {
   const Icon = route.icon;
   return (
@@ -147,10 +145,7 @@ function NavLink({ route, current, onNavigate }: { route: Route; current: boolea
       href={`#/${route.path}`}
       aria-current={current ? "page" : undefined}
       onClick={onNavigate}
-      class={cx(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition",
-        current ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-2 hover:text-fg",
-      )}
+      class={navItem(current)}
     >
       <Icon class="size-[18px] shrink-0" />
       {route.label}
@@ -158,24 +153,16 @@ function NavLink({ route, current, onNavigate }: { route: Route; current: boolea
   );
 }
 
-function ThemeButton({ theme, cycle, withLabel }: { theme: keyof typeof THEME_LABEL; cycle: () => void; withLabel?: boolean }) {
-  const Icon = THEME_ICON[theme];
-  if (withLabel) {
-    return (
-      <button type="button" onClick={cycle} class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium text-muted transition hover:bg-surface-2 hover:text-fg">
-        <Icon class="size-[18px]" />
-        {THEME_LABEL[theme]}
-      </button>
-    );
-  }
-  return (
-    <IconButton label={THEME_LABEL[theme]} onClick={cycle}>
-      <Icon class="size-[18px]" />
-    </IconButton>
-  );
+function ThemeButton({ withLabel }: { withLabel?: boolean }) {
+  const [prefs, set] = usePreferences();
+  return <label class="flex items-center gap-2 px-3 py-2 text-[12px]">
+    {withLabel && <span>Tema</span>}
+    <select class="field min-w-0" aria-label="Tema" value={prefs.theme} onChange={e => set({theme: e.currentTarget.value as typeof prefs.theme})}>
+      {THEMES.map(t => <option value={t.id}>{t.label}</option>)}
+    </select>
+  </label>;
 }
 
-/** Diálogo de reinício aberto pela paleta ou pelo painel do nó. */
 function GlobalReboot({ mac }: { mac: string }) {
   const node = useOverview().data?.nodes.find((n) => n.mac === mac);
   if (!node) return null;
@@ -184,7 +171,8 @@ function GlobalReboot({ mac }: { mac: string }) {
 
 function App() {
   const route = useRoute();
-  const [theme, cycleTheme] = useTheme();
+  usePreferences();
+  useEffect(() => { if (route === "aparencia") location.replace("#/configuracoes?secao=aparencia"); }, [route]);
   const [auth, setAuth] = useState<{ authRequired: boolean; authenticated: boolean } | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const ui = useUi();
@@ -212,7 +200,7 @@ function App() {
     return (
       <>
         <Tv />
-        {ui.client && <ClientSheet mac={ui.client} onClose={() => openClient(null)} />}
+        {ui.client && <ClientSheet key={ui.client} initialTab={ui.clientTab} mac={ui.client} onClose={() => openClient(null)} />}
         <Toaster />
       </>
     );
@@ -249,7 +237,7 @@ function App() {
           {ROUTES.map((r) => (
             <NavLink route={r} current={r === current} />
           ))}
-          <a href="#/tv" class="mt-2 flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium text-muted transition hover:bg-surface-2 hover:text-fg">
+          <a href="#/tv" class={navItem(false, "mt-2")}>
             <TvIcon class="size-[18px] shrink-0" />
             Modo TV
           </a>
@@ -257,7 +245,7 @@ function App() {
         <div class="grid gap-3 border-t border-line p-4">
           <ModeBadge />
           <div class="flex items-center gap-1">
-            <ThemeButton theme={theme} cycle={cycleTheme} />
+            <ThemeButton />
             {auth.authRequired && (
               <IconButton label="Sair" onClick={logout}>
                 <LogOut class="size-[18px]" />
@@ -329,15 +317,15 @@ function App() {
             {ROUTES.filter((r) => !r.tab).map((r) => (
               <NavLink route={r} current={r === current} onNavigate={() => setMoreOpen(false)} />
             ))}
-            <a href="#/tv" class="flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium text-muted transition hover:bg-surface-2 hover:text-fg">
+            <a href="#/tv" class={navItem()}>
               <TvIcon class="size-[18px] shrink-0" />
               Modo TV
             </a>
           </nav>
           <div class="mt-3 grid gap-0.5 border-t border-line pt-3">
-            <ThemeButton theme={theme} cycle={cycleTheme} withLabel />
+            <ThemeButton withLabel />
             {auth.authRequired && (
-              <button type="button" onClick={logout} class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium text-muted transition hover:bg-surface-2 hover:text-fg">
+              <button type="button" onClick={logout} class={navItem(false, "w-full")}>
                 <LogOut class="size-[18px]" />
                 Sair
               </button>
@@ -348,8 +336,8 @@ function App() {
           </div>
         </Dialog>
       )}
-      <CommandPalette routes={PALETTE_ROUTES} cycleTheme={cycleTheme} />
-      {ui.client && <ClientSheet mac={ui.client} onClose={() => openClient(null)} />}
+      <CommandPalette routes={PALETTE_ROUTES} cycleTheme={() => { location.hash = "/configuracoes?secao=aparencia"; }} />
+      {ui.client && <ClientSheet key={ui.client} initialTab={ui.clientTab} mac={ui.client} onClose={() => openClient(null)} />}
       {ui.reboot && <GlobalReboot mac={ui.reboot} />}
       <Toaster />
     </div>

@@ -1,3 +1,4 @@
+import { useReducedMotion } from "../lib/preferences";
 /**
  * Clientes como bolhas: o tamanho segue o tráfego, a cor o tipo do aparelho,
  * e cada grupo vira um aglomerado. Uma simulação simples (atração ao centro
@@ -28,6 +29,7 @@ const radius = (c: ClientView, byTraffic: boolean) => {
 };
 
 export function Bubbles({ clients, groupBy, byTraffic, onOpen }: { clients: ClientView[]; groupBy: GroupBy; byTraffic: boolean; onOpen: (c: ClientView) => void }) {
+  const reduced = useReducedMotion();
   const wrap = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const bodies = useRef(new Map<string, Body>());
@@ -90,7 +92,6 @@ export function Bubbles({ clients, groupBy, byTraffic, onOpen }: { clients: Clie
     for (const [mac, t] of targets) {
       if (!map.has(mac)) map.set(mac, { x: t.x + (Math.random() - 0.5) * 30, y: t.y + (Math.random() - 0.5) * 30, vx: 0, vy: 0 });
     }
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const list = [...targets].map(([mac, t]) => ({ b: map.get(mac)!, t }));
     let ticks = 0;
     let raf = 0;
@@ -133,7 +134,7 @@ export function Bubbles({ clients, groupBy, byTraffic, onOpen }: { clients: Clie
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [layout]);
+  }, [layout, reduced]);
 
   const hovered = hover ? clients.find((c) => c.mac === hover) : null;
   const hb = hover ? bodies.current.get(hover) : null;
@@ -188,7 +189,7 @@ export function Bubbles({ clients, groupBy, byTraffic, onOpen }: { clients: Clie
                 const w = Math.max(t1.length * 7, t2.length * 5.8) + 20;
                 return (
                   <>
-                    <rect x={-w / 2} y="-36" width={w} height="36" rx="8" />
+                    <rect class="theme-svg-tooltip" x={-w / 2} y="-36" width={w} height="36" />
                     <text y="-20" text-anchor="middle" class="tip-1">
                       {t1}
                     </text>

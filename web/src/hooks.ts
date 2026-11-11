@@ -22,27 +22,5 @@ export function useRoute(): string {
   return route;
 }
 
-export type ThemePref = "auto" | "light" | "dark";
-
-function readTheme(): ThemePref {
-  try {
-    const v = localStorage.getItem("theme");
-    return v === "dark" || v === "auto" ? v : "light";
-  } catch {
-    return "light";
-  }
-}
-
-export function useTheme(): [ThemePref, () => void] {
-  const [theme, setTheme] = useState<ThemePref>(readTheme);
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    try {
-      localStorage.setItem("theme", theme);
-    } catch {
-      // Sem storage (aba privada): o tema vale só nesta visita.
-    }
-  }, [theme]);
-  const cycle = () => setTheme((t) => (t === "light" ? "dark" : t === "dark" ? "auto" : "light"));
-  return [theme, cycle];
-}
+export { type ThemePref } from "./lib/preferences";
+export { usePreferences } from "./lib/preferences";
