@@ -168,7 +168,7 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
     // POST só com JSON: junto com SameSite=Strict, barra formulários de outros sites.
     // Exceção: envio de imagem (image/* também não é "simples", então exige CORS).
     const type = String(req.headers["content-type"] ?? "");
-    if (req.method === "PUT" && path.startsWith("/api/images/") && /^image\/(png|jpeg|webp)$/.test(type)) return;
+    if (req.method === "PUT" && path.startsWith("/api/images/") && /^(image\/(png|jpeg|webp)|image\/svg\+xml(;\s*charset=utf-8)?)$/i.test(type)) return;
     if (req.method !== "GET" && !type.startsWith("application/json")) {
       return reply.code(415).send({ error: "Use Content-Type: application/json." });
     }

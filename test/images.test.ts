@@ -62,13 +62,43 @@ describe("imagens", () => {
     expect((await server.inject("/api/images")).json().decos).toEqual({});
   });
 
-  it("recusa SVG, bytes que não são imagem e nomes inválidos", async () => {
+  it("recusa SVG inválido, bytes que não são imagem e nomes inválidos", async () => {
     const { server } = await setup();
     const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
-    expect((await put(server, "/api/images/decos/X50", svg, "image/svg+xml")).statusCode).toBe(415);
+    const bad = await put(server, "/api/images/decos/X50", svg, "image/svg+xml");
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().error).toMatch(/SVG recusado/);
+    const xxe = Buffer.from('<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY x SYSTEM "file:///etc/passwd">]><svg viewBox="0 0 1 1">&x;</svg>');
+    expect((await put(server, "/api/images/decos/X50", xxe, "image/svg+xml")).statusCode).toBe(400);
     expect((await put(server, "/api/images/decos/X50", Buffer.from("não sou png"))).statusCode).toBe(400);
     expect((await put(server, "/api/images/decos/..%2F..%2Fsegredo", PNG)).statusCode).toBe(400);
     expect((await put(server, "/api/images/outros/X50", PNG)).statusCode).toBe(400);
+  });
+
+  it("aceita SVG de Deco só depois de reconstruído, e o serve com CSP", async () => {
+    const { server, app } = await setup();
+    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80" onload="alert(1)"><script>alert(1)</script>' +
+      '<rect width="30" height="60" x="17" y="10" fill="#ccc"/><circle id="status-led" cx="32" cy="63" r="2" fill="#0f0"/></svg>');
+    const res = await put(server, "/api/images/decos/X50", svg, "image/svg+xml; charset=utf-8");
+    expect(res.statusCode).toBe(200);
+    expect(res.json().warnings.join(" ")).toMatch(/script/);
+    const manifest = (await server.inject("/api/images")).json();
+    expect(manifest.decos.X50).toMatch(/&t=svg$/);
+    expect(manifest.decoStyles.X50).toBe("custom");
+
+    const img = await server.inject("/api/images/decos/X50");
+    expect(img.headers["content-type"]).toMatch(/^image\/svg\+xml/);
+    expect(img.headers["x-content-type-options"]).toBe("nosniff");
+    expect(img.headers["content-security-policy"]).toBe("default-src 'none'; style-src 'unsafe-inline'");
+    expect(img.body).not.toMatch(/script|onload/);
+    expect(img.body).toContain('id="status-led"');
+    expect(app.audit.list(5)[0]!.after).toMatchObject({ type: "svg" });
+
+    // SVG só para Deco; PNG depois do SVG substitui o arquivo.
+    expect((await put(server, "/api/images/devices/1", svg, "image/svg+xml")).statusCode).toBe(400);
+    expect((await put(server, "/api/images/decos/X50", PNG)).statusCode).toBe(200);
+    expect((await server.inject("/api/images")).json().decos.X50).toMatch(/&t=png$/);
+    expect((await server.inject("/api/images/decos/X50")).headers["content-type"]).toBe("image/png");
   });
 
   it("recusa imagem grande demais", async () => {
@@ -139,4 +169,26 @@ describe("fotos oficiais: funções puras", () => {
     expect(sniffImage(Buffer.from("RIFF\0\0\0\0WEBPVP8 "))).toBe("webp");
     expect(sniffImage(Buffer.from("<svg"))).toBeNull();
   });
+});
+
+it("salva a opção desenho/foto por modelo sem apagar a foto personalizada",async()=>{
+  const {app,server}=await setup();
+  const choose=(style:unknown)=>server.inject({method:"PUT",url:"/api/images/decos/X50/style",payload:{style},headers:{"content-type":"application/json"}});
+  expect((await choose("invalid")).statusCode).toBe(400);
+  expect((await choose("custom")).statusCode).toBe(400);
+  expect((await choose("drawing")).statusCode).toBe(200);
+  expect((await server.inject("/api/images")).json().decoStyles.X50).toBe("drawing");
+  expect(app.store.getJson<Record<string,string>>("deco_image_styles")!.X50).toBe("drawing");
+  await put(server,"/api/images/decos/X50",PNG);
+  expect((await server.inject("/api/images")).json().decoStyles.X50).toBe("custom");
+  await choose("drawing");
+  expect((await server.inject("/api/images/decos/X50")).statusCode).toBe(200);
+  await choose("default");
+  expect((await server.inject("/api/images")).json().decoStyles.X50).toBe("default");
+  expect((await choose("custom")).statusCode).toBe(200);
+  expect(topicsForWrite("/api/images/decos/X50/style")).toContain("images");
+});
+it("a escolha de desenho exige autenticação",async()=>{
+  const {server}=await setup({uiPassword:"test-only"});
+  expect((await server.inject({method:"PUT",url:"/api/images/decos/X50/style",payload:{style:"drawing"}})).statusCode).toBe(401);
 });
