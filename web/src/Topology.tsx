@@ -1,3 +1,4 @@
+import { useReducedMotion } from "./lib/preferences";
 /**
  * Mapa vivo da rede: internet → gateway → satélites, com os clientes em
  * órbita do nó em que estão. Links por cabo são contínuos; por Wi-Fi,
@@ -202,7 +203,8 @@ function build(nodes: NodeView[], clients: ClientView[]) {
 
 /** Partículas ao longo de um caminho; a quantidade e a velocidade seguem o tráfego. */
 export function Flow({ d, kBps, reverse, class: klass, r = 2.6 }: { d: string; kBps: number; reverse?: boolean; class: string; r?: number }) {
-  if (kBps < 2) return null;
+  const reduced = useReducedMotion();
+  if (reduced || kBps < 2) return null;
   const n = kBps < 60 ? 1 : kBps < 600 ? 2 : kBps < 3000 ? 3 : 4;
   const dur = Math.max(0.9, 4.2 - Math.min(3.5, Math.log10(kBps)) * 0.95);
   return (
@@ -338,9 +340,9 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
         <CategoryGradients />
         <PhotoDefs />
         <defs>
-          <radialGradient id="topo-net" cx="0.35" cy="0.3" r="0.9">
-            <stop offset="0" stop-color={netOnline ? "#7dd3fc" : "#fca5a5"} />
-            <stop offset="1" stop-color={netOnline ? "#2563eb" : "#b91c1c"} />
+          <radialGradient class={netOnline ? "is-online" : "is-offline"} id="topo-net" cx="0.35" cy="0.3" r="0.9">
+            <stop class="network-highlight" offset="0" stop-color={`color-mix(in srgb, ${netOnline ? "var(--flow-down)" : "var(--bad)"} 60%, #ffffff)`} />
+            <stop offset="1" stop-color={netOnline ? "var(--flow-down)" : "var(--bad)"} />
           </radialGradient>
           <pattern id="topo-dots" width="22" height="22" patternUnits="userSpaceOnUse">
             <circle cx="1" cy="1" r="1" fill="var(--grid)" />
@@ -385,7 +387,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
                 {p.node.online && <Flow d={d} kBps={p.down} class="flow-down" />}
                 {p.node.online && <Flow d={d} kBps={p.up} reverse class="flow-up" r={2} />}
                 <g transform={`translate(${mx} ${my}) scale(${textScale})`} class="topo-edge-label">
-                  <rect x={-(label.length * 3.1 + 8)} y="-9" width={label.length * 6.2 + 16} height="18" rx="9" />
+                  <rect x={-(label.length * 3.1 + 8)} y="-9" width={label.length * 6.2 + 16} height="18" />
                   <text text-anchor="middle" dy="3.5">
                     {label}
                   </text>
@@ -500,7 +502,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
                 const w = Math.max(t1.length * 7, t2.length * 5.8) + 20;
                 return (
                   <>
-                    <rect x={-w / 2} y="-36" width={w} height="36" rx="8" />
+                    <rect class="theme-svg-tooltip" x={-w / 2} y="-36" width={w} height="36" />
                     <text y="-20" text-anchor="middle" class="tip-1">
                       {t1}
                     </text>

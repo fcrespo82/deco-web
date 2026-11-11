@@ -4,12 +4,17 @@
  */
 import { useEffect, useState } from "preact/hooks";
 import { ExternalLink, ImageUp } from "lucide-preact";
+import { useImages } from "./data";
+import { DecoShapeSvg } from "./art/DecoArt";
+import { DEFAULT_DECO_IMAGES } from "./art/images";
 import { api, officialProxy, type ImageKind } from "./api";
+import { DecoSvgContent, type DecoSvg } from "./art/custom-svg";
+import { sanitizeSvg } from "../../src/core/svg-sanitize.js";
 import { prepareImage } from "./lib/image-upload";
 import { errorText } from "./lib/mutate";
 import { invalidate } from "./lib/query";
 import { toast } from "./lib/toast";
-import { Button, Check, cx, Dialog, Segmented, Spinner } from "./ui";
+import { Button, Check, ChoiceCard, cx, Dialog, FileButton, Segmented, Spinner } from "./ui";
 
 /** Fundo xadrez para mostrar a transparência da pré-visualização. */
 const CHECKER = "bg-[conic-gradient(var(--surface-3)_25%,var(--surface)_0_50%,var(--surface-3)_0_75%,var(--surface)_0)] bg-[length:16px_16px]";
@@ -116,7 +121,7 @@ function Prepare({
       </div>
       <div class="mt-5 flex flex-wrap gap-3">
         {onBack && (
-          <Button variant="ghost" onClick={onBack}>
+          <Button onClick={onBack}>
             Voltar
           </Button>
         )}
@@ -130,64 +135,135 @@ function Prepare({
 }
 
 /** Enviar arquivo do computador/celular. */
+const isSvg = (f: File) => f.type === "image/svg+xml" || /\.svg$/i.test(f.name);
+
 export function UploadDialog(props: { file: File; kind: ImageKind; name: string; label: string; square?: boolean; defaultRemoveBg?: boolean; max?: number; onClose: () => void }) {
   return (
     <Dialog title={`Imagem de ${props.label}`} subtitle={props.file.name} onClose={props.onClose}>
-      <Prepare source={props.file} kind={props.kind} name={props.name} label={props.label} square={props.square} defaultRemoveBg={props.defaultRemoveBg ?? false} max={props.max} onDone={props.onClose} />
+      {props.kind === "decos" && isSvg(props.file) ? (
+        <SvgPrepare file={props.file} name={props.name} label={props.label} onDone={props.onClose} />
+      ) : (
+        <Prepare source={props.file} kind={props.kind} name={props.name} label={props.label} square={props.square} defaultRemoveBg={props.defaultRemoveBg ?? false} max={props.max} onDone={props.onClose} />
+      )}
     </Dialog>
   );
 }
 
-/** Galeria oficial do produto; clicar escolhe e abre a pré-visualização. */
+/** SVG de Deco: prévia já sanitizada (LED online/offline) e avisos do que foi removido. */
+function SvgPrepare({ file, name, label, onDone }: { file: File; name: string; label: string; onDone: () => void }) {
+  const [state, setState] = useState<{ text: string; doc: DecoSvg; warnings: string[] } | { error: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    file.text().then((text) => {
+      try {
+        const { tree, viewBox, warnings } = sanitizeSvg(text);
+        if (alive) setState({ text, doc: { tree, viewBox }, warnings });
+      } catch (e) {
+        if (alive) setState({ error: (e as Error).message });
+      }
+    }, () => alive && setState({ error: "Não consegui ler o arquivo." }));
+    return () => { alive = false; };
+  }, [file]);
+  if (!state) return <p class="text-sm text-muted"><Spinner /> Conferindo o SVG…</p>;
+  if ("error" in state) return <>
+    <p role="alert" class="text-sm text-bad">SVG recusado: {state.error}</p>
+    <p class="mt-2 text-[12.5px] text-muted">Veja os requisitos em README → "Enviar seu próprio SVG".</p>
+    <div class="mt-4 flex justify-end"><Button onClick={onDone}>Fechar</Button></div>
+  </>;
+  const save = async () => {
+    setBusy(true);
+    setSaveError(null);
+    try {
+      await saveImage("decos", name, new Blob([state.text], { type: "image/svg+xml" }), label);
+      onDone();
+    } catch (e) {
+      setSaveError(errorText(e));
+      setBusy(false);
+    }
+  };
+  return <>
+    <div class="grid grid-cols-2 gap-3">
+      {[true, false].map((online) => (
+        <figure class="grid gap-2 rounded-xl border border-line bg-surface-2 p-3 text-center text-[12.5px] text-muted">
+          <svg viewBox={state.doc.viewBox} class="mx-auto h-36 w-full" aria-hidden="true">
+            <DecoSvgContent doc={state.doc} uid={`upload-${online ? "on" : "off"}`} online={online} />
+          </svg>
+          <figcaption>{online ? "Online" : "Offline"}</figcaption>
+        </figure>
+      ))}
+    </div>
+    <p class="mt-3 text-[12.5px] text-muted">O elemento <code>id="status-led"</code> recebe as cores de LED do tema conforme o estado do nó.</p>
+    {state.warnings.length > 0 && <ul class="mt-3 list-disc pl-5 text-[12.5px] text-warn">{state.warnings.map((w) => <li>{w}</li>)}</ul>}
+    {saveError && <p role="alert" class="mt-3 text-sm text-bad">{saveError}</p>}
+    <div class="mt-4 flex justify-end gap-2">
+      <Button onClick={onDone}>Cancelar</Button>
+      <Button variant="primary" loading={busy} onClick={save}>Salvar SVG</Button>
+    </div>
+  </>;
+}
+
+/** Escolha local por modelo; fotos oficiais só são consultadas quando solicitadas. */
 export function OfficialPicker({ model, name, onClose }: { model: string; name: string; onClose: () => void }) {
+  const images = useImages().data;
   const [state, setState] = useState<{ page: string | null; candidates: string[] } | null>(null);
+  const [remote, setRemote] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [chosen, setChosen] = useState<string | null>(null);
+  const custom = images?.decos[name];
+  const current = images?.decoStyles?.[name] ?? (custom ? "custom" : DEFAULT_DECO_IMAGES[name] ? "default" : "drawing");
 
   useEffect(() => {
-    api.officialCandidates(model).then(setState, (e) => setError(errorText(e, "Falha ao buscar a página do produto.")));
-  }, [model]);
+    if (!remote) return;
+    let active = true;
+    api.officialCandidates(model).then(result => { if(active) setState(result); }, e => { if(active) setError(errorText(e,"Falha ao buscar fotos oficiais.")); });
+    return () => { active = false; };
+  }, [model, remote]);
 
-  return (
-    <Dialog
-      title={`Foto oficial do Deco ${model}`}
-      subtitle={
-        state?.page ? (
-          <a href={state.page} target="_blank" rel="noreferrer" class="inline-flex items-center gap-1 hover:underline">
-            página do produto na TP-Link <ExternalLink class="size-3" />
-          </a>
-        ) : (
-          "Fotos da página do produto, para uso pessoal"
-        )
-      }
-      onClose={onClose}
-    >
-      {chosen ? (
-        <Prepare source={officialProxy(chosen)} kind="decos" name={name} label={`Deco ${model}`} defaultRemoveBg onDone={onClose} onBack={() => setChosen(null)} />
-      ) : error ? (
-        <p class="text-[13px] text-bad">{error}</p>
-      ) : !state ? (
-        <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {Array.from({ length: 8 }, () => (
-            <div class="aspect-square animate-pulse rounded-xl bg-surface-2" />
-          ))}
-        </div>
-      ) : state.candidates.length === 0 ? (
-        <p class="text-[13px] text-muted">Não achei a página desse modelo no site da TP-Link. Envie uma imagem pelo botão "Enviar arquivo".</p>
-      ) : (
-        <>
-          <p class="mb-3 text-[12.5px] text-muted">Escolha uma foto com uma unidade só, de preferência de frente. O fundo branco sai na próxima etapa.</p>
-          <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {state.candidates.map((u) => (
-              <button type="button" onClick={() => setChosen(u)} class="group aspect-square overflow-hidden rounded-xl border border-line bg-white p-1.5 transition hover:border-accent hover:ring-2 hover:ring-accent/30">
-                <img src={officialProxy(u)} alt="" loading="lazy" class="size-full object-contain transition-transform group-hover:scale-105" />
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </Dialog>
-  );
+  async function choose(style: "drawing" | "default" | "custom") {
+    setBusy(true); setSaveError(null);
+    try {
+      await api.setDecoStyle(name, style);
+      invalidate(["images"]);
+      toast(`Visual do Deco ${model} salvo`);
+      onClose();
+    } catch(e) { setSaveError(errorText(e)); }
+    finally { setBusy(false); }
+  }
+
+  return <Dialog title={`Imagem do Deco ${model}`} onClose={onClose}>
+    {chosen ? <Prepare source={officialProxy(chosen)} kind="decos" name={name} label={`Deco ${model}`} defaultRemoveBg onDone={onClose} onBack={() => setChosen(null)} /> : <>
+      <p class="mb-3 text-sm text-muted">A escolha vale para todos os nós deste modelo. Desenhos e fotos mostram o indicador de status online/offline.</p>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3" role="group" aria-label="Imagem do modelo">
+        <ChoiceCard class="grid gap-2 p-3 text-center text-sm" selected={current==="drawing"} disabled={busy} onClick={()=>choose("drawing")}>
+          <svg viewBox="0 0 64 80" class="mx-auto h-28 w-full" aria-hidden="true"><DecoShapeSvg model={model} online={true} uid={`picker-drawing-${name}`} /></svg>
+          <span>Desenho com status{current==="drawing" ? " ✓" : ""}</span>
+        </ChoiceCard>
+        {DEFAULT_DECO_IMAGES[name] && <ChoiceCard class="grid gap-2 p-3 text-center text-sm" selected={current==="default"} disabled={busy} onClick={()=>choose("default")}>
+          <img src={DEFAULT_DECO_IMAGES[name]} alt="" class="h-28 w-full object-contain"/>
+          <span>Foto padrão{current==="default" ? " ✓" : ""}</span>
+        </ChoiceCard>}
+        {custom && <ChoiceCard class="grid gap-2 p-3 text-center text-sm" selected={current==="custom"} disabled={busy} onClick={()=>choose("custom")}>
+          <img src={custom} alt="" class="h-28 w-full object-contain"/>
+          <span>Foto personalizada{current==="custom" ? " ✓" : ""}</span>
+        </ChoiceCard>}
+      </div>
+      {saveError && <p role="alert" class="mt-3 text-sm text-bad">{saveError}</p>}
+      <div class="my-4 flex flex-wrap gap-2">
+        <UploadButton kind="decos" name={name} label={`Deco ${model}`} defaultRemoveBg>Enviar outra foto</UploadButton>
+        <Button size="sm" onClick={()=>setRemote(true)} disabled={remote}>Buscar fotos oficiais</Button>
+      </div>
+      {remote && <section aria-label="Fotos oficiais">
+        {state?.page && <a href={state.page} target="_blank" rel="noreferrer" class="mb-3 inline-flex items-center gap-1 text-sm text-accent hover:underline">Página do produto na TP-Link <ExternalLink class="size-3"/></a>}
+        {error ? <p class="text-sm text-bad">{error}</p> : !state ? <p class="text-sm text-muted">Buscando fotos oficiais…</p> : !state.candidates.length ? <p class="text-sm text-muted">Nenhuma foto oficial encontrada. Você pode enviar um arquivo.</p> : <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {state.candidates.map(url=><button type="button" onClick={()=>setChosen(url)} class="aspect-square overflow-hidden rounded-xl border border-line bg-white p-2 hover:border-accent" aria-label="Escolher foto oficial"><img src={officialProxy(url)} alt="" loading="lazy" class="size-full object-contain"/></button>)}
+        </div>}
+      </section>}
+    </>}
+  </Dialog>;
 }
 
 /** Botão que abre o seletor de arquivo e, escolhido, o diálogo de envio. */
@@ -213,20 +289,9 @@ export function UploadButton({
   const [file, setFile] = useState<File | null>(null);
   return (
     <>
-      <label class={cx("inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface font-medium text-fg transition hover:bg-surface-2", size === "sm" ? "px-2.5 py-1 text-[12.5px]" : "px-3 py-2 text-[13.5px]")}>
-        <ImageUp class="size-3.5" />
+      <FileButton size={size} accept={kind === "decos" ? "image/png,image/jpeg,image/webp,image/svg+xml,.svg" : "image/png,image/jpeg,image/webp"} icon={<ImageUp class="size-3.5" />} onFile={setFile}>
         {children}
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          class="sr-only"
-          onChange={(e) => {
-            const f = (e.target as HTMLInputElement).files?.[0];
-            (e.target as HTMLInputElement).value = "";
-            if (f) setFile(f);
-          }}
-        />
-      </label>
+      </FileButton>
       {file && <UploadDialog file={file} kind={kind} name={name} label={label} square={square} defaultRemoveBg={defaultRemoveBg} max={max} onClose={() => setFile(null)} />}
     </>
   );

@@ -4,12 +4,13 @@
  * (M5/M9/P9). O LED muda de cor com o estado e "respira" quando online.
  */
 import { cx } from "../ui";
-import { useArtImages, type Art } from "./images";
+import { DecoSvgContent, useDecoSvg } from "./custom-svg";
+import { modelKey, useArtImages, type Art } from "./images";
 
 export type DecoShape = "tower" | "tall" | "puck";
 
 export function decoShape(model: string): DecoShape {
-  const m = model.toUpperCase().replace(/\s+/g, "");
+  const m = modelKey(model).replace(/-/g, "");
   if (/^(M5|M9|P9|M3W|P7)/.test(m)) return "puck";
   if (/^(M4|M3|E4|E3|S4|S7)/.test(m)) return "tall";
   return "tower";
@@ -25,12 +26,22 @@ interface Props {
   uid: string;
 }
 
+/** LED reutilizável: coordenadas no viewBox do desenho, estado vindo do nó. */
+export function DecoStatusLed({ cx, cy, rx = 2, ry = rx, online, active }: {
+  cx: number; cy: number; rx?: number; ry?: number; online: boolean; active?: boolean;
+}) {
+  const color = online ? "var(--led-on)" : "var(--led-off)";
+  return <>
+    {online && <ellipse class="deco-led-glow" cx={cx} cy={cy} rx={rx * 2.4} ry={ry * 3} fill={color} opacity={active ? 0.55 : 0.3} />}
+    <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={color} class={online ? "deco-led" : ""} />
+  </>;
+}
+
 /** Conteúdo SVG (viewBox 0 0 64 80), para usar dentro de outro <svg>. */
 export function DecoShapeSvg({ model, online, active, uid }: Omit<Props, "class">) {
   const shape = decoShape(model);
   const body = `${uid}-body`;
   const top = `${uid}-top`;
-  const led = online ? "var(--led-on)" : "var(--led-off)";
   const defs = (
     <defs>
       <linearGradient id={body} x1="0" x2="1" y1="0" y2="0">
@@ -47,10 +58,7 @@ export function DecoShapeSvg({ model, online, active, uid }: Omit<Props, "class"
   );
   const shadow = <ellipse cx="32" cy="75" rx="24" ry="4" fill="var(--deco-floor)" />;
   const ledEl = (cx: number, cy: number, rx: number, ry: number) => (
-    <>
-      {online && <ellipse class="deco-led-glow" cx={cx} cy={cy} rx={rx * 2.4} ry={ry * 3} fill={led} opacity={active ? 0.55 : 0.3} />}
-      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={led} class={online ? "deco-led" : ""} />
-    </>
+    <DecoStatusLed cx={cx} cy={cy} rx={rx} ry={ry} online={online} active={active} />
   );
 
   if (shape === "puck") {
@@ -106,10 +114,12 @@ function DecoPhoto({ art, online, class: klass }: { art: Art; online: boolean; c
 export function DecoArt({ class: klass, ...props }: Props) {
   const { deco } = useArtImages();
   const photo = deco(props.model);
-  if (photo) return <DecoPhoto art={photo} online={props.online} class={klass} />;
+  // SVG enviado: inline, com o #status-led ligado ao nó; até carregar, o desenho interno.
+  const custom = useDecoSvg(photo?.svg ? photo.src : null);
+  if (photo && !photo.svg) return <DecoPhoto art={photo} online={props.online} class={klass} />;
   return (
-    <svg viewBox="0 0 64 80" class={cx("block", !props.online && "opacity-70 grayscale", klass)} aria-hidden="true">
-      <DecoShapeSvg {...props} />
+    <svg viewBox={custom?.viewBox ?? "0 0 64 80"} class={cx("block", !props.online && "opacity-70 grayscale", klass)} aria-hidden="true">
+      {custom ? <DecoSvgContent doc={custom} uid={props.uid} online={props.online} active={props.active} /> : <DecoShapeSvg {...props} />}
     </svg>
   );
 }

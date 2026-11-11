@@ -11,3 +11,7 @@ compose.override.yaml
 
 # Pacotes gerados por scripts/package-release.sh.
 release/
+
+# Fotos padrão dos Deco: renders oficiais com direitos da TP-Link, só locais.
+web/src/art/decos/*
+!web/src/art/decos/.gitkeep

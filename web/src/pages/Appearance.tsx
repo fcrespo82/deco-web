@@ -3,7 +3,7 @@ import { Sparkles, Trash } from "lucide-preact";
 import { api, officialProxy, type OfficialResult } from "../api";
 import { DecoArt } from "../art/DecoArt";
 import { CATEGORY, DeviceArt, type Category } from "../art/devices";
-import { modelKey } from "../art/images";
+import { DEFAULT_DECO_IMAGES, modelKey } from "../art/images";
 import { useImages, useOverview } from "../data";
 import { OfficialPicker, removeImage, UploadButton } from "../ImageDialogs";
 import { orderCandidates, pickBestCutout, prepareImage } from "../lib/image-upload";
@@ -57,7 +57,7 @@ export function Appearance() {
     <>
       <p class="max-w-2xl text-[13.5px] text-muted">
         Escolha as imagens dos seus Decos e dos aparelhos. Elas ficam em <code>DATA_DIR/images</code>, só no seu servidor, e aparecem no mapa, na galeria e nas
-        fichas. Onde não houver imagem, o painel usa os desenhos.
+        fichas. X50, M5 e M4R incluem fotos padrão; outros modelos usam desenhos quando não há imagem personalizada.
       </p>
 
       <SectionTitle
@@ -83,6 +83,7 @@ export function Appearance() {
         {models.map((m) => {
           const key = modelKey(m);
           const has = Boolean(data.decos[key]);
+        const style = data.decoStyles?.[key] ?? (has ? "custom" : DEFAULT_DECO_IMAGES[key] ? "default" : "drawing");
           return (
             <Card class="flex flex-col items-center gap-2 text-center">
               <div class="hero-glow flex h-36 w-full items-end justify-center rounded-xl pb-2">
@@ -90,15 +91,15 @@ export function Appearance() {
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="font-semibold">Deco {m}</span>
-                {has ? <Badge tone="ok">foto</Badge> : <Badge>desenho</Badge>}
+                {style === "drawing" ? <Badge>desenho com status</Badge> : style === "custom" && has ? <Badge tone="ok">foto personalizada</Badge> : DEFAULT_DECO_IMAGES[key] ? <Badge>foto padrão</Badge> : <Badge>desenho</Badge>}
               </div>
               <div class="mt-auto flex flex-wrap justify-center gap-1.5">
                 <Button size="sm" onClick={() => setPicking(m)}>
-                  Escolher oficial
+                  Escolher foto
                 </Button>
                 <UploadButton kind="decos" name={key} label={`Deco ${m}`} defaultRemoveBg />
                 {has && (
-                  <IconButton label={`Voltar ao desenho do ${m}`} onClick={() => removeImage("decos", key, `Deco ${m}`)}>
+                  <IconButton label={DEFAULT_DECO_IMAGES[key] ? `Restaurar foto padrão do ${m}` : `Voltar ao desenho do ${m}`} onClick={() => removeImage("decos", key, `Deco ${m}`)}>
                     <Trash class="size-4" />
                   </IconButton>
                 )}
@@ -110,7 +111,7 @@ export function Appearance() {
       </div>
       <p class="mt-3 text-[12px] text-muted">
         As fotos oficiais vêm das páginas de produto da TP-Link e têm direitos autorais: use só no seu painel. A busca automática escolhe uma foto de uma unidade
-        quando consegue; se vier o kit com três, use "Escolher oficial".
+        quando consegue; se vier o kit com três, use "Escolher foto".
       </p>
 
       <SectionTitle>Categorias de aparelho</SectionTitle>

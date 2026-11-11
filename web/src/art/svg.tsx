@@ -1,5 +1,6 @@
 /** Peças das ilustrações para dentro de um <svg> (mapa e bolhas). */
 import { DecoShapeSvg } from "./DecoArt";
+import { DecoSvgContent, useDecoSvg } from "./custom-svg";
 import { CATEGORY, type Category } from "./devices";
 import type { Art } from "./images";
 
@@ -47,7 +48,9 @@ export function SvgAvatar({ category, r, art, own, ring = true }: { category: Ca
 
 /** Deco desenhado ou foto, numa caixa 60×75 com o centro do aparelho em (0,0). */
 export function SvgDeco({ model, online, active, uid, art }: { model: string; online: boolean; active?: boolean; uid: string; art: Art | null }) {
-  if (art) {
+  // SVG enviado: mesma caixa do desenho, com o viewBox do próprio arquivo.
+  const custom = useDecoSvg(art?.svg ? art.src : null);
+  if (art && !art.svg) {
     return (
       <g class={online ? "" : "topo-photo-off"}>
         {art.opaque && <rect x="-31" y="-47" width="62" height="72" rx="14" class="topo-photo-pedestal" />}
@@ -58,7 +61,7 @@ export function SvgDeco({ model, online, active, uid, art }: { model: string; on
           width="56"
           height="70"
           preserveAspectRatio="xMidYMid meet"
-          style={art.opaque ? undefined : { filter: "drop-shadow(0 6px 6px rgb(15 23 42 / 0.25))" }}
+          style={art.opaque ? undefined : { filter: "var(--deco-photo-filter)" }}
         />
         {online && <circle cx="18" cy="18" r="9" fill="var(--led-on)" opacity="0.35" class="deco-led-glow" />}
         <circle cx="18" cy="18" r="4" fill={online ? "var(--led-on)" : "var(--led-off)"} stroke="var(--surface)" stroke-width="1.5" class={online ? "deco-led" : ""} />
@@ -66,8 +69,8 @@ export function SvgDeco({ model, online, active, uid, art }: { model: string; on
     );
   }
   return (
-    <svg x="-30" y="-48" width="60" height="75" viewBox="0 0 64 80" overflow="visible">
-      <DecoShapeSvg model={model} online={online} active={active} uid={uid} />
+    <svg x="-30" y="-48" width="60" height="75" viewBox={custom?.viewBox ?? "0 0 64 80"} overflow="visible">
+      {custom ? <DecoSvgContent doc={custom} uid={uid} online={online} active={active} /> : <DecoShapeSvg model={model} online={online} active={active} uid={uid} />}
     </svg>
   );
 }
