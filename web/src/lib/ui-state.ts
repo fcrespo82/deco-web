@@ -7,13 +7,14 @@ import { useEffect, useState } from "preact/hooks";
 
 export interface UiState {
   client: string | null;
+  clientTab: "details" | "history";
   node: string | null;
   palette: boolean;
   shortcuts: boolean;
   reboot: string | null;
 }
 
-let state: UiState = { client: null, node: null, palette: false, shortcuts: false, reboot: null };
+let state: UiState = { client: null, clientTab: "details", node: null, palette: false, shortcuts: false, reboot: null };
 const listeners = new Set<() => void>();
 
 export function setUi(patch: Partial<UiState>) {
@@ -21,7 +22,7 @@ export function setUi(patch: Partial<UiState>) {
   for (const l of listeners) l();
 }
 
-export const openClient = (mac: string | null) => setUi({ client: mac });
+export const openClient = (mac: string | null, clientTab: "details" | "history" = "details") => setUi({ client: mac, clientTab });
 export const selectNode = (mac: string | null) => setUi({ node: mac });
 
 export function useUi(): UiState {

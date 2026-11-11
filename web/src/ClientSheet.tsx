@@ -4,11 +4,13 @@
  * Editar no inventário e fixar IP trocam a ficha pelo diálogo respectivo.
  */
 import type { ComponentChildren } from "preact";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { ArrowDown, ArrowUp, Lock, Pencil } from "lucide-preact";
 import type { ClientView } from "./api";
 import { CATEGORY, categoryOf, DeviceArt } from "./art/devices";
-import { useClients, useImages, useStatus } from "./data";
+import { DeviceHistory } from "./DeviceHistory";
+import { FavoriteButton } from "./FavoriteButton";
+import { useClients, useImages, useInventory, useStatus } from "./data";
 import { removeImage, UploadButton } from "./ImageDialogs";
 import { DeviceEditor } from "./DeviceEditor";
 import { BAND_LABEL, INVENTORY_TYPE_LABEL, NETWORK_LABEL, ago, dateTime, deviceType, rate } from "./format";
@@ -22,16 +24,19 @@ export const clientLabel = (c: ClientView) => c.device?.alias ?? c.name;
 export function RateBar({ kBps, tone }: { kBps: number; tone: "down" | "up" }) {
   const ratio = kBps <= 0 ? 0 : Math.min(1, Math.log10(1 + kBps) / 4);
   return (
-    <span class="block h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+    <span class="theme-track block h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
       <span
-        class="block h-full rounded-full transition-[width] duration-700"
+        class="theme-track block h-full rounded-full transition-[width] duration-700"
         style={{ width: `${ratio * 100}%`, background: tone === "down" ? "var(--flow-down)" : "var(--flow-up)" }}
       />
     </span>
   );
 }
 
-export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void }) {
+export function ClientSheet({ mac, onClose, initialTab = "details" }: { mac: string; onClose: () => void; initialTab?: "details" | "history" }) {
+  const [tab, setTab] = useState(initialTab);
+  const inventory = useInventory();
+  useEffect(() => setTab(initialTab), [initialTab, mac]);
   const { data } = useClients();
   const images = useImages();
   const pending = usePendingReservations();
@@ -91,19 +96,25 @@ export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void
                 {images.data?.devices[String(c.device.id)] ? "Trocar foto" : "Foto"}
               </UploadButton>
               {images.data?.devices[String(c.device.id)] && (
-                <Button variant="ghost" onClick={() => removeImage("devices", String(c.device!.id), clientLabel(c))}>
+                <Button onClick={() => removeImage("devices", String(c.device!.id), clientLabel(c))}>
                   Tirar foto
                 </Button>
               )}
             </>
           )}
+          <FavoriteButton device={c.device} onRegister={() => setMode("edit")} />
           <span class="flex-1" />
-          <Button variant="ghost" onClick={onClose}>
+          <Button onClick={onClose}>
             Fechar
           </Button>
         </>
       }
     >
+      <div class="mb-4 flex gap-2" role="group" aria-label="Ficha do dispositivo">
+        <Button onClick={()=>setTab("details")} aria-pressed={tab==="details"}>Detalhes</Button>
+        <Button onClick={()=>setTab("history")} aria-pressed={tab==="history"}>Histórico</Button>
+      </div>
+      {tab === "history" ? <DeviceHistory macs={inventory.data?.devices.find(d=>d.id===c.device?.id)?.macs.map(m=>m.mac) ?? [c.mac]} /> : <>
       {c.online && !c.viaPanel && (
         <div class="mb-4 grid grid-cols-2 gap-3">
           {(["down", "up"] as const).map((dir) => {
@@ -123,6 +134,9 @@ export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void
       )}
       <Kv
         items={[
+          ["Origem da presença", !c.online ? "Última observação conhecida" : c.viaPanel ? "Confirmada pelo painel (ARP)" : "Informada pelo Deco"],
+          ["Coleta geral", dateTime(status?.fetchedAt ?? null)],
+          ["Coleta detalhada", <span title="Nó, Wi-Fi e CPU/memória dependem desta coleta">{dateTime(status?.detailTakenAt ?? null)}</span>],
           ["IP", c.ip ?? c.reservation?.ip ?? "—", "font-mono text-[12.5px]"],
           ["MAC", c.mac, "font-mono text-[12.5px]"],
           [
@@ -153,6 +167,7 @@ export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void
           ],
           ["Banda", c.band ? BAND_LABEL[c.band] : "—"],
           ["Rede", c.network ? (NETWORK_LABEL[c.network] ?? c.network) : "—"],
+          ...(c.device?.managementUrl ? ([["Gerenciamento", <a class="text-accent hover:underline" href={c.device.managementUrl} target="_blank" rel="noopener noreferrer">Abrir gerenciamento</a>]] as [string, ComponentChildren][]) : []),
           ...(c.device?.owner ? ([["Dono", c.device.owner]] as [string, string][]) : []),
           ...(c.device && c.device.tags.length
             ? ([
@@ -171,6 +186,7 @@ export function ClientSheet({ mac, onClose }: { mac: string; onClose: () => void
           ["Última vez", c.online ? "agora" : <span title={dateTime(c.lastSeen)}>{ago(c.lastSeen)}</span>],
         ]}
       />
+      </>}
     </Dialog>
   );
 }

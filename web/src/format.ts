@@ -109,6 +109,7 @@ export const EVENT_LABEL: Record<string, string> = {
   client_connected: "Conectou",
   client_disconnected: "Desconectou",
   client_ip_changed: "IP mudou",
+  client_node_changed: "Nó mudou",
   node_offline: "Nó caiu",
   node_online: "Nó voltou",
   internet_down: "Internet caiu",
@@ -137,6 +138,8 @@ export const EVENT_TONE: Record<string, "ok" | "warn" | "bad" | ""> = {
 export function eventDetail(type: string, data: Record<string, unknown>): string {
   const s = (k: string) => (typeof data[k] === "string" ? (data[k] as string) : "");
   switch (type) {
+    case "client_node_changed":
+      return `${s("fromName") || s("from")} → ${s("toName") || s("to")}`;
     case "client_ip_changed":
     case "reservation_changed":
       return `${s("from")} → ${s("to")}`;
