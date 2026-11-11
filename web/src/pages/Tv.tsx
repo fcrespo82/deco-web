@@ -1,7 +1,7 @@
 /**
  * Modo TV / quiosque (#/tv): tela cheia ambiente para um tablet na parede ou
  * uma TV. Mapa grande, relógio, internet, tráfego ao vivo, chegadas e saídas
- * e a faixa dos Decos. Sempre escura; pede para a tela não apagar (Wake Lock)
+ * e a faixa dos Decos. Segue o tema escolhido; pede para a tela não apagar (Wake Lock)
  * e esconde o cursor quando parado.
  */
 import { useEffect, useState } from "preact/hooks";
@@ -15,7 +15,7 @@ import { useQuery } from "../lib/query";
 import { useTrafficHistory, useTrafficRecorder } from "../lib/traffic";
 import { openClient, selectNode, useUi } from "../lib/ui-state";
 import { Topology } from "../Topology";
-import { cx } from "../ui";
+import { Button, cx, LinkButton, RowButton } from "../ui";
 import { Sparkline } from "../views/Sparkline";
 
 const ARRIVALS = "client_new,client_connected,client_disconnected";
@@ -29,19 +29,6 @@ function useClock() {
     return () => clearInterval(id);
   }, []);
   return now;
-}
-
-/** Tema escuro enquanto a TV está aberta; volta ao que era ao sair. */
-function useForcedDark() {
-  useEffect(() => {
-    const el = document.documentElement;
-    const before = el.dataset.theme;
-    el.dataset.theme = "dark";
-    return () => {
-      if (before) el.dataset.theme = before;
-      else delete el.dataset.theme;
-    };
-  }, []);
 }
 
 /** Mantém a tela acesa; o navegador solta o bloqueio quando a aba some, então pede de novo ao voltar. */
@@ -94,8 +81,8 @@ function Arrival({ e, now }: { e: EventView; now: number }) {
   const left = e.type === "client_disconnected";
   const Icon = e.type === "client_new" ? Sparkles : left ? LogOut : LogIn;
   return (
-    <button type="button" onClick={() => c && openClient(c.mac)} class={cx("flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition hover:bg-white/5", left && "opacity-60")}>
-      {c ? <DeviceArt category={categoryOf(c)} size="md" online={!left} deviceId={c.device?.id} /> : <span class="size-11 rounded-[13px] bg-white/10" />}
+    <RowButton onClick={() => c && openClient(c.mac)} class={cx(left && "opacity-60")}>
+      {c ? <DeviceArt category={categoryOf(c)} size="md" online={!left} deviceId={c.device?.id} /> : <span class="size-11 theme-icon bg-surface-2" />}
       <span class="min-w-0 flex-1">
         <span class="block truncate text-[15px] font-medium">{e.name ?? e.mac}</span>
         <span class={cx("flex items-center gap-1 text-[12.5px]", left ? "text-muted" : e.type === "client_new" ? "text-warn" : "text-ok")}>
@@ -105,12 +92,11 @@ function Arrival({ e, now }: { e: EventView; now: number }) {
         </span>
       </span>
       <span class="shrink-0 text-[12px] tabular-nums text-muted">{ago(e.at, now)}</span>
-    </button>
+    </RowButton>
   );
 }
 
 export function Tv() {
-  useForcedDark();
   useWakeLock();
   const idle = useIdle();
   const now = useClock();
@@ -174,7 +160,7 @@ export function Tv() {
           </div>
 
           <div class="tv-card flex items-center gap-3">
-            <span class={cx("flex size-10 items-center justify-center rounded-full", internetOk ? "bg-ok-soft text-ok" : "bg-bad-soft text-bad animate-pulse")}>
+            <span class={cx("flex size-10 items-center justify-center theme-icon", internetOk ? "bg-ok-soft text-ok" : "bg-bad-soft text-bad animate-pulse")}>
               <Globe class="size-5" />
             </span>
             <div>
@@ -228,13 +214,10 @@ export function Tv() {
 
       {/* Controles: somem com o cursor parado */}
       <div class={cx("absolute bottom-24 right-4 flex gap-2 transition-opacity duration-500 lg:bottom-auto lg:left-6 lg:right-auto lg:top-6", idle ? "pointer-events-none opacity-0" : "opacity-100")}>
-        <a href="#/" class="tv-card flex items-center gap-1.5 !px-3 !py-2 text-[13px] hover:bg-white/10">
-          <ArrowLeft class="size-4" /> Sair
-        </a>
-        <button type="button" onClick={toggleFull} class="tv-card flex items-center gap-1.5 !px-3 !py-2 text-[13px] hover:bg-white/10">
-          {full ? <Shrink class="size-4" /> : <Expand class="size-4" />}
+        <LinkButton href="#/" icon={<ArrowLeft class="size-4" />}>Sair</LinkButton>
+        <Button onClick={toggleFull} icon={full ? <Shrink class="size-4" /> : <Expand class="size-4" />}>
           {full ? "Sair da tela cheia" : "Tela cheia"}
-        </button>
+        </Button>
       </div>
     </div>
   );

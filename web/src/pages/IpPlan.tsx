@@ -13,7 +13,7 @@ import { DeviceEditor } from "../DeviceEditor";
 import { PickClient } from "./Reservations";
 import { toast } from "../lib/toast";
 import { ManualMacDialog, PendingReservationBadge, ReservationDialog } from "../ReservationDialog";
-import { Badge, Banner, Button, Card, Check, cx, Dialog, Empty, Field, FilterChips, IconButton, Kv, PageLoading, SectionTitle, TableCard } from "../ui";
+import { Badge, Banner, Button, Card, Check, Chip, cx, Dialog, Empty, Field, FilterChips, IconButton, Kv, PageLoading, SectionTitle, TableCard, TextButton } from "../ui";
 
 /** Cores das faixas: ordem categórica fixa (validada); da 9ª em diante, cinza. */
 const RANGE_SLOTS = 8;
@@ -151,14 +151,9 @@ function RangeForm({ range, onClose }: { range: RangeSummary | null; onClose: ()
             {Object.entries(INVENTORY_TYPE_LABEL).map(([t, label]) => {
               const on = form.types.includes(t);
               return (
-                <button
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => toggleType(t)}
-                  class={cx("rounded-full border px-3 py-1 text-[13px] font-medium transition", on ? "border-accent bg-accent-soft text-accent" : "border-line text-muted hover:text-fg")}
-                >
+                <Chip pressed={on} onClick={() => toggleType(t)}>
                   {label}
-                </button>
+                </Chip>
               );
             })}
           </div>
@@ -518,9 +513,9 @@ export function IpPlan() {
               {anomalies.map((a) => (
                 <tr>
                   <td class="cell-primary">
-                    <button type="button" class="font-mono font-medium text-fg hover:text-accent hover:underline" onClick={() => setSelected(a.ip)}>
+                    <TextButton tone="fg" class="font-mono" onClick={() => setSelected(a.ip)}>
                       {a.ip}
-                    </button>
+                    </TextButton>
                   </td>
                   <td data-label="Tipo">
                     <Badge tone="warn">

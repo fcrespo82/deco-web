@@ -1,3 +1,4 @@
+import { useStored } from "../lib/preferences";
 import type { ComponentType } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { ArrowLeftRight, Clock, Globe, Lock, Router, Sparkles, Wifi, WifiOff } from "lucide-preact";
@@ -11,7 +12,7 @@ import { EVENT_LABEL, EVENT_TONE, ago, dateTime, eventDetail } from "../format";
 import { useNow } from "../hooks";
 import { useQuery } from "../lib/query";
 import { LineChart } from "../LineChart";
-import { Badge, Button, Card, cx, Empty, FilterChips, Segmented, SectionTitle, Skeleton, TableCard } from "../ui";
+import { Badge, Button, Card, cx, Empty, FilterChips, RowButton, SectionTitle, Segmented, Skeleton, TableCard } from "../ui";
 
 const RANGES = [
   { hours: 24, label: "24 h" },
@@ -24,6 +25,7 @@ const TYPE_GROUPS: { label: string; types: string }[] = [
   { label: "Todos", types: "" },
   { label: "Dispositivos novos", types: "client_new" },
   { label: "Conexões", types: "client_connected,client_disconnected" },
+  { label: "Nós de conexão", types: "client_node_changed" },
   { label: "IP mudou", types: "client_ip_changed" },
   { label: "Nós", types: "node_offline,node_online" },
   { label: "Internet", types: "internet_down,internet_up" },
@@ -35,6 +37,7 @@ const EVENT_ICON: Record<string, ComponentType<{ class?: string }>> = {
   client_connected: Wifi,
   client_disconnected: WifiOff,
   client_ip_changed: ArrowLeftRight,
+  client_node_changed: Router,
   node_offline: Router,
   node_online: Router,
   internet_down: Globe,
@@ -63,8 +66,9 @@ function dayLabel(iso: string, now: number): string {
  */
 function Events() {
   const now = useNow();
-  const [types, setTypes] = useState("");
+  const [types, setTypes] = useStored("history.types", "", (v): v is string => TYPE_GROUPS.some(g=>g.types===v));
   const first = useQuery(KEYS.events(types), () => api.events({ type: types, limit: 100 }), ["snapshot", "reservations"]);
+  useEffect(()=>{ const reset=()=>setTypes(""); addEventListener("dashboard-history-reset",reset); return ()=>removeEventListener("dashboard-history-reset",reset); },[]);
   const clients = useClients().data?.clients ?? [];
   const [older, setOlder] = useState<{ events: EventView[]; next: number | null } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -126,12 +130,7 @@ function Events() {
                     <span class={cx("timeline-dot", tone && `is-${tone}`)}>
                       <Icon class="size-3" />
                     </span>
-                    <button
-                      type="button"
-                      disabled={!c}
-                      onClick={() => c && openClient(c.mac)}
-                      class="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1 text-left enabled:hover:bg-surface-2"
-                    >
+                    <RowButton disabled={!c} onClick={() => c && openClient(c.mac)} class="flex-1">
                       {c ? <DeviceArt category={categoryOf(c)} size="sm" online={c.online} deviceId={c.device?.id} class="!size-7" /> : null}
                       <span class="min-w-0">
                         <span class="block text-[13px]">
@@ -140,7 +139,7 @@ function Events() {
                         {detail && <span class="block truncate font-mono text-[11.5px] text-muted">{detail}</span>}
                       </span>
                       <span class="ml-auto shrink-0 text-[11px] text-muted max-sm:hidden">{ago(e.at, now)}</span>
-                    </button>
+                    </RowButton>
                   </li>
                 </>
               );
@@ -238,7 +237,8 @@ function Audit() {
 }
 
 function PresenceSection() {
-  const [hours, setHours] = useState(24);
+  const [hours, setHours] = useStored("history.presence-hours", 24, (v): v is number => v===24 || v===168);
+  useEffect(()=>{ const reset=()=>setHours(24); addEventListener("dashboard-history-reset",reset); return ()=>removeEventListener("dashboard-history-reset",reset); },[]);
   const presence = usePresence(hours);
   const clients = useClients().data?.clients;
   return (
@@ -254,7 +254,7 @@ function PresenceSection() {
 }
 
 export function History() {
-  const [hours, setHours] = useState(24);
+  const [hours, setHours] = useStored("history.hours", 24, (v): v is number => RANGES.some(r=>r.hours===v));
   const { data: samples } = useSamples(hours);
   const heat = useHeatSamples();
 
@@ -282,7 +282,7 @@ export function History() {
         )}
       </Card>
 
-      <SectionTitle>Eventos</SectionTitle>
+      <SectionTitle actions={<Button onClick={()=>{setHours(24);window.dispatchEvent(new Event("dashboard-history-reset"));}}>Limpar filtros</Button>}>Eventos</SectionTitle>
       <Events />
 
       <SectionTitle>Alterações feitas no painel</SectionTitle>

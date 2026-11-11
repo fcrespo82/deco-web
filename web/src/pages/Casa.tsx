@@ -16,7 +16,7 @@ import { errorText, mutate } from "../lib/mutate";
 import { setQueryData } from "../lib/query";
 import { openClient, selectNode, useUi } from "../lib/ui-state";
 import { BAND_COLOR, Flow, signalTone } from "../Topology";
-import { Badge, Button, Card, Check, cx, Empty, PageLoading, Segmented } from "../ui";
+import { Badge, Button, Card, Check, cx, Empty, PageLoading, RowButton, Segmented } from "../ui";
 import { COVERAGE_STOPS, paintCoverage, type CoverageBand } from "../views/coverage";
 import { BAND_LABEL, rate } from "../format";
 
@@ -121,7 +121,7 @@ function Marker({
               onClick={() => openClient(c.mac)}
               title={`${clientLabel(c)} · ${c.band ? BAND_LABEL[c.band] : ""}${busy ? ` · ↓ ${rate(c.downKBps)}` : ""}`}
             >
-              <DeviceArt category={categoryOf(c)} size="sm" deviceId={c.device?.id} class="!size-[22px] !rounded-full [&>svg]:!size-3" />
+              <DeviceArt category={categoryOf(c)} size="sm" deviceId={c.device?.id} class="!size-[22px] [&>svg]:!size-3" />
             </button>
           );
         })}
@@ -387,11 +387,11 @@ export function Casa() {
                 .sort((a, b) => b.downKBps - a.downKBps)
                 .slice(0, 10)
                 .map((c) => (
-                  <button type="button" onClick={() => openClient(c.mac)} class="flex items-center gap-2 rounded-md px-1.5 py-1 text-left hover:bg-surface-2">
+                  <RowButton onClick={() => openClient(c.mac)}>
                     <DeviceArt category={categoryOf(c)} size="sm" deviceId={c.device?.id} class="!size-6" />
                     <span class="flex-1 truncate text-[12.5px]">{clientLabel(c)}</span>
                     <span class="text-[11px] tabular-nums text-muted">{c.downKBps > 0 ? rate(c.downKBps) : ""}</span>
-                  </button>
+                  </RowButton>
                 ))}
             </div>
           </Card>

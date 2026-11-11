@@ -1,3 +1,4 @@
+import { useStored } from "../lib/preferences";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { ArrowDownUp, Bubbles as BubblesIcon, LayoutGrid, Lock, MonitorSmartphone, Search, Table2, X } from "lucide-preact";
 import type { Band, ClientView } from "../api";
@@ -8,7 +9,7 @@ import { useNow } from "../hooks";
 import { openClient } from "../lib/ui-state";
 import { usePendingReservations } from "../lib/reservation-write";
 import { PendingReservationBadge, ReservationDialog } from "../ReservationDialog";
-import { Badge, Button, Check, cx, Dot, Empty, FilterChips, PageLoading, Segmented, TableCard } from "../ui";
+import { Badge, Button, Check, cx, Dot, Empty, FilterChips, PageLoading, Segmented, TableCard, TextButton } from "../ui";
 import { Bubbles } from "../views/Bubbles";
 import { Gallery } from "../views/Gallery";
 import { GROUP_LABEL, type GroupBy } from "../views/grouping";
@@ -17,22 +18,7 @@ type View = "gallery" | "bubbles" | "table";
 
 /** Preferências de visualização lembradas neste navegador. */
 function usePref<T extends string>(key: string, initial: T, valid: readonly T[]): [T, (v: T) => void] {
-  const [v, setV] = useState<T>(() => {
-    try {
-      const saved = localStorage.getItem(key) as T | null;
-      return saved && valid.includes(saved) ? saved : initial;
-    } catch {
-      return initial;
-    }
-  });
-  useEffect(() => {
-    try {
-      localStorage.setItem(key, v);
-    } catch {
-      // Sem storage: vale só nesta visita.
-    }
-  }, [key, v]);
-  return [v, setV];
+  return useStored(key, initial, (v): v is T => typeof v === "string" && valid.includes(v as T));
 }
 
 /** Apelido do inventário, ou o nome que o Deco dá. */
@@ -74,6 +60,14 @@ interface Filters {
 }
 
 const EMPTY: Filters = { q: "", status: "all", band: "", node: "", network: "", reservation: "" };
+
+function validFilters(v: unknown): v is Filters {
+  if (!v || typeof v !== "object") return false;
+  const f = v as Filters;
+  return typeof f.q === "string" && f.q.length <= 500 && ["all","online","offline"].includes(f.status)
+    && ["","wired","2.4GHz","5GHz","6GHz"].includes(f.band) && typeof f.node === "string"
+    && typeof f.network === "string" && ["","yes","no"].includes(f.reservation);
+}
 
 function matches(c: ClientView, f: Filters): boolean {
   if (f.status === "online" && !c.online) return false;
@@ -127,8 +121,8 @@ export function Clients() {
   const now = useNow();
   const { data, error } = useClients();
   const status = useStatus();
-  const [f, setF] = useState<Filters>(EMPTY);
-  const [sort, setSort] = useState<SortKey | null>(null);
+  const [f, setF] = useStored<Filters>("clients.filters", EMPTY, validFilters);
+  const [sort, setSort] = useStored<SortKey | null>("clients.sort", null, (v): v is SortKey | null => v === null || typeof v === "string" && Object.hasOwn(SORTERS,v));
   const [editing, setEditing] = useState<ClientView | null>(null);
   const [reserving, setReserving] = useState<ClientView | null>(null);
   const pending = usePendingReservations();
@@ -142,6 +136,10 @@ export function Clients() {
     for (const c of clients) if (c.nodeMac && c.nodeName) m.set(c.nodeMac, c.nodeName);
     return [...m].sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
   }, [clients]);
+  useEffect(() => {
+    if (data && f.node && !nodes.some(([mac])=>mac===f.node)) setF(old=>({...old,node:""}));
+  }, [data, f.node, nodes]);
+
   const networks = useMemo(() => [...new Set(clients.map((c) => c.network).filter(Boolean))] as string[], [clients]);
 
   const rows = useMemo(() => {
@@ -220,7 +218,7 @@ export function Clients() {
             </select>
           </label>
           {filtered && (
-            <Button variant="ghost" icon={<X class="size-4" />} onClick={() => setF(EMPTY)}>
+            <Button icon={<X class="size-4" />} onClick={() => { setF(EMPTY); setSort(null); }}>
               Limpar
             </Button>
           )}
@@ -291,9 +289,9 @@ export function Clients() {
                   <td class="cell-primary">
                     <div class="flex items-center gap-2">
                       <Dot tone={c.online ? "ok" : "off"} label={c.online ? "online" : "offline"} />
-                      <button type="button" class="truncate text-left font-medium text-fg hover:text-accent hover:underline" onClick={() => setEditing(c)} title="Editar no inventário">
+                      <TextButton tone="fg" class="truncate" onClick={() => setEditing(c)} title="Editar no inventário">
                         {label(c)}
-                      </button>
+                      </TextButton>
                     </div>
                     <div class="mt-0.5 pl-4 text-[12px] text-muted">
                       {[

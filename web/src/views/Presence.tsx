@@ -106,7 +106,7 @@ export function Presence({ data, clients, hours }: { data: PresenceView; clients
                 class="group grid w-full grid-cols-[minmax(120px,30%)_1fr_44px] items-center border-b border-line/60 text-left last:border-0 hover:bg-surface-2/60 sm:grid-cols-[220px_1fr_52px]"
               >
                 <span class="flex min-w-0 items-center gap-2 px-3 py-1.5">
-                  <DeviceArt category={cat} size="sm" online={c.online} deviceId={c.device?.id} class="!size-6 !rounded-md [&>svg]:!size-3.5" />
+                  <DeviceArt category={cat} size="sm" online={c.online} deviceId={c.device?.id} class="!size-6 [&>svg]:!size-3.5" />
                   <span class="truncate text-[12.5px] font-medium">{clientLabel(c)}</span>
                 </span>
                 <span class="presence-lane relative h-7">

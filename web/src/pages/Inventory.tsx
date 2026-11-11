@@ -1,11 +1,14 @@
+import { useStored } from "../lib/preferences";
 import { useMemo, useState } from "preact/hooks";
 import { Boxes, Plus, Search } from "lucide-preact";
 import type { DeviceMacView, DeviceView } from "../api";
 import { useInventory } from "../data";
 import { categoryOf, DeviceArt } from "../art/devices";
+import { FavoriteButton } from "../FavoriteButton";
+import { openClient } from "../lib/ui-state";
 import { DeviceEditor } from "../DeviceEditor";
 import { BAND_LABEL, INVENTORY_TYPE_LABEL, ago } from "../format";
-import { Badge, Button, Dot, Empty, PageLoading, SectionTitle, TableCard } from "../ui";
+import { Badge, Button, Dot, Empty, PageLoading, SectionTitle, TableCard, TextButton } from "../ui";
 
 function MacLine({ m }: { m: DeviceMacView }) {
   return (
@@ -23,13 +26,15 @@ type Editing = { deviceId: number } | { mac: string; name?: string };
 
 export function Inventory() {
   const { data, error } = useInventory();
-  const [q, setQ] = useState("");
-  const [type, setType] = useState("");
+  const [q, setQ] = useStored("inventory.search", "", (v): v is string => typeof v === "string" && v.length<=500);
+  const [type, setType] = useStored("inventory.type", "", (v): v is string => typeof v === "string" && (v === "" || Object.hasOwn(INVENTORY_TYPE_LABEL,v)));
+  const [favoritesOnly, setFavoritesOnly] = useStored("inventory.favorites", false, (v): v is boolean => typeof v === "boolean");
   const [editing, setEditing] = useState<Editing | null>(null);
 
   const devices = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return (data?.devices ?? []).filter((d: DeviceView) => {
+      if (favoritesOnly && !d.favorite) return false;
       if (type && d.type !== type) return false;
       if (!needle) return true;
       return [d.alias, d.owner, d.notes, ...d.tags, ...d.macs.flatMap((m) => [m.mac, m.ip, m.decoName])]
@@ -38,7 +43,7 @@ export function Inventory() {
         .toLowerCase()
         .includes(needle.replace(/:/g, "-"));
     });
-  }, [data, q, type]);
+  }, [data, q, type, favoritesOnly]);
 
   if (!data) return <PageLoading error={error} />;
 
@@ -55,6 +60,8 @@ export function Inventory() {
             <option value={t}>{INVENTORY_TYPE_LABEL[t] ?? t}</option>
           ))}
         </select>
+        <Button aria-pressed={favoritesOnly} onClick={()=>setFavoritesOnly(!favoritesOnly)}>★ Favoritos</Button>
+        <Button onClick={()=>{setQ("");setType("");setFavoritesOnly(false);}}>Limpar filtros</Button>
       </div>
 
       <SectionTitle>
@@ -88,9 +95,11 @@ export function Inventory() {
                         category={categoryOf({ name: d.macs[0]?.decoName ?? d.alias, deviceType: null, vendor: null, suggestedType: null, device: d })}
                       />
                       <div class="min-w-0">
-                        <button type="button" class="block max-w-full truncate text-left font-medium text-fg hover:text-accent hover:underline" onClick={() => setEditing({ deviceId: d.id })}>
+                        <TextButton tone="fg" class="block truncate" onClick={() => setEditing({ deviceId: d.id })}>
                           {d.alias}
-                        </button>
+                        </TextButton>
+                        <div class="my-1 flex flex-wrap gap-2"><FavoriteButton device={d} size="sm"/><Button size="sm" onClick={()=>openClient(d.macs[0]!.mac,"history")}>Histórico</Button></div>
+                        {d.managementUrl && <a class="block text-[12px] text-accent hover:underline" href={d.managementUrl} target="_blank" rel="noopener noreferrer">Abrir gerenciamento</a>}
                         <div class="flex flex-wrap gap-1 text-[12px] text-muted">
                           {d.type && <span>{INVENTORY_TYPE_LABEL[d.type]}</span>}
                           {!d.approved && <Badge tone="warn">não aprovado</Badge>}

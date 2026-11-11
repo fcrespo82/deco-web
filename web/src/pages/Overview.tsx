@@ -7,14 +7,15 @@ import { categoryOf, DeviceArt } from "../art/devices";
 import { clientLabel, RateBar } from "../ClientSheet";
 import { WifiDialog } from "../DangerDialogs";
 import { openClient as openClientSheet, selectNode, setUi, useUi } from "../lib/ui-state";
-import { useClients, useOverview, useStatus } from "../data";
+import { useClients, useOverview, useStatus, useInventory } from "../data";
 import { BAND_LABEL, NETWORK_LABEL, WIFI_KIND_LABEL, rate, shortFirmware, since } from "../format";
 import { useNow } from "../hooks";
 import { useTrafficHistory, useTrafficRecorder } from "../lib/traffic";
 import { Sparkline } from "../views/Sparkline";
+import { FavoriteButton } from "../FavoriteButton";
 import { Counter } from "../Counter";
 import { BAND_COLOR, Topology, TopologyLegend } from "../Topology";
-import { Badge, Button, Card, cx, Empty, Kv, PageLoading, SectionTitle } from "../ui";
+import { Badge, Button, Card, cx, Empty, IconButton, Kv, PageLoading, RowButton, SectionTitle, TextButton } from "../ui";
 
 const BAND_ORDER: Band[] = ["wired", "5GHz", "6GHz", "2.4GHz"];
 
@@ -39,7 +40,7 @@ function Ring({ value, label }: { value: number; label: string }) {
 function BandBar({ byBand, total }: { byBand: Partial<Record<Band, number>>; total: number }) {
   return (
     <div>
-      <div class="flex h-2 overflow-hidden rounded-full bg-surface-2">
+      <div class="theme-track flex h-2 overflow-hidden rounded-full bg-surface-2">
         {BAND_ORDER.filter((b) => byBand[b]).map((b) => (
           <span class="h-full transition-[width] duration-700" style={{ width: `${((byBand[b] ?? 0) / Math.max(1, total)) * 100}%`, background: BAND_COLOR[b] }} />
         ))}
@@ -149,14 +150,14 @@ function Uplink({ node }: { node: NodeView }) {
 
 function ClientRow({ c, onOpen, right }: { c: ClientView; onOpen: (c: ClientView) => void; right?: ComponentChildren }) {
   return (
-    <button type="button" onClick={() => onOpen(c)} class="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition hover:bg-surface-2">
+    <RowButton onClick={() => onOpen(c)}>
       <DeviceArt category={categoryOf(c)} size="sm" online={c.online} deviceId={c.device?.id} />
       <span class="min-w-0 flex-1">
         <span class="block truncate text-[13px] font-medium">{clientLabel(c)}</span>
         <span class="block truncate text-[11.5px] text-muted">{[c.ip, c.band && BAND_LABEL[c.band]].filter(Boolean).join(" · ")}</span>
       </span>
       {right}
-    </button>
+    </RowButton>
   );
 }
 
@@ -172,9 +173,9 @@ function NodePanel({ node, clients, now, onReboot, onOpen, onClose }: { node: No
         <div class="min-w-0 flex-1 pt-1">
           <div class="flex items-center gap-2">
             <h3 class="truncate text-[17px] font-semibold tracking-tight">{node.name}</h3>
-            <button type="button" class="ml-auto rounded-md p-1 text-muted hover:bg-surface-2 hover:text-fg" onClick={onClose} aria-label="Fechar painel do nó">
+            <IconButton size="sm" label="Fechar painel do nó" class="ml-auto" onClick={onClose}>
               <X class="size-4" />
-            </button>
+            </IconButton>
           </div>
           <div class="text-[12.5px] text-muted">
             Deco {node.model} · hw {node.hardware}
@@ -276,7 +277,7 @@ function NodeShelf({ nodes, selected, onSelect, now }: { nodes: NodeView[]; sele
               </span>
               <span class="text-[11.5px] text-muted">{n.clients.total === 1 ? "cliente" : "clientes"}</span>
             </div>
-            <div class="mt-2 flex h-1.5 overflow-hidden rounded-full bg-surface-2">
+            <div class="theme-track mt-2 flex h-1.5 overflow-hidden rounded-full bg-surface-2">
               {BAND_ORDER.filter((b) => n.clients.byBand[b]).map((b) => (
                 <span style={{ width: `${((n.clients.byBand[b] ?? 0) / Math.max(1, n.clients.total)) * 100}%`, background: BAND_COLOR[b] }} />
               ))}
@@ -323,6 +324,20 @@ function WifiCards({ wifi, canEdit, onEdit }: { wifi: WifiNetwork[]; canEdit: bo
   );
 }
 
+function Favorites() {
+  const {data} = useInventory();
+  const favorites = (data?.devices ?? []).filter(d=>d.favorite).sort((a,b)=>a.alias.localeCompare(b.alias,"pt-BR"));
+  if (!favorites.length) return null;
+  return <section class="mb-5"><SectionTitle>Favoritos</SectionTitle><div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    {favorites.map(d=><Card key={d.id}>
+      <TextButton class="font-semibold" onClick={()=>openClientSheet((d.macs.find(m=>m.online)??d.macs[0])!.mac)}>{d.alias}</TextButton>
+      <Badge tone={d.online?"ok":""}>{d.online?"online":"offline"}</Badge>
+      <ul class="my-2 text-xs text-muted">{d.macs.map(m=><li key={m.mac}>{m.ip??"IP desconhecido"} · {m.mac} · {m.online?"online":"offline"}</li>)}</ul>
+      <div class="flex flex-wrap gap-3">{d.managementUrl && <a class="text-sm text-accent hover:underline" href={d.managementUrl} target="_blank" rel="noopener noreferrer">Abrir gerenciamento</a>}<FavoriteButton device={d}/></div>
+    </Card>)}
+  </div></section>;
+}
+
 export function Overview() {
   const now = useNow();
   const { data, error } = useOverview();
@@ -354,6 +369,7 @@ export function Overview() {
 
   return (
     <>
+      <Favorites />
       {editingWifi && <WifiDialog kind={editingWifi} rows={(data.wifi ?? []).filter((w) => w.kind === editingWifi)} onClose={() => setEditingWifi(null)} />}
 
       <div class="flex flex-col gap-3">
@@ -365,8 +381,8 @@ export function Overview() {
         <Card class="hero-glow relative overflow-hidden p-0 max-sm:-mx-1">
           <div class="flex flex-wrap items-center gap-3 px-4 pt-3.5">
             <h2 class="text-[15px] font-semibold tracking-tight">Mapa da rede</h2>
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-ok-soft px-2 py-0.5 text-[11px] font-semibold text-ok">
-              <span class="size-1.5 animate-pulse rounded-full bg-ok" /> ao vivo
+            <span class="hud-badge inline-flex items-center gap-1.5 rounded-full bg-ok-soft px-2 py-0.5 text-[11px] font-semibold text-ok">
+              <span class="size-1.5 animate-pulse rounded-full bg-ok" /> última coleta
             </span>
             <span class="flex-1" />
             <div class="relative w-full sm:w-56">

@@ -7,7 +7,7 @@ import { useState } from "preact/hooks";
 import { RefreshCw } from "lucide-preact";
 import { api, ApiError, type StatusView } from "./api";
 import { useStatus } from "./data";
-import { ago } from "./format";
+import { ago, dateTime } from "./format";
 import { useNow } from "./hooks";
 import { useLive } from "./lib/live";
 import { toast } from "./lib/toast";
@@ -24,14 +24,16 @@ export function StatusPill({ compact }: { compact?: boolean }) {
     : status.fetchedAt
       ? `Atualizado ${ago(status.fetchedAt, now)}`
       : "Aguardando a primeira leitura…";
-  const liveLabel = live.state === "open" ? "Ao vivo" : live.state === "offline" ? "Reconectando" : "Conectando";
+  const liveLabel = live.state === "open" ? "Atualização automática" : live.state === "offline" ? "Reconectando" : "Conectando";
+  const next = status.polling ? "Lendo o Deco…" : status.pausedUntil && Date.parse(status.pausedUntil)>now ? `Pausa até ${dateTime(status.pausedUntil)}` : status.breaker === "locked" ? "Coleta bloqueada" : status.breaker === "open" ? "Coleta em espera" : status.nextPollAt ? `Próxima coleta: ${dateTime(status.nextPollAt)}` : "Aguardando agendamento";
   return (
-    <div class="flex min-w-0 items-center gap-2 text-[12.5px] text-muted" role="status">
+    <div class="flex min-w-0 items-center gap-2 text-[12.5px] text-muted" role="status" title={next}>
       <span class="inline-flex items-center gap-1.5" title={live.state === "open" ? "Atualiza sozinho quando o Deco é lido" : "Sem canal ao vivo: relendo a cada 30 s"}>
         <Dot tone={live.state === "open" ? "ok" : "warn"} pulse={live.state === "open"} />
         {!compact && <span class="font-medium text-fg">{liveLabel}</span>}
       </span>
       <span class={cx("truncate", status.polling && "text-accent")}>{text}</span>
+      {!compact && <a class="hidden text-accent hover:underline 2xl:inline" href="#/configuracoes?secao=atualizacao">{next}</a> }
       {!compact && status.detailTakenAt && status.detailTakenAt !== status.fetchedAt && (
         <span class="hidden truncate xl:inline" title="Cliente→nó, Wi-Fi e CPU são lidos com menos frequência">
           · detalhes {ago(status.detailTakenAt, now)}

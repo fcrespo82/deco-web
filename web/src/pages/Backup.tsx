@@ -9,7 +9,7 @@ import { api, type BackupDiff, type ImportResult } from "../api";
 import { INVENTORY_TYPE_LABEL, dateTime } from "../format";
 import { errorText } from "../lib/mutate";
 import { toast } from "../lib/toast";
-import { Badge, Banner, Button, Card, Check, Dialog, Kv, SectionTitle, type Tone } from "../ui";
+import { Badge, Banner, Button, Card, Check, Dialog, FileButton, Kv, SectionTitle, type Tone } from "../ui";
 
 type Sections = { devices: boolean; ranges: boolean; reservations: boolean };
 
@@ -20,6 +20,8 @@ const FIELD_LABEL: Record<string, string> = {
   tags: "tags",
   notes: "notas",
   approved: "aprovado",
+  favorite: "favorito",
+  managementUrl: "URL de gerenciamento",
   macs: "MACs",
   merge: "junta",
   spec: "endereços",
@@ -213,11 +215,7 @@ export function Backup() {
     }
   }
 
-  async function pick(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const f = input.files?.[0];
-    input.value = "";
-    if (!f) return;
+  async function pick(f: File) {
     setError(null);
     setDiff(null);
     setResult(null);
@@ -277,10 +275,7 @@ export function Backup() {
           </div>
           <p class="mb-4 text-[12.5px] text-muted">Mostra o que muda antes de aplicar. Acrescenta e atualiza; nunca apaga o que só existe aqui.</p>
           <div class="flex flex-wrap items-center gap-3">
-            <label class="relative inline-flex h-9 cursor-pointer items-center rounded-lg border border-line bg-surface px-3.5 text-[13.5px] font-medium shadow-card transition hover:bg-surface-2 focus-within:ring-2 focus-within:ring-accent">
-              Escolher arquivo…
-              <input type="file" accept="application/json,.json" onChange={pick} class="absolute inset-0 cursor-pointer opacity-0" />
-            </label>
+            <FileButton accept="application/json,.json" onFile={(f) => void pick(f)}>Escolher arquivo…</FileButton>
             {file && <span class="truncate text-[12.5px] text-muted">{file.name}</span>}
           </div>
         </Card>

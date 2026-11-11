@@ -7,7 +7,7 @@ import { INVENTORY_TYPE_LABEL, ago, deviceType } from "../format";
 import { usePendingReservations } from "../lib/reservation-write";
 import { ManualMacDialog, PendingReservationBadge, ReservationDialog } from "../ReservationDialog";
 import { stubClient } from "../lib/reservation-write";
-import { Badge, Banner, Button, Dialog, Dot, Empty, PageLoading, SectionTitle, TableCard } from "../ui";
+import { Badge, Banner, Button, Dialog, Dot, Empty, PageLoading, RowButton, SectionTitle, TableCard, TextButton } from "../ui";
 
 const label = (c: ClientView) => c.device?.alias ?? c.name;
 const ipKey = (ip: string) => ip.split(".").reduce((acc, part) => acc * 256 + Number(part), 0);
@@ -73,7 +73,7 @@ export function PickClient({
       <ul class="mt-3 grid gap-1">
         {options.map((c) => (
           <li>
-            <button type="button" onClick={() => onPick(c)} class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-surface-2">
+            <RowButton onClick={() => onPick(c)}>
               <DeviceArt size="sm" category={categoryOf(c)} deviceId={c.device?.id} />
               <span class="min-w-0 flex-1">
                 <span class="block truncate font-medium">{label(c)}</span>
@@ -85,7 +85,7 @@ export function PickClient({
                 )}
               </span>
               <span class="font-mono text-[12px] text-muted">{c.ip}</span>
-            </button>
+            </RowButton>
           </li>
         ))}
         {!data && <li class="h-20 animate-pulse rounded-lg bg-surface-2" />}
@@ -94,9 +94,7 @@ export function PickClient({
       {onManual && (
         <p class="mt-3 border-t border-line pt-3 text-[12.5px] text-muted">
           Aparelho fora da lista (desligado, ou que o Deco não mostra)?{" "}
-          <button type="button" class="font-medium text-accent hover:underline" onClick={onManual}>
-            Reservar por MAC
-          </button>
+          <TextButton onClick={onManual}>Reservar por MAC</TextButton>
         </p>
       )}
     </Dialog>
