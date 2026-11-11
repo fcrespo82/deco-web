@@ -9,52 +9,127 @@ export const cx = (...parts: (string | false | null | undefined)[]) => parts.fil
 export type Tone = "ok" | "warn" | "bad" | "accent" | "";
 
 // --- botões -----------------------------------------------------------
+// Toda ação com cara de botão passa por buttonClass: <button> (Button), <a> (LinkButton)
+// e <label> de arquivo (FileButton) ficam idênticos e seguem o tema.
 
-type ButtonVariant = "default" | "primary" | "danger" | "danger-solid" | "ghost";
+export type ButtonVariant = "default" | "primary" | "danger" | "danger-solid" | "ghost";
+export type ButtonSize = "sm" | "md";
 const BUTTON: Record<ButtonVariant, string> = {
   default: "btn-hud border border-line bg-surface/70 text-fg hover:border-accent/60 hover:text-accent",
-  primary: "btn-brand border border-transparent text-white hover:brightness-110",
+  primary: "btn-brand border border-transparent hover:brightness-110",
   danger: "btn-hud border border-line bg-surface/70 text-bad hover:border-bad/60 hover:bg-bad-soft",
-  "danger-solid": "border border-transparent bg-bad text-white shadow-card hover:brightness-110",
+  "danger-solid": "border border-transparent bg-bad text-bad-fg shadow-card hover:brightness-110",
   ghost: "border border-transparent text-muted hover:bg-surface-2 hover:text-fg",
 };
 
+export function buttonClass({ variant = "default", size = "md" }: { variant?: ButtonVariant; size?: ButtonSize } = {}, ...extra: (string | false | null | undefined)[]) {
+  return cx(
+    "inline-flex cursor-pointer select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-medium transition",
+    "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+    size === "sm" ? "h-7 px-2.5 text-[12.5px]" : "h-9 px-3.5 text-[13.5px]",
+    BUTTON[variant],
+    ...extra,
+  );
+}
+
 type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "size" | "loading" | "type" | "icon"> & {
   variant?: ButtonVariant;
-  size?: "sm" | "md";
+  size?: ButtonSize;
   loading?: boolean;
   icon?: ComponentChildren;
   type?: "button" | "submit";
 };
 
-export function Button({ variant = "default", size = "md", loading, icon, class: klass, children, disabled, type = "button", ...rest }: ButtonProps) {
+export function Button({ variant, size, loading, icon, class: klass, children, disabled, type = "button", ...rest }: ButtonProps) {
   return (
-    <button
-      type={type}
-      disabled={disabled || loading}
-      class={cx(
-        "inline-flex select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-medium transition",
-        "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
-        size === "sm" ? "h-7 px-2.5 text-[12.5px]" : "h-9 px-3.5 text-[13.5px]",
-        BUTTON[variant],
-        klass as string,
-      )}
-      {...rest}
-    >
+    <button type={type} disabled={disabled || loading} class={buttonClass({ variant, size }, klass as string)} {...rest}>
       {loading ? <LoaderCircle class="size-4 animate-spin" /> : icon}
       {children}
     </button>
   );
 }
 
-export function IconButton({ label, children, class: klass, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type"> & { label: string }) {
+/** Link com aparência de botão (navegação, não ação). */
+export function LinkButton({ href, target, rel, title, variant, size, icon, class: klass, children }: { href: string; target?: string; rel?: string; title?: string; variant?: ButtonVariant; size?: ButtonSize; icon?: ComponentChildren; class?: string; children: ComponentChildren }) {
+  return <a href={href} target={target} rel={rel} title={title} class={buttonClass({ variant, size }, klass)}>{icon}{children}</a>;
+}
+
+/** Botão que abre o seletor de arquivo; o input fica dentro do <label> para manter teclado e leitor de tela. */
+export function FileButton({ accept, onFile, variant, size, icon, disabled, children, class: klass }: { accept: string; onFile: (file: File) => void; variant?: ButtonVariant; size?: ButtonSize; icon?: ComponentChildren; disabled?: boolean; children: ComponentChildren; class?: string }) {
+  return (
+    <label class={buttonClass({ variant, size }, "focus-within:ring-2 focus-within:ring-accent", klass)} aria-disabled={disabled || undefined}>
+      {icon}
+      {children}
+      <input
+        type="file"
+        accept={accept}
+        disabled={disabled}
+        class="sr-only"
+        onChange={(e) => {
+          const input = e.currentTarget;
+          const file = input.files?.[0];
+          input.value = "";
+          if (file) onFile(file);
+        }}
+      />
+    </label>
+  );
+}
+
+const ICON_SIZE = { sm: "size-7 rounded-md", md: "size-9 rounded-lg" } as const;
+export function IconButton({ label, size = "md", children, class: klass, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type" | "size"> & { label: string; size?: keyof typeof ICON_SIZE }) {
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
       class={cx(
-        "inline-flex size-9 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-fg active:scale-95 disabled:opacity-50",
+        "inline-flex shrink-0 items-center justify-center text-muted transition hover:bg-surface-2 hover:text-fg active:scale-95 disabled:opacity-50",
+        ICON_SIZE[size],
+        klass as string,
+      )}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Ação dentro do texto (nome que abre o editor, "digitar manualmente"). */
+export function TextButton({ tone = "accent", class: klass, children, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type"> & { tone?: "accent" | "fg" }) {
+  return (
+    <button
+      type="button"
+      class={cx("max-w-full text-left font-medium hover:text-accent hover:underline", tone === "accent" ? "text-accent" : "text-fg", klass as string)}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Linha clicável de lista (aparelho, sugestão): ocupa a largura e destaca no hover. */
+export function RowButton({ class: klass, children, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type">) {
+  return (
+    <button
+      type="button"
+      class={cx("flex w-full min-w-0 items-center gap-3 rounded-lg px-2 py-1.5 text-left transition enabled:hover:bg-surface-2", klass as string)}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Cartão de escolha exclusiva (tema, imagem): aria-pressed indica o selecionado. */
+export function ChoiceCard({ selected, class: klass, children, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type"> & { selected: boolean }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      class={cx(
+        "rounded-xl border p-4 text-left transition hover:border-accent disabled:opacity-50",
+        selected ? "border-accent bg-accent-soft ring-2 ring-accent/30" : "border-line bg-surface",
         klass as string,
       )}
       {...rest}
@@ -226,23 +301,33 @@ export function Segmented<T extends string | number>({ options, value, onChange,
   );
 }
 
+/** Chip alternável; use FilterChips para escolha exclusiva com contagem. */
+export function Chip({ pressed, class: klass, children, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type"> & { pressed: boolean }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      class={cx(
+        "shrink-0 rounded-full border px-3 py-1 text-[13px] font-medium transition",
+        pressed ? "border-transparent bg-fg text-bg" : "border-line bg-surface text-muted hover:text-fg",
+        klass as string,
+      )}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}
+
 /** Chips de filtro com contagem. */
 export function FilterChips<T extends string>({ options, value, onChange, label }: { options: { value: T; label: string; count?: number }[]; value: T; onChange: (v: T) => void; label: string }) {
   return (
     <div role="group" aria-label={label} class="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 scrollbar-none sm:mx-0 sm:flex-wrap sm:px-0">
       {options.map((o) => (
-        <button
-          type="button"
-          aria-pressed={o.value === value}
-          onClick={() => onChange(o.value)}
-          class={cx(
-            "shrink-0 rounded-full border px-3 py-1 text-[13px] font-medium transition",
-            o.value === value ? "border-transparent bg-fg text-bg" : "border-line bg-surface text-muted hover:text-fg",
-          )}
-        >
+        <Chip pressed={o.value === value} onClick={() => onChange(o.value)}>
           {o.label}
           {o.count !== undefined && <span class="ml-1.5 opacity-60">{o.count}</span>}
-        </button>
+        </Chip>
       ))}
     </div>
   );
@@ -308,9 +393,9 @@ export function Toaster() {
             <div class="font-medium">{t.text}</div>
             {t.detail && <div class="mt-0.5 text-[12.5px] text-muted">{t.detail}</div>}
           </div>
-          <button type="button" class="-m-1 rounded p-1 text-muted hover:text-fg" aria-label="Fechar aviso" onClick={() => dismiss(t.id)}>
+          <IconButton size="sm" label="Fechar aviso" class="-m-1" onClick={() => dismiss(t.id)}>
             <X class="size-3.5" />
-          </button>
+          </IconButton>
         </div>
       ))}
     </div>
