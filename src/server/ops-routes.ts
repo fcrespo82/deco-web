@@ -129,7 +129,7 @@ export function registerOpsRoutes(server: FastifyInstance, app: App, actorOf: (r
       app.store.db.transaction(() => {
         for (const d of diff.devices.changes) {
           const b = backup.devices[d.index]!;
-          const fields = { alias: b.alias, owner: b.owner, type: b.type, tags: b.tags, notes: b.notes, approved: b.approved };
+          const fields = { alias: b.alias, owner: b.owner, type: b.type, tags: b.tags, notes: b.notes, managementUrl: b.managementUrl, favorite: b.favorite, approved: b.approved };
           if (d.action === "add") {
             app.inventory.create({ ...fields, macs: b.macs });
             result.devices.added += 1;

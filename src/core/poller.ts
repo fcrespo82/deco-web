@@ -7,6 +7,8 @@
  * - `pollNow()` (ex.: botão "atualizar") reaproveita um poll em andamento.
  * - Ao iniciar, carrega o último snapshot do SQLite para a UI ter dados já.
  */
+import { PollRepo } from "../db/polls.js";
+import { classifyError } from "../deco-client/errors.js";
 import { EventEmitter } from "node:events";
 import type { Reservation, Snapshot, WifiNetwork } from "../deco-client/types.js";
 import type { Store } from "../db/store.js";
@@ -19,6 +21,7 @@ export interface PollerCache {
   /** Quando o snapshot atual foi obtido com sucesso. */
   fetchedAt: string | null;
   lastAttemptAt: string | null;
+  lastDurationMs?: number | null;
   lastError: { message: string; at: string } | null;
   nextPollAt: string | null;
   /** Leituras suspensas até esta hora (ex.: gateway reiniciando). */
@@ -71,6 +74,7 @@ export class Poller extends EventEmitter<PollerEvents> {
       snapshot: persisted,
       fetchedAt: persisted?.takenAt ?? null,
       lastAttemptAt: null,
+      lastDurationMs: new PollRepo(this.store.db).list()[0]?.durationMs ?? null,
       lastError: null,
       nextPollAt: null,
       pausedUntil: null,
@@ -162,7 +166,11 @@ export class Poller extends EventEmitter<PollerEvents> {
       return null;
     }
 
-    this.state.lastAttemptAt = this.now().toISOString();
+    const started = this.now();
+    let outcome: "success" | "failure" = "failure";
+    let skipped = false;
+    let category: "auth" | "busy" | "other" | null = null;
+    this.state.lastAttemptAt = started.toISOString();
     try {
       const fetched = await this.gateway.fetchSnapshot();
       const snapshot = this.augment ? await this.augment(fetched).catch(() => fetched) : fetched;
@@ -175,8 +183,11 @@ export class Poller extends EventEmitter<PollerEvents> {
         `poll ok: ${snapshot.nodes.length} nós, ${snapshot.clients.length} clientes`,
       );
       this.emit("snapshot", snapshot, previous);
+      outcome = "success";
       return snapshot;
     } catch (err) {
+      skipped = err instanceof CircuitOpenError;
+      category = classifyError(err).kind;
       const error = err instanceof Error ? err : new Error(String(err));
       this.state.lastError = { message: error.message, at: this.now().toISOString() };
       if (!(err instanceof CircuitOpenError)) {
@@ -185,6 +196,12 @@ export class Poller extends EventEmitter<PollerEvents> {
       // Só emite se houver ouvinte: "error" sem ouvinte derruba o processo.
       if (this.listenerCount("error") > 0) this.emit("error", error);
       return null;
+    } finally {
+      const ended = this.now();
+      if (!skipped) {
+        this.state.lastDurationMs = Math.max(0, ended.getTime() - started.getTime());
+        new PollRepo(this.store.db).record({ startedAt: started.toISOString(), endedAt: ended.toISOString(), durationMs: this.state.lastDurationMs, outcome, category });
+      }
     }
   }
 }

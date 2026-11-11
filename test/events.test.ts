@@ -137,3 +137,33 @@ describe("EventDetector", () => {
     expect(types(events).sort()).toEqual(["reservation_added", "reservation_changed", "reservation_removed"]);
   });
 });
+
+describe("mudanças de nó", () => {
+  function withNode(minute: number, nodeMac: string | null, detail: string, source?: "panel") {
+    const snap = snapAt(minute);
+    snap.detailTakenAt = detail;
+    snap.clients = [{...snap.clients[0]!,nodeMac,source}];
+    return snap;
+  }
+  it("só compara nós conhecidos em nova coleta detalhada", () => {
+    const detector = new EventDetector({graceMs:120_000});
+    detector.prime(withNode(0,"node-a","detail-1"));
+    expect(detector.next(withNode(1,"node-b","detail-1")).filter(e=>e.type==="client_node_changed")).toEqual([]);
+    const changes = detector.next(withNode(2,"node-b","detail-2")).filter(e=>e.type==="client_node_changed");
+    expect(changes).toHaveLength(1);
+    expect(changes[0]!.data).toMatchObject({from:"node-a",to:"node-b"});
+    expect(detector.next(withNode(3,"node-b","detail-3")).filter(e=>e.type==="client_node_changed")).toEqual([]);
+  });
+  it("não inventa mudança após ausência, ARP, nó desconhecido ou primeira observação", () => {
+    for (const mode of ["absent","panel","unknown"] as const) {
+      const detector = new EventDetector({graceMs:120_000});
+      detector.prime(withNode(0,"node-a","d1"));
+      const middle = withNode(1,mode==="unknown"?null:"node-a","d2",mode==="panel"?"panel":undefined);
+      if(mode==="absent") middle.clients=[];
+      detector.next(middle);
+      expect(detector.next(withNode(2,"node-b","d3")).some(e=>e.type==="client_node_changed")).toBe(false);
+    }
+    const first = new EventDetector({graceMs:0});
+    expect(first.next(withNode(0,"node-a","d1")).some(e=>e.type==="client_node_changed")).toBe(false);
+  });
+});

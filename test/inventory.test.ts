@@ -3,7 +3,8 @@ import { subnetOf } from "../src/core/ipmath.js";
 import { NotFoundError, ValidationError } from "../src/db/errors.js";
 import { InventoryRepo } from "../src/db/inventory.js";
 import { IpRangeRepo } from "../src/db/ipranges.js";
-import { Store } from "../src/db/store.js";
+import Database from "better-sqlite3";
+import { MIGRATIONS, Store } from "../src/db/store.js";
 import { bucketSamples } from "../src/server/history.js";
 
 const stores: Store[] = [];
@@ -110,4 +111,43 @@ describe("bucketSamples", () => {
       { t: "2026-10-17T03:00:00.000Z", avg: 5, max: 5 },
     ]);
   });
+});
+
+describe("URL de gerenciamento", () => {
+  it("persiste, atualiza, preserva em PATCH e remove o endereço", () => {
+    const { inv } = repos();
+    const d = inv.create({ alias: "NAS", macs: [A], managementUrl: " https://nas.local:5001/admin?q=1 " });
+    expect(inv.get(d.id).managementUrl).toBe("https://nas.local:5001/admin?q=1");
+    expect(inv.update(d.id, { alias: "NAS novo" }).managementUrl).toBe(d.managementUrl);
+    expect(inv.update(d.id, { managementUrl: "http://192.168.1.2:8080/" }).managementUrl).toBe("http://192.168.1.2:8080/");
+    expect(inv.update(d.id, { managementUrl: " " }).managementUrl).toBeNull();
+    expect(inv.update(d.id, { managementUrl: null }).managementUrl).toBeNull();
+  });
+  it.each(["javascript:alert(1)", "ftp://nas.local", "nas.local", "http:example.com", "https://user:pass@nas.local", 42])("recusa endereço inválido %s", (managementUrl) => {
+    const { inv } = repos();
+    expect(() => inv.create({ alias: "NAS", macs: [A], managementUrl })).toThrow(ValidationError);
+  });
+  it("migra registros existentes sem perder dados", () => {
+    const db = new Database(":memory:");
+    try {
+      for (const sql of MIGRATIONS.slice(0, -1)) db.exec(sql);
+      db.exec("INSERT INTO devices (alias, created_at, updated_at) VALUES ('NAS', 'x', 'x')");
+      db.exec(MIGRATIONS.at(-1)!);
+      expect(new InventoryRepo(db).list()[0]).toMatchObject({ alias: "NAS", managementUrl: null });
+    } finally { db.close(); }
+  });
+});
+
+it("favoritos são booleanos, sobrevivem à mesclagem e não são copiados ao separar", () => {
+  const {inv} = repos();
+  const a = inv.create({alias:"NAS",macs:[A],favorite:true});
+  const b = inv.create({alias:"Servidor",macs:[B]});
+  expect(b.favorite).toBe(false);
+  expect(()=>inv.update(a.id,{favorite:"true"})).toThrow(ValidationError);
+  expect(inv.update(a.id,{alias:"NAS atualizado"}).favorite).toBe(true);
+  expect(inv.attachMac(b.id,A).favorite).toBe(true);
+  expect(()=>inv.get(a.id)).toThrow(NotFoundError);
+  inv.detachMac(b.id,A);
+  expect(inv.create({alias:"Separado",macs:[A]}).favorite).toBe(false);
+  expect(inv.get(b.id).favorite).toBe(true);
 });

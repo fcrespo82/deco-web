@@ -99,6 +99,12 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX alerts_at ON alerts(at);
   `,
+  `ALTER TABLE devices ADD COLUMN management_url TEXT;`,
+  `ALTER TABLE devices ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0;
+   CREATE TABLE poll_attempts (
+     id INTEGER PRIMARY KEY, startedAt TEXT NOT NULL, endedAt TEXT NOT NULL,
+     durationMs INTEGER NOT NULL, outcome TEXT NOT NULL, category TEXT
+   );`,
 ];
 
 export interface ClientSeen {

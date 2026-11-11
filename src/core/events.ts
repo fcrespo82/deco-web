@@ -13,6 +13,7 @@ export const NET_EVENT_TYPES = [
   "client_connected",
   "client_disconnected",
   "client_ip_changed",
+  "client_node_changed",
   "node_offline",
   "node_online",
   "internet_down",
@@ -49,6 +50,8 @@ export class EventDetector {
   private missingSince = new Map<string, number>();
   private nodes = new Map<string, { online: boolean; name: string }>();
   private internet: boolean | null = null;
+  private clientNodes = new Map<string, string>();
+  private detailAt: string | null = null;
   private reservations: Map<string, string> | null = null;
   private primed = false;
 
@@ -61,6 +64,8 @@ export class EventDetector {
   prime(snap: Snapshot | null): void {
     if (!snap) return;
     this.absorb(snap);
+    this.detailAt = snap.detailTakenAt;
+    this.clientNodes = new Map(snap.clients.filter(c => c.source !== "panel" && c.nodeMac).map(c => [c.mac, c.nodeMac!]));
     this.primed = true;
   }
 
@@ -78,6 +83,21 @@ export class EventDetector {
     const at = snap.takenAt;
     const t = Date.parse(at);
     const events: NetEvent[] = [];
+    const presentMacs = new Set(snap.clients.filter(c => c.source !== "panel" && c.nodeMac).map(c => c.mac));
+    for (const mac of this.clientNodes.keys()) if (!presentMacs.has(mac)) this.clientNodes.delete(mac);
+    if (snap.detailTakenAt !== this.detailAt) {
+      for (const c of snap.clients) {
+        const from = this.clientNodes.get(c.mac);
+        if (c.source !== "panel" && c.nodeMac) {
+          if (from && from !== c.nodeMac && this.online.has(c.mac)) {
+            events.push(ev(at, "client_node_changed", c.mac, { name: c.name, from, to: c.nodeMac, fromName: snap.nodes.find(n=>n.mac===from)?.name ?? from, toName: snap.nodes.find(n=>n.mac===c.nodeMac)?.name ?? c.nodeMac }));
+          }
+          this.clientNodes.set(c.mac, c.nodeMac);
+        } else this.clientNodes.delete(c.mac);
+      }
+      this.detailAt = snap.detailTakenAt;
+    }
+
 
     // --- clientes ---
     const present = new Map(snap.clients.map((c) => [c.mac, c]));

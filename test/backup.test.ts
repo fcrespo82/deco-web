@@ -33,7 +33,7 @@ async function setup(env: Record<string, string> = { DECO_ALLOW_WRITE: "1" }) {
 async function seeded() {
   const s = await setup();
   const [c1, c2] = s.app.poller.cache.snapshot!.clients;
-  await s.send("POST", "/api/devices", { alias: "NAS", type: "servidor", tags: ["casa"], macs: [c1!.mac], approved: true });
+  await s.send("POST", "/api/devices", { alias: "NAS", managementUrl: "https://nas.local:5001/", type: "servidor", tags: ["casa"], macs: [c1!.mac], approved: true });
   await s.send("POST", "/api/devices", { alias: "TV", type: "tv", macs: [c2!.mac] });
   await s.send("POST", "/api/ipplan/ranges", { name: "Servidores", spec: ".40-.59", kind: "static", types: ["servidor"] });
   await s.send("POST", "/api/ipplan/ranges", { name: "Pool", spec: ".100-.199", kind: "dynamic" });
@@ -197,4 +197,44 @@ describe("orderReservationChanges", () => {
     );
     expect(order.map((c) => c.mac)).toEqual(["A", "B"]);
   });
+});
+
+it("restaura links novos e preserva links ausentes em backups antigos", async () => {
+  const s = await seeded();
+  const backup = (await s.server.inject("/api/backup")).json() as BackupFile;
+  const nas = backup.devices.find(d => d.alias === "NAS")!;
+  expect(nas.managementUrl).toBe("https://nas.local:5001/");
+  const local = s.app.inventory.list().find(d => d.alias === "NAS")!;
+  delete nas.managementUrl;
+  nas.alias = "NAS antigo";
+  const restore = await s.send("POST", "/api/backup/import", { backup, sections: { devices: true }, confirm: true });
+  expect(restore.statusCode).toBe(200);
+  expect(s.app.inventory.get(local.id)).toMatchObject({ alias: "NAS antigo", managementUrl: "https://nas.local:5001/" });
+  nas.managementUrl = "http://nas.local:8080/admin";
+  const preview = (await s.send("POST", "/api/backup/preview", { backup })).json();
+  expect(JSON.stringify(preview.devices)).toContain("managementUrl");
+  expect((await s.send("POST", "/api/backup/import", { backup, sections: { devices: true }, confirm: true })).statusCode).toBe(200);
+  expect(s.app.inventory.get(local.id).managementUrl).toBe(nas.managementUrl);
+  nas.managementUrl = null;
+  await s.send("POST", "/api/backup/import", { backup, sections: { devices: true }, confirm: true });
+  expect(s.app.inventory.get(local.id).managementUrl).toBeNull();
+  nas.managementUrl = "javascript:alert(1)";
+  expect(() => parseBackup(backup)).toThrow(/URL de gerenciamento/);
+});
+
+it("backup exporta favoritos, preserva campo antigo ausente e importa false explícito", async () => {
+  const s = await seeded();
+  const local = s.app.inventory.list().find(d=>d.alias==="NAS")!;
+  s.app.inventory.update(local.id,{favorite:true});
+  const backup = (await s.server.inject("/api/backup")).json() as BackupFile;
+  const nas = backup.devices.find(d=>d.alias==="NAS")!;
+  expect(nas.favorite).toBe(true);
+  delete nas.favorite;
+  nas.alias = "Outro NAS";
+  expect((await s.send("POST","/api/backup/import",{backup,sections:{devices:true},confirm:true})).statusCode).toBe(200);
+  expect(s.app.inventory.get(local.id).favorite).toBe(true);
+  nas.favorite = false;
+  expect((await s.send("POST","/api/backup/import",{backup,sections:{devices:true},confirm:true})).statusCode).toBe(200);
+  expect(s.app.inventory.get(local.id).favorite).toBe(false);
+  expect(()=>parseBackup({...backup,devices:[{...nas,favorite:"true"}]})).toThrow(/favorite/);
 });

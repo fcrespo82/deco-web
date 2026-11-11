@@ -53,3 +53,14 @@ export function stringList(value: unknown, field: string, maxItems: number, maxL
   if (out.length > maxItems) throw new ValidationError(`${field}: máximo de ${maxItems} itens`);
   return out;
 }
+
+export function parseManagementUrl(value: unknown): string | null {
+  const text = optionalText(value, "URL de gerenciamento", 2048);
+  if (!text) return null;
+  let url: URL;
+  try { url = new URL(text); } catch { throw new ValidationError("URL de gerenciamento inválida: informe uma URL completa HTTP/HTTPS"); }
+  if (!/^https?:\/\//i.test(text) || !["http:", "https:"].includes(url.protocol) || url.username || url.password) {
+    throw new ValidationError("URL de gerenciamento deve usar HTTP/HTTPS e não conter credenciais");
+  }
+  return text;
+}

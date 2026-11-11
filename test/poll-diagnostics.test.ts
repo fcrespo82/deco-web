@@ -1,0 +1,46 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Store } from "../src/db/store.js";
+import { PollRepo } from "../src/db/polls.js";
+import { Poller } from "../src/core/poller.js";
+import { CircuitBreaker } from "../src/core/breaker.js";
+import { DecoGateway } from "../src/core/gateway.js";
+import { MockDecoApi } from "../src/deco-client/mock.js";
+import { silentLogger } from "../src/log.js";
+const close: (()=>void)[]=[];
+afterEach(()=>close.splice(0).forEach(f=>f()));
+describe("diagnóstico de coleta",()=>{
+  it("mede tentativa completa e não registra pausa nem bloqueio",async()=>{
+    let time=Date.parse("2026-11-10T12:00:00Z");
+    const now=()=>new Date(time);
+    const store=new Store(":memory:"); close.push(()=>store.close());
+    const api=new MockDecoApi({now});
+    const breaker=new CircuitBreaker({now:()=>time});
+    const gateway=new DecoGateway(api,breaker);
+    const poller=new Poller({gateway,store,intervalMs:90_000,logger:silentLogger,now,augment:async s=>{time+=1500;return s;}});
+    await poller.pollNow();
+    expect(poller.cache.lastDurationMs).toBe(1500);
+    const repo=new PollRepo(store.db);
+    expect(repo.view().attempts[0]).toMatchObject({durationMs:1500,outcome:"success",category:null});
+    poller.pause(60_000); await poller.pollNow(); expect(repo.list()).toHaveLength(1);
+    time+=60_000;
+    api.failNext(new Error("SECRET must never appear")); await poller.pollNow();
+    expect(repo.list()[0]).toMatchObject({outcome:"failure",category:"other"});
+    expect(JSON.stringify(repo.view())).not.toContain("SECRET");
+    await poller.pollNow(); expect(repo.list()).toHaveLength(2);
+    expect(repo.view().summary.consecutiveFailures).toBe(1);
+  });
+  it("limita a 200 registros, retorna 100 e persiste após reabrir",()=>{
+    const dir=mkdtempSync(join(tmpdir(),"deco-poll-test-")); close.push(()=>rmSync(dir,{recursive:true,force:true}));
+    const path=join(dir,"test.db");
+    let store=new Store(path);
+    const repo=new PollRepo(store.db);
+    for(let i=0;i<205;i++) repo.record({startedAt:"x",endedAt:"y",durationMs:i,outcome:i%2?"success":"failure",category:null});
+    expect((store.db.prepare("SELECT count(*) AS n FROM poll_attempts").get() as {n:number}).n).toBe(200);
+    expect(repo.view().summary).toMatchObject({count:100,successes:50,failures:50,consecutiveFailures:1});
+    store.close(); store=new Store(path);
+    expect(new PollRepo(store.db).list()).toHaveLength(100); store.close();
+  });
+});

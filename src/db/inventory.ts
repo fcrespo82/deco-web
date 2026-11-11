@@ -4,7 +4,7 @@
  * pertence a no máximo um dispositivo.
  */
 import type Database from "better-sqlite3";
-import { NotFoundError, optionalText, requireMac, requireText, stringList, ValidationError } from "./errors.js";
+import { NotFoundError, optionalText, parseManagementUrl, requireMac, requireText, stringList, ValidationError } from "./errors.js";
 
 export const DEVICE_TYPES = ["pc", "notebook", "celular", "tablet", "tv", "iot", "impressora", "servidor", "rede", "outro"] as const;
 export type DeviceType = (typeof DEVICE_TYPES)[number];
@@ -16,8 +16,10 @@ export interface Device {
   type: DeviceType | null;
   tags: string[];
   notes: string | null;
+  managementUrl: string | null;
   /** Aprovado como conhecido (alertas de dispositivo novo). */
   approved: boolean;
+  favorite: boolean;
   macs: string[];
   createdAt: string;
   updatedAt: string;
@@ -29,7 +31,9 @@ export interface DeviceInput {
   type?: unknown;
   tags?: unknown;
   notes?: unknown;
+  managementUrl?: unknown;
   approved?: unknown;
+  favorite?: unknown;
 }
 
 interface Row {
@@ -39,7 +43,9 @@ interface Row {
   type: string | null;
   tags: string;
   notes: string | null;
+  management_url: string | null;
   approved: number;
+  favorite: number;
   created_at: string;
   updated_at: string;
   macs: string | null;
@@ -53,12 +59,15 @@ function toDevice(r: Row): Device {
     type: r.type as DeviceType | null,
     tags: JSON.parse(r.tags) as string[],
     notes: r.notes,
+    managementUrl: r.management_url,
     approved: r.approved === 1,
+    favorite: r.favorite === 1,
     macs: r.macs ? r.macs.split(",").sort() : [],
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
 }
+
 
 function parseType(value: unknown): DeviceType | null {
   if (value === undefined || value === null || value === "") return null;
@@ -75,7 +84,12 @@ function fields(input: DeviceInput, requireAlias: boolean) {
   if (input.owner !== undefined) out.owner = optionalText(input.owner, "Dono", 80);
   if (input.type !== undefined) out.type = parseType(input.type);
   if (input.tags !== undefined) out.tags = stringList(input.tags, "Tags", 20, 30);
+  if (input.managementUrl !== undefined) out.managementUrl = parseManagementUrl(input.managementUrl);
   if (input.notes !== undefined) out.notes = optionalText(input.notes, "Notas", 2000);
+  if (input.favorite !== undefined) {
+    if (typeof input.favorite !== "boolean") throw new ValidationError("favorite deve ser booleano");
+    out.favorite = input.favorite;
+  }
   if (input.approved !== undefined) {
     if (typeof input.approved !== "boolean") throw new ValidationError("approved deve ser booleano");
     out.approved = input.approved;
@@ -126,10 +140,10 @@ export class InventoryRepo {
     return this.db.transaction(() => {
       const { lastInsertRowid } = this.db
         .prepare(
-          `INSERT INTO devices (alias, owner, type, tags, notes, approved, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO devices (alias, owner, type, tags, notes, management_url, approved, favorite, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(f.alias!, f.owner ?? null, f.type ?? null, JSON.stringify(f.tags ?? []), f.notes ?? null, f.approved ? 1 : 0, at, at);
+        .run(f.alias!, f.owner ?? null, f.type ?? null, JSON.stringify(f.tags ?? []), f.notes ?? null, f.managementUrl ?? null, f.approved ? 1 : 0, f.favorite ? 1 : 0, at, at);
       const id = Number(lastInsertRowid);
       for (const mac of macs) this.moveMac(mac, id);
       return this.get(id);
@@ -142,8 +156,8 @@ export class InventoryRepo {
     const sets: string[] = [];
     const values: unknown[] = [];
     for (const [key, value] of Object.entries(f)) {
-      sets.push(`${key} = ?`);
-      values.push(key === "tags" ? JSON.stringify(value) : key === "approved" ? (value ? 1 : 0) : value);
+      sets.push(`${key === "managementUrl" ? "management_url" : key} = ?`);
+      values.push(key === "tags" ? JSON.stringify(value) : (key === "approved" || key === "favorite") ? (value ? 1 : 0) : value);
     }
     if (sets.length === 0) return this.get(id);
     sets.push("updated_at = ?");
@@ -193,7 +207,10 @@ export class InventoryRepo {
       .run(mac, id);
     if (prev) {
       const left = this.db.prepare("SELECT count(*) AS n FROM device_macs WHERE device_id = ?").get(prev.device_id) as { n: number };
-      if (left.n === 0) this.db.prepare("DELETE FROM devices WHERE id = ?").run(prev.device_id);
+      if (left.n === 0) {
+        this.db.prepare("UPDATE devices SET favorite = MAX(favorite, (SELECT favorite FROM devices WHERE id = ?)) WHERE id = ?").run(prev.device_id, id);
+        this.db.prepare("DELETE FROM devices WHERE id = ?").run(prev.device_id);
+      }
       else this.touch(prev.device_id);
     }
     this.touch(id);

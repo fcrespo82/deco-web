@@ -1,3 +1,4 @@
+import { parseManagementUrl } from "../../src/db/errors";
 /**
  * Edição de um dispositivo do inventário: apelido, dono, tipo, tags, notas,
  * MACs agrupados e os últimos eventos desses MACs. Abre a partir de um MAC
@@ -38,9 +39,11 @@ function applyLocally(macs: string[], device: DeviceView | null, input: Required
     id: prev?.id ?? device?.id ?? -1,
     alias: input.alias,
     owner: input.owner ?? null,
+    managementUrl: input.managementUrl ?? null,
     type: input.type ?? null,
     tags: input.tags,
     approved: input.approved,
+    favorite: input.favorite ?? device?.favorite ?? false,
   });
   return [
     setQueryData<Clients>(KEYS.clients, (d) => ({
@@ -63,7 +66,7 @@ export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vend
   const [events, setEvents] = useState<EventView[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<{ alias: string; owner: string; type: string; tags: string; notes: string; approved: boolean } | null>(null);
+  const [form, setForm] = useState<{ alias: string; owner: string; type: string; tags: string; notes: string; managementUrl: string; approved: boolean } | null>(null);
   const [mergeInto, setMergeInto] = useState("");
 
   const device: DeviceView | null =
@@ -80,6 +83,7 @@ export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vend
       type: device?.type ?? (device ? "" : (suggestedType ?? "")),
       tags: device?.tags.join(", ") ?? "",
       notes: device?.notes ?? "",
+      managementUrl: device?.managementUrl ?? "",
       approved: device?.approved ?? false,
     });
   }, [inventory]);
@@ -93,12 +97,20 @@ export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vend
   function save(e: Event) {
     e.preventDefault();
     if (!form) return;
+    let managementUrl: string | null;
+    try {
+      managementUrl = parseManagementUrl(form.managementUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "URL de gerenciamento inválida");
+      return;
+    }
     const input = {
       alias: form.alias.trim(),
       owner: form.owner || null,
       type: form.type || null,
       tags: parseTags(form.tags),
       notes: form.notes || null,
+      managementUrl,
       approved: form.approved,
     };
     const target = device;
@@ -160,7 +172,7 @@ export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vend
     );
   }
 
-  const set = (k: "alias" | "owner" | "type" | "tags" | "notes") => (e: Event) =>
+  const set = (k: "alias" | "owner" | "type" | "tags" | "notes" | "managementUrl") => (e: Event) =>
     setForm((f) => f && { ...f, [k]: (e.target as HTMLInputElement).value });
 
   const title = device ? device.alias : `Cadastrar ${mac}`;
@@ -227,6 +239,9 @@ export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vend
             </div>
             <Field label="Tags" hint="(separadas por vírgula)">
               <input class="field" value={form.tags} onInput={set("tags")} placeholder="ex.: escritório, backup" />
+            </Field>
+            <Field label="URL de gerenciamento">
+              <input class="field" type="url" value={form.managementUrl} onInput={set("managementUrl")} placeholder="https://192.168.68.10:8006/" maxLength={2048} />
             </Field>
             <Field label="Notas">
               <textarea class="field resize-y" value={form.notes} onInput={set("notes")} rows={3} maxLength={2000} />

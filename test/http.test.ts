@@ -240,3 +240,37 @@ describe("API de inventário, plano e histórico", () => {
     expect(samples.points[0].avg).toBe(28);
   });
 });
+
+it("configurações e diagnóstico consultam somente cache e não expõem dados privados", async () => {
+  const {app,api,server}=await setup();
+  app.config.notify.ntfyUrl="https://example.com/private-topic";
+  app.config.notify.telegramChatId="private-chat";
+  const calls=api.calls;
+  const settings=await server.inject("/api/settings");
+  expect(settings.statusCode).toBe(200);
+  expect(settings.json()).toMatchObject({pollIntervalSeconds:90,detailEvery:5,retentionDays:90,channels:{ntfy:true,telegram:true}});
+  expect(settings.body).not.toMatch(/private-topic|private-chat|username|password|dataDir|telegramApi/);
+  const diagnostics=await server.inject("/api/diagnostics/polls");
+  expect(diagnostics.statusCode).toBe(200);
+  expect(diagnostics.json().attempts).toEqual([]);
+  expect(api.calls).toBe(calls);
+});
+it("novos endpoints exigem a autenticação configurada",async()=>{
+  const {server}=await setup({uiPassword:"test-only"});
+  for(const url of ["/api/settings","/api/diagnostics/polls"]){
+    expect((await server.inject(url)).statusCode).toBe(401);
+  }
+});
+
+it("histórico agrega vários MACs e pagina sem duplicar",async()=>{
+  const {app,server}=await setup();
+  const macs=["AA-BB-CC-DD-EE-01","AA-BB-CC-DD-EE-02"];
+  app.inventory.create({alias:"NAS",macs});
+  app.events.insert(Array.from({length:65},(_,i)=>({type:"client_connected" as const,at:new Date(1_000*i).toISOString(),mac:macs[i%2]!,data:{ip:"192.168.68.10"}})));
+  app.events.insert([{type:"client_connected",at:new Date().toISOString(),mac:"AA-BB-CC-DD-EE-03",data:{}}]);
+  const first=(await server.inject(`/api/history/events?mac=${macs.join(",")}&limit=50`)).json();
+  const second=(await server.inject(`/api/history/events?mac=${macs.join(",")}&limit=50&before=${first.nextBefore}`)).json();
+  expect(first.events).toHaveLength(50); expect(second.events).toHaveLength(15);
+  expect(new Set([...first.events,...second.events].map(e=>e.id)).size).toBe(65);
+  expect([...first.events,...second.events].every(e=>e.name==="NAS")).toBe(true);
+});

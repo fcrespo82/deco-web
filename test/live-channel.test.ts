@@ -105,3 +105,14 @@ describe("canal ao vivo", () => {
     expect(topicsForWrite("/api/backup/import")).toEqual(expect.arrayContaining(["inventory", "ipplan", "reservations"]));
   });
 });
+
+it("favoritar publica inventário por SSE sem nova consulta ao Deco",async()=>{
+  const {app,base}=await setup();
+  const device=app.inventory.create({alias:"NAS",macs:["AA-BB-CC-DD-EE-01"]});
+  const res=await fetch(`${base}/api/live`);
+  const update=await fetch(`${base}/api/devices/${device.id}`,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({favorite:true})});
+  expect(update.status).toBe(200);
+  const messages=await readUntil(res,m=>m.topics.includes("inventory"));
+  expect(messages.at(-1)!.topics).toContain("inventory");
+  expect(app.inventory.get(device.id).favorite).toBe(true);
+});

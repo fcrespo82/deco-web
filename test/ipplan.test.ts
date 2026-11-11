@@ -101,7 +101,7 @@ describe("buildIpPlan", () => {
   it("tipo do inventário diferente do esperado pela faixa", () => {
     const mac = snapshot.reservations.find((r) => r.ip === "192.168.68.72")!.mac;
     const device: Device = {
-      id: 1, alias: "Lâmpada", owner: null, type: "iot", tags: [], notes: null, approved: true,
+      id: 1, alias: "Lâmpada", owner: null, type: "iot", tags: [], notes: null, managementUrl: null, favorite: false, approved: true,
       macs: [mac], createdAt: "", updatedAt: "",
     };
     const p = plan([range(1, 64, 95, "static", "Servidores", ["servidor"])], new Map([[mac, device]]));

@@ -1,4 +1,6 @@
 import type {
+  SettingsView,
+  PollDiagnosticsView,
   AuditView,
   ClientView,
   EventView,
@@ -21,6 +23,8 @@ export type {
   ImagesView,
   OfficialResult,
   Anomaly,
+  SettingsView,
+  PollDiagnosticsView,
   AuditView,
   CellStatus,
   ClientView,
@@ -148,6 +152,8 @@ export interface ImportResult {
 }
 
 export interface DeviceInput {
+  favorite?: boolean;
+  managementUrl?: string | null;
   alias?: string;
   owner?: string | null;
   type?: string | null;
@@ -173,6 +179,8 @@ export const api = {
   me: () => request<{ authRequired: boolean; authenticated: boolean }>("GET", "/api/auth/me"),
   login: (password: string) => request<{ ok: true }>("POST", "/api/auth/login", { password }),
   logout: () => request<{ ok: true }>("POST", "/api/auth/logout"),
+  settings: () => request<SettingsView>("GET", "/api/settings"),
+  pollDiagnostics: () => request<PollDiagnosticsView>("GET", "/api/diagnostics/polls"),
   status: () => request<StatusView>("GET", "/api/status"),
   overview: () => request<OverviewView>("GET", "/api/overview"),
   clients: () => request<{ status: StatusView; clients: ClientView[] }>("GET", "/api/clients"),
@@ -235,6 +243,7 @@ export const api = {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) throw new ApiError(res.status, data.error ?? `Erro ${res.status}`, data);
   },
+  setDecoStyle: (name: string, style: "drawing" | "default" | "custom") => request("PUT", `/api/images/decos/${encodeURIComponent(name)}/style`, {style}),
   deleteImage: (kind: ImageKind, name: string) => request("DELETE", `/api/images/${kind}/${encodeURIComponent(name)}`),
   officialCandidates: (model: string) =>
     request<{ model: string; page: string | null; candidates: string[] }>("GET", `/api/images/official/candidates${qs({ model })}`),

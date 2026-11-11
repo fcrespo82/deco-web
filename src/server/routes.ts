@@ -4,6 +4,9 @@
  * dependem de DECO_ALLOW_WRITE. Reservas escrevem no Deco e exigem
  * DECO_ALLOW_WRITE=1. Toda alteração vai para o log de auditoria.
  */
+import { readFileSync } from "node:fs";
+import { PollRepo } from "../db/polls.js";
+import type { SettingsView } from "./api-types.js";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { App } from "../app.js";
 import { NET_EVENT_TYPES, type NetEventType } from "../core/events.js";
@@ -28,6 +31,20 @@ export function registerDataRoutes(server: FastifyInstance, app: App, actorOf: (
   const clients = () => buildClients(app.poller.cache.snapshot, app.store.clientSeen(), app.inventory.byMac());
   const audit = (req: FastifyRequest, action: string, target: string | null, before: unknown, after: unknown) =>
     app.audit.record({ actor: actorOf(req), action, target, before, after });
+
+  server.get("/api/settings", async (): Promise<SettingsView> => {
+    const c = app.config;
+    return {
+      version: (JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as {version: string}).version,
+      pollIntervalSeconds: c.pollIntervalMs / 1000, detailEvery: c.detailEvery,
+      disconnectGraceSeconds: c.disconnectGraceMs / 1000, retentionDays: c.retentionDays,
+      alerts: { newDevice: c.alerts.newDevice, nodeOfflineSeconds: c.alerts.nodeOfflineMs === null ? null : c.alerts.nodeOfflineMs / 1000,
+        internetDownSeconds: c.alerts.internetDownMs === null ? null : c.alerts.internetDownMs / 1000 },
+      channels: { ntfy: Boolean(c.notify.ntfyUrl), telegram: Boolean(c.notify.telegramChatId) },
+      mode: { mock: c.mock, allowWrite: c.allowWrite, allowDangerous: c.allowDangerous, wifiWrite: c.experimentalWifiWrite },
+    };
+  });
+  server.get("/api/diagnostics/polls", async () => new PollRepo(app.store.db).view());
 
   // --- inventário -----------------------------------------------------
 

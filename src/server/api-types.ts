@@ -8,6 +8,7 @@ export interface StatusView {
   fetchedAt: string | null;
   detailTakenAt: string | null;
   lastAttemptAt: string | null;
+  lastDurationMs?: number | null;
   nextPollAt: string | null;
   /** Leituras suspensas até esta hora (gateway reiniciando). */
   pausedUntil: string | null;
@@ -37,7 +38,8 @@ export interface LiveMessage {
 export type ImageKind = "decos" | "categories" | "devices" | "floorplan";
 
 /** URL de cada imagem escolhida, por tipo e nome (modelo, categoria, id do dispositivo). */
-export type ImagesView = Record<ImageKind, Record<string, string>>;
+export type DecoImageStyle = "drawing" | "default" | "custom";
+export type ImagesView = Record<ImageKind, Record<string, string>> & { decoStyles?: Record<string, DecoImageStyle> };
 
 /** Planta da casa: onde cada Deco está (0–1 na largura/altura da planta) e a escala. */
 export interface FloorplanView {
@@ -105,6 +107,8 @@ export interface ClientView {
 }
 
 export interface DeviceSummary {
+  favorite: boolean;
+  managementUrl: string | null;
   id: number;
   alias: string;
   owner: string | null;
@@ -247,4 +251,16 @@ export interface IpPlan {
   cells: IpCell[];
   ranges: RangeSummary[];
   anomalies: Anomaly[];
+}
+
+export interface SettingsView {
+  version: string;
+  pollIntervalSeconds: number; detailEvery: number; disconnectGraceSeconds: number; retentionDays: number;
+  alerts: { newDevice: boolean; nodeOfflineSeconds: number | null; internetDownSeconds: number | null };
+  channels: { ntfy: boolean; telegram: boolean };
+  mode: StatusView["mode"];
+}
+export interface PollDiagnosticsView {
+  attempts: { id: number; startedAt: string; endedAt: string; durationMs: number; outcome: "success" | "failure"; category: "auth" | "busy" | "other" | null }[];
+  summary: { count: number; successes: number; failures: number; consecutiveFailures: number; averageDurationMs: number | null };
 }

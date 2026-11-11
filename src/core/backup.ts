@@ -9,7 +9,7 @@
  * Nada de segredo entra no arquivo: nem senha, nem PSK, nem tokens.
  */
 import type { Reservation, Snapshot } from "../deco-client/types.js";
-import { requireMac, ValidationError } from "../db/errors.js";
+import { parseManagementUrl, requireMac, ValidationError } from "../db/errors.js";
 import { DEVICE_TYPES, type Device } from "../db/inventory.js";
 import type { IpRange } from "../db/ipranges.js";
 import { intToIp, parseRangeSpec, type Subnet } from "./ipmath.js";
@@ -20,6 +20,8 @@ export const BACKUP_FORMAT = "deco-web-backup";
 export const BACKUP_VERSION = 1;
 
 export interface BackupDevice {
+  favorite?: boolean;
+  managementUrl?: string | null;
   alias: string;
   owner: string | null;
   type: string | null;
@@ -68,7 +70,9 @@ export function buildBackup(input: { snapshot: Snapshot | null; devices: Device[
       type: d.type,
       tags: d.tags,
       notes: d.notes,
+      managementUrl: d.managementUrl,
       approved: d.approved,
+      favorite: d.favorite,
       macs: d.macs,
     })),
     ranges: input.ranges.map((r) => ({
@@ -115,6 +119,7 @@ export function parseBackup(raw: unknown): BackupFile {
     if (!isObj(d)) throw new ValidationError(`Backup: dispositivo ${i + 1} inválido`);
     const type = text(d.type, "tipo", 20, true);
     if (type && !(DEVICE_TYPES as readonly string[]).includes(type)) throw new ValidationError(`Backup: tipo inválido "${type}"`);
+    if (d.favorite !== undefined && typeof d.favorite !== "boolean") throw new ValidationError("Backup: favorite deve ser booleano");
     const macs = list(d.macs, "MACs", 16).map(requireMac);
     if (macs.length === 0) throw new ValidationError(`Backup: dispositivo "${String(d.alias)}" sem MAC`);
     return {
@@ -123,7 +128,9 @@ export function parseBackup(raw: unknown): BackupFile {
       type,
       tags: strings(d.tags, "tags"),
       notes: text(d.notes, "notas", 2000, true),
+      ...(d.managementUrl === undefined ? {} : { managementUrl: parseManagementUrl(d.managementUrl) }),
       approved: d.approved === true,
+      ...(d.favorite === undefined ? {} : { favorite: d.favorite as boolean }),
       macs,
     };
   });
@@ -213,7 +220,9 @@ function deviceChanges(local: Device, b: BackupDevice): FieldChange[] {
   cmp("type", local.type, b.type);
   cmp("tags", local.tags, b.tags, sameList(local.tags, b.tags));
   cmp("notes", local.notes, b.notes);
+  if (b.managementUrl !== undefined) cmp("managementUrl", local.managementUrl, b.managementUrl);
   cmp("approved", local.approved, b.approved);
+  if (b.favorite !== undefined) cmp("favorite", local.favorite, b.favorite);
   const merged = [...new Set([...local.macs, ...b.macs])];
   cmp("macs", local.macs, merged, sameList(local.macs, merged));
   return out;
