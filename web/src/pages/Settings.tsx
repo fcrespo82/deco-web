@@ -1,3 +1,4 @@
+import { MAC_FORMATS } from "../lib/mac-format";
 import { useEffect, useState } from "preact/hooks";
 import { api } from "../api";
 import { useStatus } from "../data";
@@ -9,7 +10,7 @@ import { THEMES, usePreferences, resetLocalPreferences } from "../lib/preference
 import { useQuery } from "../lib/query";
 import { useNow } from "../hooks";
 import { dateTime, ago } from "../format";
-import { Button, Card, ChoiceCard, Field, Kv, LinkButton, PageLoading, SectionTitle } from "../ui";
+import { Button, Card, Field, Kv, LinkButton, PageLoading, SectionTitle } from "../ui";
 const SECTIONS = ["aparencia", "temas", "atualizacao", "alertas", "sistema", "dados"] as const;
 type Section = typeof SECTIONS[number];
 const LABEL = { aparencia: "Aparência", temas: "Editor de temas", atualizacao: "Atualização", alertas: "Alertas", sistema: "Sistema", dados: "Dados" };
@@ -36,29 +37,31 @@ export function Settings() {
     {section === "aparencia" && <>
       <SectionTitle actions={<div class="flex flex-wrap gap-2"><Button onClick={()=>downloadTheme(currentTheme())}>Exportar tema atual</Button><LinkButton href="#/configuracoes?secao=temas">Editar / importar tema</LinkButton></div>}>Tema</SectionTitle>
       {THEME_LOAD_ERRORS.length>0 && <p role="alert" class="mb-3 text-sm text-bad">Arquivos de tema ignorados: {THEME_LOAD_ERRORS.join(" · ")}</p>}
-      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" role="group" aria-label="Temas">
-        {THEMES.map(t => <ChoiceCard selected={prefs.theme === t.id} onClick={() => set({theme:t.id})}>
-          <span class="mb-3 flex h-12 overflow-hidden rounded-lg" aria-hidden="true">{t.colors.map(color => <span class="flex-1" style={{background:color}} />)}</span>
-          <span class="font-medium">{t.label}{prefs.theme === t.id ? " ✓" : ""}</span>
-          <span class="block text-xs text-muted">{t.mode === "auto" ? `Segue o sistema: ${getTheme(prefs.autoLightTheme).label} / ${getTheme(prefs.autoDarkTheme).label}` : t.mode === "dark" ? "Escuro" : "Claro"}</span>
-        </ChoiceCard>)}
+      <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6" role="group" aria-label="Temas">
+        {THEMES.filter(t=>t.mode!=="auto").map(t=><button type="button" aria-pressed={prefs.theme===t.id} aria-label={`${t.label} · ${t.mode==="dark"?"Escuro":"Claro"}`} title={getTheme(t.id).description} onClick={()=>set({theme:t.id})} class={`min-w-0 rounded-lg border p-2 text-left transition hover:bg-surface-2 ${prefs.theme===t.id?"border-accent bg-accent-soft":"border-line bg-surface"}`}>
+          <span class="mb-2 flex h-7 overflow-hidden rounded" aria-hidden="true">{t.colors.map(color=><span class="flex-1" style={{background:color}}/>)}</span>
+          <span class="flex min-h-8 items-start justify-between gap-1 text-xs font-medium leading-snug"><span>{t.label}</span>{prefs.theme===t.id&&<span aria-hidden="true" class="text-accent">✓</span>}</span>
+          <span class="mt-1 block text-[11px] text-muted">{t.mode==="dark"?"Escuro":"Claro"}</span>
+        </button>)}
       </div>
-      {prefs.theme === "auto" && <div class="my-5 grid gap-4 sm:grid-cols-2" role="group" aria-label="Temas do modo Automático">
-        <Field label="Tema para modo claro">
-          <select class="field" value={prefs.autoLightTheme} onChange={e=>set({autoLightTheme:e.currentTarget.value})}>
-            {THEMES.filter(t=>t.mode==="light").map(t=><option value={t.id}>{t.label}</option>)}
-          </select>
-        </Field>
-        <Field label="Tema para modo escuro">
-          <select class="field" value={prefs.autoDarkTheme} onChange={e=>set({autoDarkTheme:e.currentTarget.value})}>
-            {THEMES.filter(t=>t.mode==="dark").map(t=><option value={t.id}>{t.label}</option>)}
-          </select>
-        </Field>
-      </div>}
+      <div class="mt-3 grid items-end gap-3 rounded-lg border border-line bg-surface p-3 md:grid-cols-[minmax(160px,0.8fr)_1fr_1fr]" role="group" aria-label="Temas do modo Automático">
+        <button type="button" aria-pressed={prefs.theme==="auto"} onClick={()=>set({theme:"auto"})} class={`h-full rounded-md border px-3 py-2 text-left ${prefs.theme==="auto"?"border-accent bg-accent-soft":"border-line hover:bg-surface-2"}`}><span class="block text-sm font-medium">Automático{prefs.theme==="auto"?" ✓":""}</span><span class="block text-xs text-muted">Segue o claro/escuro do sistema</span></button>
+        <Field label="Tema claro"><select class="field" value={prefs.autoLightTheme} onChange={e=>set({autoLightTheme:e.currentTarget.value})}>{THEMES.filter(t=>t.mode==="light").map(t=><option value={t.id}>{t.label}</option>)}</select></Field>
+        <Field label="Tema escuro"><select class="field" value={prefs.autoDarkTheme} onChange={e=>set({autoDarkTheme:e.currentTarget.value})}>{THEMES.filter(t=>t.mode==="dark").map(t=><option value={t.id}>{t.label}</option>)}</select></Field>
+      </div>
       <div class="my-5 grid gap-4 sm:grid-cols-2">
         <Field label="Densidade"><select class="field" value={prefs.density} onChange={e=>set({density:e.currentTarget.value as typeof prefs.density})}><option value="comfortable">Confortável</option><option value="compact">Compacta</option></select></Field>
         <Field label="Animações"><select class="field" value={prefs.motion} onChange={e=>set({motion:e.currentTarget.value as typeof prefs.motion})}><option value="system">Sistema</option><option value="reduced">Reduzidas</option></select></Field>
       </div>
+      <SectionTitle>Switches</SectionTitle>
+      <p class="mb-5 text-sm"><LinkButton href="#/switches">Configurar e monitorar switches</LinkButton></p>
+      <SectionTitle>Endereços MAC</SectionTitle>
+      <Field label="Formato de exibição">
+        <select class="field" value={prefs.macFormat} onChange={e=>set({macFormat:e.currentTarget.value as typeof prefs.macFormat})}>
+          {MAC_FORMATS.map(f=><option value={f.value}>{f.label} · {f.example}</option>)}
+        </select>
+      </Field>
+      <p class="mb-5 mt-2 text-xs text-muted">Aplica-se neste navegador. Os quatro formatos representam o mesmo endereço.</p>
       <SectionTitle>Imagens</SectionTitle><Appearance />
     </>}
     {section === "atualizacao" && <>

@@ -15,3 +15,9 @@ release/
 # Fotos padrão dos Deco: renders oficiais com direitos da TP-Link, só locais.
 web/src/art/decos/*
 !web/src/art/decos/.gitkeep
+
+# Builds isolados das POCs de topologia.
+/poc-dist/
+/web/poc/assets/*.png
+
+/poc-shadcn-dist/

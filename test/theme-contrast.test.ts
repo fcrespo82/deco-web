@@ -7,7 +7,7 @@ function luminance(hex:string) {
     .reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i]!,0);
 }
 describe("contraste dos temas",()=>{
-  it.each(["professional-light","latte","mocha","dracula","professional-dark"])("%s mantém contraste de texto e estados",theme=>{
+  it.each(["professional-light","latte","mocha","dracula","professional-dark","papel","duna","jardim","abissal","fosforo","cereja"])("%s mantém contraste de texto e estados",theme=>{
     const tokens=parseTheme(JSON.parse(readFileSync(new URL(`../web/src/themes/${theme}.json`,import.meta.url),"utf8"))).colors;
     for(const [fg,bg] of [["text","bg"],["muted","bg"],["accent","surface"],["accent-text","accent"],["sidebar-text","sidebar"],["ok","ok-soft"],["warn","warn-soft"],["bad","bad-soft"]]) {
       const [low,high]=[luminance(tokens[fg! as keyof typeof tokens]!),luminance(tokens[bg! as keyof typeof tokens]!)].sort((a,b)=>a-b);

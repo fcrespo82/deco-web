@@ -1,3 +1,5 @@
+import { NetworkGraph } from "../NetworkGraph";
+import { useStored } from "../lib/preferences";
 /**
  * Modo TV / quiosque (#/tv): tela cheia ambiente para um tablet na parede ou
  * uma TV. Mapa grande, relógio, internet, tráfego ao vivo, chegadas e saídas
@@ -99,6 +101,7 @@ function Arrival({ e, now }: { e: EventView; now: number }) {
 export function Tv() {
   useWakeLock();
   const idle = useIdle();
+  const [mapMode,setMapMode]=useStored<"physical"|"mesh">("maps.tv.mode","mesh",(v):v is "physical"|"mesh"=>v==="physical"||v==="mesh");
   const now = useClock();
   const ui = useUi();
   const overview = useOverview();
@@ -136,7 +139,7 @@ export function Tv() {
       <div class="grid h-full grid-rows-[auto_1fr_auto] gap-4 p-4 lg:grid-cols-[1fr_minmax(320px,26%)] lg:grid-rows-[1fr_auto] lg:p-6">
         {/* Mapa */}
         <div class="relative min-h-0 lg:row-span-1">
-          {data && (
+          {data && (mapMode==="physical"?<NetworkGraph ambient/>:
             <Topology
               ambient
               nodes={data.nodes}
@@ -214,6 +217,7 @@ export function Tv() {
 
       {/* Controles: somem com o cursor parado */}
       <div class={cx("absolute bottom-24 right-4 flex gap-2 transition-opacity duration-500 lg:bottom-auto lg:left-6 lg:right-auto lg:top-6", idle ? "pointer-events-none opacity-0" : "opacity-100")}>
+        <Button aria-pressed={mapMode==="physical"} onClick={()=>setMapMode("physical")}>Físico</Button><Button aria-pressed={mapMode==="mesh"} onClick={()=>setMapMode("mesh")}>Mesh</Button>
         <LinkButton href="#/" icon={<ArrowLeft class="size-4" />}>Sair</LinkButton>
         <Button onClick={toggleFull} icon={full ? <Shrink class="size-4" /> : <Expand class="size-4" />}>
           {full ? "Sair da tela cheia" : "Tela cheia"}

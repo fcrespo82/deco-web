@@ -72,6 +72,7 @@ function update_script() {
     CLEAN_INSTALL=1 fetch_and_deploy_gh_release "deco-web" "fcrespo82/deco-web" "prebuild" "latest" "/opt/deco-web" "deco-web-*.tar.gz"
 
     msg_info "Updating ${APP}"
+    $STD apt install -y python3 python3-bs4 python3-yaml
     cd /opt/deco-web || exit
     if ! $STD npm ci --omit=dev; then
       # Sem binário pronto do better-sqlite3 para esta plataforma: compila.

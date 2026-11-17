@@ -703,3 +703,86 @@ As preferências antigas usam Profissional Claro/Escuro. Se um tema escolhido
 for removido ou mudar entre claro e escuro, apenas essa faixa volta ao padrão.
 O par pertence às preferências do navegador; exportar um tema continua gerando
 somente o JSON do tema individual efetivamente aplicado.
+
+
+## Monitoramento direto de switches
+
+A página **Switches** (`#/switches`) cadastra switches HTTP compatíveis com os templates HORACO/KeepLink/RTLPlayground incluídos. A coleta é feita pelo próprio Deco Dashboard, sem consultar a API nem executar o servidor do Switch Dashboard. O coletor Python adaptado mantém sua licença MIT em `collectors/switches/`.
+
+- Portas: estado, velocidade, duplex, contadores, taxas RX/TX e anotações.
+- Histórico de portas em SQLite, com a mesma retenção configurada para o painel. A consulta retorna até 2.000 amostras recentes do período.
+- Tabela MAC com porta e VLAN; associação com os nomes já conhecidos no inventário e nós mesh. Uma observação indica alcançabilidade pela porta, não conexão física direta.
+- Diagnóstico SFP sob demanda, conforme suporte do equipamento.
+- Uplink físico como anotação manual. O mapa mesh continua baseado nas relações reportadas pelo Deco, não é um mapa completo de cabos/switches.
+
+O agendamento é independente do Deco: intervalo por switch entre 30 e 3.600 segundos, sem consultas simultâneas ao mesmo equipamento, com limite de 120 segundos por operação. RX/TX são vistos pelo switch; a primeira leitura não tem taxa. Queda de contador ou reinício detectado interrompe o cálculo de deltas. Os volumes acumulam apenas deltas observados. Valores legados calculados a partir de pacotes são identificados como estimativas. Leituras com falha preservam o último snapshot e são sinalizadas como desatualizadas.
+
+### Dependências e credenciais
+
+Docker e instalador Proxmox incluem Python, BeautifulSoup e PyYAML. Na execução local Debian/Ubuntu:
+
+```bash
+sudo apt install python3 python3-bs4 python3-yaml
+npm run test:collectors
+```
+
+Alternativa: um virtualenv com `pip install -r collectors/switches/requirements.txt` e `SWITCH_PYTHON=/caminho/venv/bin/python` no ambiente do backend.
+
+A senha é enviada ao processo por stdin, nunca por argv ou logs. Fica em `DATA_DIR/switch-secrets/<id>`, com diretório 0700 e arquivo 0600. Não é retornada pela API nem incluída na auditoria. Campo de senha vazio ao editar mantém a existente. Os cadastros e últimas leituras ficam no banco; as amostras usam a tabela `switch_port_samples`.
+
+O backup JSON de cadastros existente **ainda não inclui switches**. Para backup integral, preserve o SQLite e o diretório `switch-secrets` com suas permissões. Remover um switch apaga seu cadastro, credencial e histórico de portas. Operações locais usam a autenticação da interface; esta integração oferece somente leitura nos switches, sem reinício nem alteração de portas. OVS/SSH e FritzBox não foram incorporados.
+
+Ao migrar do Switch Dashboard, evite manter os dois coletores consultando o mesmo switch, pois os firmwares podem aceitar apenas uma sessão administrativa.
+
+
+## Versão 2.0 — mapa físico e caminho para outros fabricantes
+
+A Visão geral oferece os modos **Físico** e **Mesh**. O modo físico reúne Decos, switches monitorados e switches intermediários cadastrados. **Editar cabeamento** salva equipamentos, uplinks e portas no SQLite (`physical_topology`). Linhas contínuas são ligações cadastradas; tracejadas são relações informadas pelo Deco; pontilhadas são observações MAC, que não provam cabo direto. O modo Mesh mantém o desenho anterior reportado pelo firmware. Clientes são opcionais para preservar a legibilidade.
+
+O cadastro rejeita ciclos, dois uplinks para o mesmo equipamento e referências desconhecidas. Switches intermediários sem gerenciamento têm estado desconhecido, em vez de um falso indicador online. A topologia física também fica fora do backup JSON atual; o backup integral deve preservar o SQLite.
+
+Os coletores de Deco e switches são separados, mas o núcleo ainda tem tipos e operações específicas do Deco. O caminho previsto para novos fabricantes é introduzir um contrato comum de leitura (equipamentos, interfaces, clientes, enlaces, contadores e capacidades), implementar adaptadores por fabricante e manter reserva DHCP/reinício/configuração como capacidades opcionais. Não é necessário reescrever inventário, histórico e mapa para cada fabricante. A versão 2.0 ainda não implementa esse contrato nem declara suporte a outros roteadores.
+
+
+### Organização visual dos mapas
+
+Nos modos Físico e Mesh, arraste equipamentos com mouse ou toque. Nos dois mapas, mover um pai leva os seus descendentes pelo mesmo deslocamento. No Mesh, os clientes acompanham os Decos; também é possível mover clientes individualmente. Linhas e fluxos acompanham os equipamentos, sem alterar suas ligações ou o cabeamento cadastrado.
+
+As posições ficam no SQLite, separadamente nas chaves `map_layout:physical` e `map_layout:mesh`, compartilhadas entre navegadores e com o modo TV. As gravações são por nó e a atualização chega às outras telas por SSE. Posições locais antigas são importadas uma única vez, quando o servidor ainda não tem um layout inicializado. **Restaurar posições** limpa somente o mapa atual; o menu contextual também permite restaurar um único nó. Restaurar preferências locais não apaga os layouts compartilhados. O backup JSON atual não inclui layouts; o backup integral do SQLite os preserva.
+
+
+### Portas, painéis, grade e criação de equipamentos
+
+O mapa Físico oferece visuais **Equipamentos** e **Cartões**. O primeiro reutiliza a arte configurada dos Decos e usa painéis frontais vetoriais para os switches, com portas e LEDs conforme os dados disponíveis. O desenho de switch é uma representação genérica, não uma fotografia exata do modelo; o template KeepLink KP-9000-9XHML-X distingue a porta SFP+ 9. Estados das portas vêm da coleta; equipamentos manuais mantêm estado desconhecido.
+
+Referências usadas: [Deco X50 — 3 portas](https://static.tp-link.com/upload/product-overview/2024/202402/20240226/Deco%20X50%28US%291.30_Datasheet.pdf), [Deco M4 — 2 portas](https://www.tp-link.com/us/deco-mesh-wifi/product-family/deco-m4/), [Deco M5 — 2 portas](https://www.omadanetworks.com/us/deco-mesh-wifi/product-family/deco-m5/), [exemplo de painel KeepLink](https://manuals.plus/asin/B0D49BFN7H). A contagem de portas é configurável; variantes não reconhecidas não herdam automaticamente a contagem de outro modelo.
+
+O botão direito abre o menu para adicionar nó de rede, switch ou dispositivo manual, configurar portas e cadastrar um switch monitorado. O menu também funciona com o comando de menu contextual do teclado. Equipamentos criados pelo Mesh aparecem no Físico; desenhar um nó não provisiona um Deco real. O cadastro físico fica no SQLite.
+
+**Encaixar na grade** move nós em passos de 20 unidades e pode ser desligado. A grade e o visual são preferências locais; posições continuam compartilhadas no banco. No mapa Físico, clique na porta de origem e depois na porta de destino para cadastrar o cabo. Os extremos do enlace usam os mesmos pontos geométricos das portas desenhadas. Portas não informadas usam um marcador `?`; não se escolhe uma porta arbitrária.
+
+O modo TV oferece **Físico / Mesh**, reaproveita as mesmas posições do banco e não apresenta controles de edição. Descoberta automática por LLDP ainda não está implementada: o cadastro manual e as observações MAC continuam sendo fontes distintas.
+
+
+### Navegação, edição por nó e interfaces
+
+A roda do mouse aproxima/afasta o mapa sob o cursor, sem alterar o zoom da página. Arrastar o fundo faz pan; botão do meio ou Espaço + arraste também permitem navegar. Os controles de zoom e **Ajustar à tela** estão disponíveis nos dois mapas, inclusive em telas estreitas. A câmera permanece estável durante o movimento dos equipamentos; **Ajustar à tela** recalcula o enquadramento.
+
+Ao mover um pai, os descendentes mantêm seu deslocamento relativo. A gravação do grupo é uma única atualização no SQLite. O modo TV reaproveita essas posições, com enquadramento próprio e sem edição.
+
+O menu de cada nó oferece **Editar cabeamento** e mostra apenas os cabos incidentes nele. Cada cabo possui duas pontas e é cadastrado uma única vez; a ligação aparece automaticamente na consulta dos dois equipamentos. Os números/nomes das portas não são adivinhados quando a coleta não os fornece. **Configurar portas** aceita nomes como `eth0`, `eth1` e `LAN 1`; ao renomear, os cabos ligados às portas acompanham a mudança. Dispositivos com múltiplas interfaces podem ter vários cabos, desde que cada porta física seja usada uma única vez.
+
+Os conectores foram ampliados e receberam identificação visível e área de clique maior. O roteador de cabos usa corredores ortogonais para desviar dos retângulos dos equipamentos, mantendo os extremos nas portas. Equipamentos sobrepostos podem impedir uma rota totalmente livre; mova-os para abrir espaço. Nomes de portas também são preservados no SQLite (`physical_topology.portNames`).
+
+
+### Interface e topologia integradas
+
+Os componentes comuns usam shadcn/Radix com Preact/compat e os tokens dos temas existentes. O build rejeita a inclusão acidental dos runtimes React/React DOM.
+
+O mapa completo fica em **Infraestrutura → Topologia** (primeira aba). A **Visão geral** mostra o mesmo mapa salvo em modo de consulta, com zoom, navegação e opção **Mostrar clientes**; o botão **Abrir topologia para editar** leva ao editor. O mapa **Físico** usa JointJS + libavoid para desviar os cabos dos equipamentos e separar as linhas; **Organizar rede** usa ELK e salva as posições pela API existente. Arraste entre portas livres para cadastrar uma ligação, clique na linha para consultar sua origem ou remover uma ligação cadastrada. Conexões observadas/mesh não são apagadas nem convertidas automaticamente em cabeamento físico.
+
+**Equipamentos** usa PNGs genéricos transparentes em vista traseira, com as âncoras nas posições dos conectores. **Cartões** usa blocos genéricos. O ponto Wi-Fi permanece no topo central, separado das portas numeradas. Nomes de portas personalizados são preservados; portas desconhecidas aparecem como `?`, sem inferir uma porta física.
+
+Selecione o equipamento e use **PNG e portas…** para gerar outro formato, importar um PNG e calibrar seus conectores. A imagem PNG e a calibração ficam no SQLite, compartilhadas entre navegadores. O cadastro de portas, cabeamento e posições também fica no servidor. Calibrações locais antigas são importadas automaticamente sem sobrescrever registros já compartilhados. Trocar a imagem exige recalibrar todas as portas. O mapa carrega seu motor sob demanda; o WASM e suas licenças são distribuídos separadamente no frontend.
+
+**Ver em tela cheia** expande o mesmo mapa, preservando zoom, posições e cabeamento; **Sair da tela cheia** ou `Esc` restaura a visualização. Quando a API nativa não está disponível, a expansão ocupa a janela. As posições recuperadas do banco sempre prevalecem sobre a distribuição automática ao carregar o mapa.

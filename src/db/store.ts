@@ -105,6 +105,14 @@ export const MIGRATIONS: string[] = [
      id INTEGER PRIMARY KEY, startedAt TEXT NOT NULL, endedAt TEXT NOT NULL,
      durationMs INTEGER NOT NULL, outcome TEXT NOT NULL, category TEXT
    );`,
+  `CREATE TABLE switch_port_samples (
+    switch_id TEXT NOT NULL,
+    port TEXT NOT NULL,
+    at TEXT NOT NULL,
+    data TEXT NOT NULL,
+    PRIMARY KEY (switch_id, port, at)
+  );
+  CREATE INDEX switch_port_samples_at ON switch_port_samples(at);`,
 ];
 
 export interface ClientSeen {

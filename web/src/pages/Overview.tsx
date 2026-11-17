@@ -1,6 +1,9 @@
+import {NetworkGraph} from "../NetworkGraph";
+import { SwitchAttachment } from "../SwitchAttachment";
+import { Mac } from "../Mac";
 import type { ComponentChildren } from "preact";
-import { useMemo, useState } from "preact/hooks";
-import { ArrowDown, ArrowUp, Cable, Globe, Power, Router, Search, Wifi, X } from "lucide-preact";
+import { useState } from "preact/hooks";
+import { ArrowDown, ArrowUp, Cable, Globe, Power, Router, Wifi, X } from "lucide-preact";
 import type { Band, ClientView, NodeView, OverviewView, WifiKind, WifiNetwork } from "../api";
 import { DecoArt } from "../art/DecoArt";
 import { categoryOf, DeviceArt } from "../art/devices";
@@ -8,14 +11,14 @@ import { clientLabel, RateBar } from "../ClientSheet";
 import { WifiDialog } from "../DangerDialogs";
 import { openClient as openClientSheet, selectNode, setUi, useUi } from "../lib/ui-state";
 import { useClients, useOverview, useStatus, useInventory } from "../data";
-import { BAND_LABEL, NETWORK_LABEL, WIFI_KIND_LABEL, rate, shortFirmware, since } from "../format";
+import { BAND_LABEL, NETWORK_LABEL, WIFI_KIND_LABEL, rate, since } from "../format";
 import { useNow } from "../hooks";
 import { useTrafficHistory, useTrafficRecorder } from "../lib/traffic";
 import { Sparkline } from "../views/Sparkline";
 import { FavoriteButton } from "../FavoriteButton";
 import { Counter } from "../Counter";
-import { BAND_COLOR, Topology, TopologyLegend } from "../Topology";
-import { Badge, Button, Card, cx, Empty, IconButton, Kv, PageLoading, RowButton, SectionTitle, TextButton } from "../ui";
+import { BAND_COLOR } from "../Topology";
+import { Badge, Button, Card, cx, Empty, IconButton, Kv, LinkButton, PageLoading, RowButton, SectionTitle, TextButton } from "../ui";
 
 const BAND_ORDER: Band[] = ["wired", "5GHz", "6GHz", "2.4GHz"];
 
@@ -136,7 +139,7 @@ function Uplink({ node }: { node: NodeView }) {
   if (node.backhaul.includes("wired")) {
     return (
       <span class="inline-flex items-center gap-1">
-        <Cable class="size-3.5 text-muted" /> cabo → {node.parentName ?? "?"}
+        <Cable class="size-3.5 text-muted" /> cabo · referência Deco: {node.parentName ?? "?"}
       </span>
     );
   }
@@ -161,9 +164,10 @@ function ClientRow({ c, onOpen, right }: { c: ClientView; onOpen: (c: ClientView
   );
 }
 
-function NodePanel({ node, clients, now, onReboot, onOpen, onClose }: { node: NodeView; clients: ClientView[]; now: number; onReboot?: () => void; onOpen: (c: ClientView) => void; onClose: () => void }) {
+export function NodePanel({ node, clients, now, onReboot, onOpen, onClose }: { node: NodeView; clients: ClientView[]; now: number; onReboot?: () => void; onOpen: (c: ClientView) => void; onClose: () => void }) {
   const own = clients.filter((c) => c.online && c.nodeMac === node.mac).sort((a, b) => b.downKBps + b.upKBps - (a.downKBps + a.upKBps));
   const down = own.reduce((s, c) => s + c.downKBps, 0);
+  const up = own.reduce((s, c) => s + c.upKBps, 0);
   return (
     <div class="animate-fade-in">
       <div class="flex items-start gap-3">
@@ -190,12 +194,18 @@ function NodePanel({ node, clients, now, onReboot, onOpen, onClose }: { node: No
         class="mt-4"
         items={[
           ["IP", node.ip ?? "—", "font-mono text-[12.5px]"],
+          ["MAC", <Mac value={node.mac} />, "font-mono text-[12.5px] select-all"],
+          ["Modelo / hardware", `${node.model} / ${node.hardware || "—"}`],
+          ["Referência reportada pelo Deco", node.role === "master" ? "Este nó (gateway)" : node.parentName ?? "—"],
+          ["MAC da referência", <Mac value={node.parentMac} />, "font-mono text-[12.5px] select-all"],
           ["Uplink", <Uplink node={node} />, "text-[12.5px]"],
           ["Online há", <span title="Medido por este painel">{node.online && node.onlineSince ? since(node.onlineSince, now) : "—"}</span>],
-          ["Firmware", <span title={node.firmware}>{shortFirmware(node.firmware)}</span>, "text-[12.5px]"],
-          ["Tráfego", `↓ ${rate(down)}`, "tabular-nums"],
+          ["Firmware", node.firmware || "—", "break-words text-[12.5px]"],
+          ["Clientes por conexão", Object.entries(node.clients.byBand).map(([band, count]) => `${BAND_LABEL[band as keyof typeof BAND_LABEL] ?? band}: ${count}`).join(" · ") || "—", "text-[12.5px]"],
+          ["Tráfego", `↓ ${rate(down)} · ↑ ${rate(up)}`, "tabular-nums"],
         ]}
       />
+      <SwitchAttachment mac={node.mac} />
       <div class="mb-1 mt-4 flex items-center justify-between text-[12px] font-semibold uppercase tracking-wide text-muted">
         <span>Clientes · {own.length}</span>
         {onReboot && (
@@ -214,7 +224,7 @@ function NodePanel({ node, clients, now, onReboot, onOpen, onClose }: { node: No
   );
 }
 
-function TopTalkers({ clients, onOpen }: { clients: ClientView[]; onOpen: (c: ClientView) => void }) {
+export function TopTalkers({ clients, onOpen }: { clients: ClientView[]; onOpen: (c: ClientView) => void }) {
   const top = clients
     .filter((c) => c.online && c.downKBps + c.upKBps > 0)
     .sort((a, b) => b.downKBps + b.upKBps - (a.downKBps + a.upKBps))
@@ -241,7 +251,7 @@ function TopTalkers({ clients, onOpen }: { clients: ClientView[]; onOpen: (c: Cl
           ))}
         </div>
       )}
-      <p class="mt-3 text-[11.5px] text-muted">Clique num Deco do mapa para ver os detalhes dele, ou num aparelho para abrir a ficha.</p>
+      <p class="mt-3 text-[11.5px] text-muted">Selecione um Deco na lista ou abra a topologia em Infraestrutura para consultar suas conexões.</p>
     </div>
   );
 }
@@ -332,7 +342,7 @@ function Favorites() {
     {favorites.map(d=><Card key={d.id}>
       <TextButton class="font-semibold" onClick={()=>openClientSheet((d.macs.find(m=>m.online)??d.macs[0])!.mac)}>{d.alias}</TextButton>
       <Badge tone={d.online?"ok":""}>{d.online?"online":"offline"}</Badge>
-      <ul class="my-2 text-xs text-muted">{d.macs.map(m=><li key={m.mac}>{m.ip??"IP desconhecido"} · {m.mac} · {m.online?"online":"offline"}</li>)}</ul>
+      <ul class="my-2 text-xs text-muted">{d.macs.map(m=><li key={m.mac}>{m.ip??"IP desconhecido"} · <Mac value={m.mac} /> · {m.online?"online":"offline"}</li>)}</ul>
       <div class="flex flex-wrap gap-3">{d.managementUrl && <a class="text-sm text-accent hover:underline" href={d.managementUrl} target="_blank" rel="noopener noreferrer">Abrir gerenciamento</a>}<FavoriteButton device={d}/></div>
     </Card>)}
   </div></section>;
@@ -345,17 +355,10 @@ export function Overview() {
   const status = useStatus();
   const { node: selected } = useUi();
   const setSelected = selectNode;
-  const [q, setQ] = useState("");
   const [editingWifi, setEditingWifi] = useState<WifiKind | null>(null);
 
   const clients = clientsQ.data?.clients ?? [];
   useTrafficRecorder(clientsQ.data);
-
-  const highlight = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    if (!needle) return undefined;
-    return (c: ClientView) => [clientLabel(c), c.name, c.ip, c.mac, c.vendor, c.device?.owner].join(" ").toLowerCase().includes(needle);
-  }, [q]);
 
   if (!data) return <PageLoading error={error} />;
   if (data.nodes.length === 0) return <Empty icon={<Router />}>Ainda sem dados do Deco. A primeira leitura leva uns 15–40 s.</Empty>;
@@ -365,7 +368,6 @@ export function Overview() {
   const wifiWrite = dangerous && mode.wifiWrite;
   const node = data.nodes.find((n) => n.mac === selected) ?? null;
   const openClient = (c: ClientView) => openClientSheet(c.mac);
-  const matches = highlight ? clients.filter((c) => c.online && highlight(c)).length : 0;
 
   return (
     <>
@@ -378,26 +380,7 @@ export function Overview() {
       </div>
 
       <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_330px]">
-        <Card class="hero-glow relative overflow-hidden p-0 max-sm:-mx-1">
-          <div class="flex flex-wrap items-center gap-3 px-4 pt-3.5">
-            <h2 class="text-[15px] font-semibold tracking-tight">Mapa da rede</h2>
-            <span class="hud-badge inline-flex items-center gap-1.5 rounded-full bg-ok-soft px-2 py-0.5 text-[11px] font-semibold text-ok">
-              <span class="size-1.5 animate-pulse rounded-full bg-ok" /> última coleta
-            </span>
-            <span class="flex-1" />
-            <div class="relative w-full sm:w-56">
-              <Search class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted" />
-              <input type="search" class="field py-1.5 pl-8 text-[13px]" placeholder="Achar no mapa…" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} aria-label="Achar aparelho no mapa" />
-            </div>
-          </div>
-          {highlight && <p class="px-4 pt-1 text-[12px] text-muted">{matches === 0 ? "Nenhum aparelho online com esse nome." : `${matches} aparelho(s) destacado(s).`}</p>}
-          <div class="px-1 sm:px-2">
-            <Topology nodes={data.nodes} clients={clients} internet={data.internet} selected={selected} onSelectNode={setSelected} onSelectClient={openClient} highlight={highlight} />
-          </div>
-          <div class="border-t border-line/70 px-4 py-2.5">
-            <TopologyLegend />
-          </div>
-        </Card>
+        <Card class="overflow-hidden p-0"><div class="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4"><h2 class="text-base font-semibold">Mapa da rede</h2><LinkButton href="#/infraestrutura?aba=topologia" size="sm">Abrir topologia para editar</LinkButton></div><NetworkGraph readOnly/></Card>
         <Card class="lg:sticky lg:top-[72px] lg:self-start">
           {node ? (
             <NodePanel node={node} clients={clients} now={now} onReboot={dangerous ? () => setUi({ reboot: node.mac }) : undefined} onOpen={openClient} onClose={() => setSelected(null)} />

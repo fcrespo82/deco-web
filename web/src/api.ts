@@ -1,3 +1,7 @@
+import type {EquipmentArtwork} from "../../src/core/equipment-artwork";
+import type { MapLayoutView, MapPoint, MapPositions } from "../../src/core/map-layout";
+import type { PhysicalTopology } from "../../src/switches/topology";
+import type { SwitchesView, SwitchConfig, PortSample } from "../../src/switches/types";
 import type {
   SettingsView,
   PollDiagnosticsView,
@@ -176,6 +180,23 @@ const qs = (params: Record<string, string | number | undefined>) => {
 };
 
 export const api = {
+  mapLayout: (map:"physical"|"mesh")=>request<MapLayoutView>("GET",`/api/maps/layouts/${map}`),
+  moveMapNodes: (map:"physical"|"mesh",positions:MapPositions)=>request<MapLayoutView>("PATCH",`/api/maps/layouts/${map}`,{positions}),
+  moveMapNode: (map:"physical"|"mesh",id:string,point:MapPoint)=>request<MapLayoutView>("PATCH",`/api/maps/layouts/${map}`,{id,point}),
+  importMapLayout: (map:"physical"|"mesh",positions:MapPositions)=>request<MapLayoutView>("PUT",`/api/maps/layouts/${map}`,{positions}),
+  resetMapNode: (map:"physical"|"mesh",id:string)=>request<MapLayoutView>("DELETE",`/api/maps/layouts/${map}/nodes/${encodeURIComponent(id)}`),
+  resetMapLayout: (map:"physical"|"mesh")=>request<MapLayoutView>("DELETE",`/api/maps/layouts/${map}`),
+  equipmentArtwork:()=>request<Record<string,EquipmentArtwork>>("GET","/api/maps/artwork"),
+  saveEquipmentArtwork:(id:string,artwork:EquipmentArtwork)=>request<EquipmentArtwork>("PUT",`/api/maps/artwork/${encodeURIComponent(id)}`,{artwork,revision:artwork.revision??0}),
+  importEquipmentArtwork:(records:Record<string,EquipmentArtwork>)=>request<Record<string,EquipmentArtwork>>("PUT","/api/maps/artwork/import",{records}),
+  networkTopology: () => request<PhysicalTopology>("GET", "/api/switches/topology"),
+  saveNetworkTopology: (topology:PhysicalTopology) => request<PhysicalTopology>("PUT", "/api/switches/topology",topology),
+  switches: () => request<SwitchesView>("GET", "/api/switches"),
+  saveSwitch: (input: Partial<SwitchConfig> & {password?:string}, id?: string) => request<SwitchConfig>(id?"PUT":"POST", id?`/api/switches/${id}`:"/api/switches", input),
+  deleteSwitch: (id:string) => request("DELETE", `/api/switches/${id}`),
+  refreshSwitch: (id:string) => request("POST", `/api/switches/${id}/refresh`),
+  switchTransceiver: (id:string) => request<{at:string;data:Record<string,unknown>}>("POST", `/api/switches/${id}/transceiver`),
+  switchHistory: (id:string,port:string,hours:number) => request<{samples:PortSample[]}>("GET", `/api/switches/${id}/history${qs({port,hours})}`),
   me: () => request<{ authRequired: boolean; authenticated: boolean }>("GET", "/api/auth/me"),
   login: (password: string) => request<{ ok: true }>("POST", "/api/auth/login", { password }),
   logout: () => request<{ ok: true }>("POST", "/api/auth/logout"),

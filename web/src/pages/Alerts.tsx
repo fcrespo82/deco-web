@@ -1,3 +1,4 @@
+import { Mac } from "../Mac";
 import { useState } from "preact/hooks";
 import { Bell, Check as CheckIcon, Send } from "lucide-preact";
 import { api, type AlertEntry, type AlertsView, type ClientView } from "../api";
@@ -105,7 +106,7 @@ function Pending({ pending }: { pending: ClientView[] }) {
                     <div class="pl-4 text-[12px] text-muted">{deviceType(c.deviceType)}</div>
                   </td>
                   <td data-label="MAC" class="whitespace-nowrap font-mono text-[12.5px]">
-                    {c.mac}
+                    <Mac value={c.mac} />
                   </td>
                   <td data-label="Estado" class="text-[12.5px]">
                     {[c.ip, c.band && BAND_LABEL[c.band], c.nodeName, c.online ? null : c.lastSeen ? `visto ${ago(c.lastSeen)}` : null].filter(Boolean).join(" · ")}

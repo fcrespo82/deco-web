@@ -1,3 +1,4 @@
+import { Mac } from "../Mac";
 import { useStored } from "../lib/preferences";
 import { useMemo, useState } from "preact/hooks";
 import { Boxes, Plus, Search } from "lucide-preact";
@@ -14,7 +15,7 @@ function MacLine({ m }: { m: DeviceMacView }) {
   return (
     <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
       <Dot tone={m.online ? "ok" : "off"} label={m.online ? "online" : "offline"} />
-      <span class="font-mono text-[12.5px]">{m.mac}</span>
+      <span class="font-mono text-[12.5px]"><Mac value={m.mac} /></span>
       <span class="text-[12px] text-muted">
         {[m.ip, m.band && BAND_LABEL[m.band], m.nodeName, !m.online && m.lastSeen ? `visto ${ago(m.lastSeen)}` : null].filter(Boolean).join(" · ")}
       </span>
@@ -158,7 +159,7 @@ export function Inventory() {
                     </span>
                   </td>
                   <td data-label="MAC" class="whitespace-nowrap font-mono text-[12.5px]">
-                    {m.mac}
+                    <Mac value={m.mac} />
                   </td>
                   <td data-label="Estado" class="text-[12.5px]">
                     {[m.ip, m.band && BAND_LABEL[m.band], m.nodeName, m.online ? "online" : m.lastSeen ? `visto ${ago(m.lastSeen)}` : null].filter(Boolean).join(" · ")}

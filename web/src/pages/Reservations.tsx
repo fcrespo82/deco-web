@@ -1,3 +1,4 @@
+import { Mac } from "../Mac";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { Lock, Plus, Search } from "lucide-preact";
 import type { ClientView } from "../api";
@@ -84,7 +85,7 @@ export function PickClient({
                   </span>
                 )}
               </span>
-              <span class="font-mono text-[12px] text-muted">{c.ip}</span>
+              <span class="font-mono text-[14px] text-fg">{c.ip}</span>
             </RowButton>
           </li>
         ))}
@@ -189,7 +190,7 @@ export function Reservations() {
               {rows.map((c) => (
                 <tr key={c.mac} class={c.online ? "" : "is-off"}>
                   <td class="cell-primary">
-                    <span class="inline-flex items-center gap-2 font-mono font-medium text-fg">
+                    <span class="inline-flex items-center gap-2 font-mono text-[15px] font-semibold text-fg">
                       <Dot tone={c.online ? "ok" : "off"} />
                       {c.reservation!.ip}
                     </span>
@@ -204,7 +205,7 @@ export function Reservations() {
                     </div>
                   </td>
                   <td data-label="MAC" class="whitespace-nowrap font-mono text-[12.5px]">
-                    {c.mac}
+                    <Mac value={c.mac} />
                   </td>
                   <td data-label="Estado">
                     <State c={c} />

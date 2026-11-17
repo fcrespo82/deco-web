@@ -16,6 +16,9 @@ const HEARTBEAT_MS = 25_000;
 
 /** Tópicos que uma escrita da API pode ter mudado, pelo caminho. */
 export function topicsForWrite(path: string): LiveTopic[] {
+  if (path.startsWith("/api/maps/artwork")) return ["images", "audit"];
+  if (path.startsWith("/api/maps/layouts/")) return ["layouts", "audit"];
+  if (path.startsWith("/api/switches")) return ["switches", "audit"];
   if (path.startsWith("/api/auth/")) return [];
   if (path === "/api/refresh" || path === "/api/breaker/reset") return ["status", "audit"];
   if (path.startsWith("/api/devices") || /^\/api\/clients\/[^/]+\/device$/.test(path)) return ["inventory", "audit"];

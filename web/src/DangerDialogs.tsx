@@ -1,3 +1,4 @@
+import { Mac } from "./Mac";
 /**
  * Operações perigosas (DECO_ALLOW_DANGEROUS=1): reiniciar um nó e alterar
  * uma rede Wi-Fi. Mesmo roteiro do diálogo de reservas — escolher → confirmar
@@ -59,7 +60,7 @@ export function RebootDialog({ node, onClose }: { node: NodeView; onClose: () =>
   return (
     <Dialog
       title={`Reiniciar ${node.name}`}
-      subtitle={<span class="font-mono">{node.model} · {node.mac}</span>}
+      subtitle={<span class="font-mono">{node.model} · <Mac value={node.mac} /></span>}
       onClose={close}
       footer={
         done ? (

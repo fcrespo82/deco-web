@@ -64,6 +64,7 @@ export function CommandPalette({ routes, cycleTheme }: { routes: PaletteRoute[];
   useEffect(() => {
     let pendingG = 0;
     const onKey = (e: KeyboardEvent) => {
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setUi({ palette: !ui.palette });
@@ -150,7 +151,7 @@ function Palette({ routes, cycleTheme, onClose }: { routes: PaletteRoute[]; cycl
         keywords: `${n.model} ${n.ip ?? ""} ${n.mac} deco no`,
         run: () => {
           selectNode(n.mac);
-          go("");
+          go("infraestrutura?aba=topologia");
         },
       });
       if (mode?.allowDangerous && n.online) {

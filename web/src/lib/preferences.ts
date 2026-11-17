@@ -1,3 +1,4 @@
+import { MAC_FORMATS, type MacFormat } from "./mac-format.js";
 import { useEffect, useState } from "preact/hooks";
 import { listThemes, getTheme, subscribeThemes, themeVariables, type ThemeConfig } from "./themes.js";
 export interface ThemeOption { id: string; label: string; mode: "light" | "dark" | "auto"; colors: readonly string[] }
@@ -6,8 +7,8 @@ const AUTO_DEFAULTS: AutomaticThemes = { autoLightTheme: "professional-light", a
 const options = (pair: AutomaticThemes = AUTO_DEFAULTS): ThemeOption[] => [...listThemes().map(t=>({id:t.id,label:t.label,mode:t.mode,colors:[t.colors.bg,t.colors.surface,t.colors.accent]})), {id:"auto",label:"Automático",mode:"auto",colors:[getTheme(pair.autoLightTheme).colors.bg,getTheme(pair.autoDarkTheme).colors.bg,getTheme(pair.autoDarkTheme).colors.accent]}];
 export const THEMES: ThemeOption[] = options();
 export type ThemePref = string;
-export interface Preferences extends AutomaticThemes { theme: ThemePref; density: "comfortable" | "compact"; motion: "system" | "reduced" }
-export const DEFAULTS: Preferences = { theme: "professional-light", ...AUTO_DEFAULTS, density: "comfortable", motion: "system" };
+export interface Preferences extends AutomaticThemes { macFormat: MacFormat; theme: ThemePref; density: "comfortable" | "compact"; motion: "system" | "reduced" }
+export const DEFAULTS: Preferences = { macFormat: "hyphen", theme: "professional-light", ...AUTO_DEFAULTS, density: "comfortable", motion: "system" };
 function automaticTheme(id: unknown, mode: "light" | "dark"): string {
   return listThemes().find(t=>t.id===id && t.mode===mode)?.id ?? (mode==="light" ? AUTO_DEFAULTS.autoLightTheme : AUTO_DEFAULTS.autoDarkTheme);
 }
@@ -16,7 +17,7 @@ export function parsePreferences(raw: unknown, legacy?: string | null): Preferen
   const old = legacy === "dark" ? "professional-dark" : legacy === "auto" ? "auto" : "professional-light";
   const requested = String(p.theme ?? "");
   const migrated = requested === "neutral" || requested === "light" ? "professional-light" : requested === "professional" || requested === "dark" ? "professional-dark" : requested;
-  return { theme: migrated==="auto" || listThemes().some(t=>t.id===migrated) ? migrated : old,
+  return { macFormat: MAC_FORMATS.some(f => f.value === p.macFormat) ? p.macFormat! : "hyphen", theme: migrated==="auto" || listThemes().some(t=>t.id===migrated) ? migrated : old,
     autoLightTheme: automaticTheme(p.autoLightTheme,"light"), autoDarkTheme: automaticTheme(p.autoDarkTheme,"dark"),
     density: p.density === "compact" ? "compact" : "comfortable", motion: p.motion === "reduced" ? "reduced" : "system" };
 }
@@ -80,7 +81,7 @@ subscribeThemes(()=>{
 export function resetLocalPreferences() {
   try {
     const keys = Array.from({length: localStorage.length}, (_,i) => localStorage.key(i));
-    for (const key of keys) if (key && (key === "theme" || key === "dashboard.preferences" || key === "dashboard.theme-cache" || /^(clients|inventory|history)\./.test(key))) localStorage.removeItem(key);
+    for (const key of keys) if (key && (key === "theme" || key === "dashboard.preferences" || key === "dashboard.theme-cache" || /^(clients|inventory|history|maps)\./.test(key))) localStorage.removeItem(key);
   } catch { /* memory only */ }
   setPreferences(DEFAULTS);
   if (typeof window !== "undefined") window.dispatchEvent(new Event("dashboard-preferences-reset"));

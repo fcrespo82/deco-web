@@ -18,6 +18,9 @@ RUN npm run build && npm prune --omit=dev
 
 # --- runtime -----------------------------------------------------------------
 FROM node:22-bookworm-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 python3-bs4 python3-yaml \
+ && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production \
     DATA_DIR=/data \
     PORT=8080
@@ -27,6 +30,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/web/dist ./web/dist
 COPY package.json THIRD_PARTY_NOTICES.md ./
 # Fixture anonimizada: só é usada com DECO_MOCK=1 (demonstração).
+COPY collectors ./collectors
 COPY fixtures ./fixtures
 # Base de fabricantes por MAC (IEEE), consultada localmente.
 COPY oui ./oui

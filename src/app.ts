@@ -1,3 +1,5 @@
+import type { Collect } from "./switches/collector.js";
+import { SwitchService } from "./switches/service.js";
 /**
  * Monta as peças do backend a partir da configuração: store, DecoApi
  * (live ou mock), breaker persistido, gateway, poller, detector de eventos e
@@ -35,6 +37,7 @@ const LAST_PRUNE_KEY = "last_prune";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface App {
+  switches: SwitchService;
   config: Config;
   store: Store;
   gateway: DecoGateway;
@@ -71,6 +74,7 @@ export function channelsFromConfig(config: Config): Channel[] {
 }
 
 export interface AppDeps {
+  switchCollect?: Collect;
   api?: DecoApi;
   /** Presença vista pelo painel (ARP); null desliga. Padrão: ligado no Linux fora do mock. */
   probe?: ProbeDeps | null;
@@ -183,6 +187,7 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
       }
     }
   };
+  const switches = new SwitchService(store, config.dataDir, () => notify(["switches"]), config.retentionDays, deps.switchCollect);
   poller.on("change", () => notify(["status"]));
 
   poller.on("snapshot", (snap, previous) => {
@@ -215,6 +220,7 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
   }
 
   return {
+    switches,
     config,
     store,
     gateway,
@@ -234,7 +240,7 @@ export function createApp(config: Config, log: Logger, depsOrApi?: DecoApi | App
       return () => changeListeners.delete(l);
     },
     async close() {
-      await poller.stop();
+      await Promise.all([poller.stop(), switches.stop()]);
       await alertEngine.idle();
       store.close();
     },

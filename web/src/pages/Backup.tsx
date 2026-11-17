@@ -1,3 +1,4 @@
+import { Mac } from "../Mac";
 /**
  * Backup: exportar em JSON e importar com pré-visualização. A importação é
  * mesclagem — acrescenta e atualiza, nunca apaga o que só existe aqui.
@@ -140,7 +141,7 @@ function Preview({ diff, sections, setSections }: { diff: BackupDiff; sections: 
           <ul class="mt-3 grid gap-2 text-[13.5px]">
             {diff.reservations.changes.map((r) => (
               <li>
-                <Action a={r.action} /> {r.name ?? <span class="font-mono">{r.mac}</span>}{" "}
+                <Action a={r.action} /> {r.name ?? <span class="font-mono"><Mac value={r.mac} /></span>}{" "}
                 <span class="font-mono text-[12px]">
                   {r.from ?? "sem reserva"} → {r.to}
                 </span>
@@ -177,7 +178,7 @@ function Results({ r }: { r: ImportResult }) {
             .filter((x) => x.outcome !== "applied")
             .map((x) => (
               <li>
-                <Badge tone="bad">{x.outcome}</Badge> <span class="font-mono text-[12px]">{x.mac}</span> {x.message}
+                <Badge tone="bad">{x.outcome}</Badge> <span class="font-mono text-[12px]"><Mac value={x.mac} /></span> {x.message}
               </li>
             ))}
         </ul>

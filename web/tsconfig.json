@@ -5,12 +5,36 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
     "allowImportingTsExtensions": false,
-    "types": []
+    "types": [],
+    "allowJs": true,
+    "checkJs": false,
+    "baseUrl": ".",
+    "paths": {
+      "react": [
+        "../node_modules/preact/compat"
+      ],
+      "react-dom": [
+        "../node_modules/preact/compat"
+      ],
+      "react-dom/*": [
+        "../node_modules/preact/compat/*"
+      ],
+      "react/jsx-runtime": [
+        "../node_modules/preact/jsx-runtime"
+      ]
+    }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": [
+    "src",
+    "vite.config.ts"
+  ]
 }

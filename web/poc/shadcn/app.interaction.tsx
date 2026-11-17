@@ -1,0 +1,33 @@
+import {describe,it,expect,vi} from 'vitest';
+import {screen,waitFor,within} from '@testing-library/dom';
+const act=(callback:()=>void|Promise<void>)=>window.__decoPocTest.act(callback);
+import userEvent from '@testing-library/user-event';
+async function start(){const raw=userEvent.setup();const user=new Proxy(raw,{get(target,key){const value=Reflect.get(target,key);return typeof value==='function'? (...args:unknown[])=>act(()=>value.apply(target,args)):value;}});document.body.innerHTML='<div id="app"></div>';await act(()=>window.__decoPocTest.mount());const frame=screen.getByTitle('Topologia JointJS com cabeamento interativo') as HTMLIFrameElement;const addDevice=vi.fn(()=>true);Object.assign(frame.contentWindow!,{poc:{addDevice}});await act(()=>{window.dispatchEvent(new MessageEvent('message',{origin:location.origin,source:frame.contentWindow,data:{type:'deco-poc:ready'}}));});return {user,frame,addDevice};}
+describe('shadcn oficial com Preact/compat',()=>{
+ it('mantém o mesmo diagrama montado ao navegar, preservando cabeamento e posições',async()=>{const {user,frame}=await start();await user.click(screen.getByRole('button',{name:'Dispositivos'}));expect(screen.getByRole('table')).toBeTruthy();await user.click(screen.getByRole('button',{name:'Topologia'}));expect(screen.getByTitle('Topologia JointJS com cabeamento interativo')).toBe(frame);expect(frame.getAttribute('src')).toBe('/jointjs.html?embed=1');});
+ it('abre Select, filtra a tabela e abre Sheet pelo DropdownMenu; Escape fecha',async()=>{const {user}=await start();await user.click(screen.getByRole('button',{name:'Dispositivos'}));screen.getByRole('combobox',{name:'Filtrar por tipo'}).focus();await user.keyboard(' ');const option=await screen.findByRole('option',{name:'Clientes'});option.focus();await user.keyboard('{Enter}');await user.type(await screen.findByRole('textbox',{name:'Buscar dispositivo'}),'Computador');expect(screen.getAllByRole('row')).toHaveLength(2);const trigger=screen.getByRole('button',{name:'Ações de Computador'});await user.click(trigger);await user.click(await screen.findByRole('menuitem',{name:'Ver detalhes'}));const dialog=await screen.findByRole('dialog');expect(within(dialog).getByRole('heading',{name:'Computador'})).toBeTruthy();await waitFor(()=>expect(dialog.contains(document.activeElement)).toBe(true));await user.keyboard('{Escape}');await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());});
+ it('Dialog e Select preservam foco, configuram tablet sem RJ45 e adicionam ao mesmo mapa',async()=>{const {user,addDevice}=await start();await user.click(screen.getByRole('button',{name:'Adicionar dispositivo'}));const dialog=await screen.findByRole('dialog');await user.type(within(dialog).getByRole('textbox',{name:'Nome'}),'Tablet de teste');within(dialog).getByRole('combobox',{name:'Tipo do dispositivo'}).focus();await user.keyboard(' ');const option=await screen.findByRole('option',{name:'Tablet'});option.focus();await user.keyboard('{Enter}');expect((await within(dialog).findByRole('spinbutton',{name:'Portas Ethernet'}) as HTMLInputElement).value).toBe('0');await waitFor(()=>expect(dialog.contains(document.activeElement)).toBe(true));for(let i=0;i<6;i++){await user.tab();expect(dialog.contains(document.activeElement)).toBe(true);}await user.click(within(dialog).getByRole('button',{name:'Adicionar ao mapa'}));expect(addDevice).toHaveBeenCalledWith(expect.objectContaining({name:'Tablet de teste',deviceType:'tablet',ports:0}));await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());expect(screen.getByRole('status').textContent).toContain('adicionado ao mapa');});
+ it('Tabs e Switch alteram o tema e mostram as opções de roteamento',async()=>{const {user}=await start();await user.click(screen.getByRole('button',{name:'Configurações'}));const dark=screen.getAllByRole('switch',{name:'Tema escuro'}).at(-1)!;expect(dark.getAttribute('aria-checked')).toBe('true');await user.click(dark);await waitFor(()=>expect(document.documentElement.classList.contains('dark')).toBe(false));await user.click(screen.getByRole('tab',{name:'Roteamento'}));expect(screen.getByRole('tabpanel').textContent).toContain('Libavoid recalcula');});
+ it('sincroniza inventário com conexões do iframe e rejeita eventos de outra origem',async()=>{const {user,frame}=await start();await act(()=>{window.dispatchEvent(new MessageEvent('message',{origin:'https://example.org',source:frame.contentWindow,data:{type:'deco-poc:graph',nodes:[],links:[]}}));});await user.click(screen.getByRole('button',{name:'Dispositivos'}));expect(screen.getAllByRole('row').length).toBeGreaterThan(1);await act(()=>{window.dispatchEvent(new MessageEvent('message',{origin:location.origin,source:frame.contentWindow,data:{type:'deco-poc:graph',nodes:[{id:'new',name:'Switch conectado',kind:'Switch',ports:8}],links:[]}}));});expect(await screen.findByText('Switch conectado')).toBeTruthy();expect(screen.getAllByRole('row')).toHaveLength(2);});
+});
+
+it('seleciona com mouse no Select Radix sem confundir clique com o gesto de abertura',async()=>{
+ const {user}=await start();await user.click(screen.getByRole('button',{name:'Dispositivos'}));
+ await user.click(screen.getByRole('combobox',{name:'Filtrar por tipo'}));const option=await screen.findByRole('option',{name:'Clientes'});
+ await user.pointer({target:option,coords:{clientX:80,clientY:120}});
+ // jsdom has no page layout: give Radix the actual page displacement it uses
+ // to distinguish a deliberate choice from releasing the opening click.
+ const move=new PointerEvent('pointermove',{bubbles:true,clientX:80,clientY:120,pointerType:'mouse'});
+ Object.defineProperties(move,{pageX:{value:80},pageY:{value:120}});
+ await act(()=>{document.dispatchEvent(move);});await user.click(option);
+ expect((await screen.findByRole('combobox',{name:'Filtrar por tipo'})).textContent).toContain('Clientes');
+ expect(screen.queryByRole('listbox')).toBeNull();
+});
+
+
+it('expande e recolhe o mesmo mapa sem desmontá-lo; Escape restaura a rolagem',async()=>{
+ document.body.innerHTML='<div id="app"></div>';const user=userEvent.setup();await act(()=>window.__decoPocTest.mountFullscreen());
+ const map=screen.getByLabelText('Mapa estável');await act(async()=>{await user.click(screen.getByRole('button',{name:'Ver em tela cheia'}));});
+ expect(document.querySelector('.map-fullscreen')).toBeTruthy();expect(screen.getByLabelText('Mapa estável')).toBe(map);expect(document.body.style.overflow).toBe('hidden');
+ await act(async()=>{await user.keyboard('{Escape}');});expect(document.querySelector('.map-fullscreen')).toBeNull();expect(document.body.style.overflow).not.toBe('hidden');expect(screen.getByLabelText('Mapa estável')).toBe(map);
+});

@@ -26,7 +26,7 @@ export interface StatusView {
  * O que mudou, avisado pelo canal ao vivo (GET /api/live). A UI relê só as
  * telas que dependem desses tópicos.
  */
-export type LiveTopic = "status" | "snapshot" | "inventory" | "ipplan" | "reservations" | "alerts" | "audit" | "images" | "floorplan";
+export type LiveTopic = "layouts" | "switches" | "status" | "snapshot" | "inventory" | "ipplan" | "reservations" | "alerts" | "audit" | "images" | "floorplan";
 
 export interface LiveMessage {
   topics: LiveTopic[];

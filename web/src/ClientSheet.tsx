@@ -1,3 +1,6 @@
+import { DevicePortsEditor } from "./DevicePortsEditor";
+import { SwitchAttachment } from "./SwitchAttachment";
+import { Mac } from "./Mac";
 /**
  * Ficha de um cliente, aberta do mapa, da galeria ou das bolhas. Lê o cliente
  * do cache pelo MAC, então acompanha as atualizações ao vivo enquanto aberta.
@@ -41,10 +44,11 @@ export function ClientSheet({ mac, onClose, initialTab = "details" }: { mac: str
   const images = useImages();
   const pending = usePendingReservations();
   const status = useStatus();
-  const [mode, setMode] = useState<"view" | "edit" | "reserve">("view");
+  const [mode, setMode] = useState<"view" | "edit" | "reserve" | "ports">("view");
   const c = data?.clients.find((x) => x.mac === mac);
   if (!c) return null;
 
+  if(mode==="ports")return <DevicePortsEditor nodeId={`client:${c.mac}`} name={clientLabel(c)} onClose={()=>setMode("view")}/>;
   if (mode === "edit") {
     return (
       <DeviceEditor
@@ -85,6 +89,7 @@ export function ClientSheet({ mac, onClose, initialTab = "details" }: { mac: str
           <Button icon={<Pencil class="size-4" />} onClick={() => setMode("edit")}>
             {c.device ? "Editar no inventário" : "Cadastrar no inventário"}
           </Button>
+          <Button onClick={()=>setMode("ports")}>Portas físicas…</Button>
           {allowWrite && (c.online || c.reservation) && (
             <Button icon={<Lock class="size-4" />} onClick={() => setMode("reserve")} disabled={pending.has(c.mac)}>
               {c.reservation ? "Mudar reserva" : "Fixar IP"}
@@ -114,6 +119,7 @@ export function ClientSheet({ mac, onClose, initialTab = "details" }: { mac: str
         <Button onClick={()=>setTab("details")} aria-pressed={tab==="details"}>Detalhes</Button>
         <Button onClick={()=>setTab("history")} aria-pressed={tab==="history"}>Histórico</Button>
       </div>
+      <SwitchAttachment mac={c.mac} />
       {tab === "history" ? <DeviceHistory macs={inventory.data?.devices.find(d=>d.id===c.device?.id)?.macs.map(m=>m.mac) ?? [c.mac]} /> : <>
       {c.online && !c.viaPanel && (
         <div class="mb-4 grid grid-cols-2 gap-3">
@@ -138,7 +144,7 @@ export function ClientSheet({ mac, onClose, initialTab = "details" }: { mac: str
           ["Coleta geral", dateTime(status?.fetchedAt ?? null)],
           ["Coleta detalhada", <span title="Nó, Wi-Fi e CPU/memória dependem desta coleta">{dateTime(status?.detailTakenAt ?? null)}</span>],
           ["IP", c.ip ?? c.reservation?.ip ?? "—", "font-mono text-[12.5px]"],
-          ["MAC", c.mac, "font-mono text-[12.5px]"],
+          ["MAC", <Mac value={c.mac} />, "font-mono text-[12.5px]"],
           [
             "Reserva",
             pending.has(c.mac) ? (

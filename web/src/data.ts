@@ -59,3 +59,5 @@ export function useStatus() {
   const { data } = useQuery(KEYS.status, api.status, ["status"]);
   return (live.state === "open" ? live.status : null) ?? data ?? live.status ?? null;
 }
+
+export const useSwitches = () => useQuery("switches", api.switches, ["switches"]);

@@ -1,0 +1,119 @@
+[
+  {
+    "name": "button",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/button.json",
+    "dependencies": [
+      "cn",
+      "radix-ui"
+    ]
+  },
+  {
+    "name": "badge",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/badge.json",
+    "dependencies": [
+      "cn",
+      "radix-ui"
+    ]
+  },
+  {
+    "name": "card",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/card.json",
+    "dependencies": [
+      "cn"
+    ]
+  },
+  {
+    "name": "input",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/input.json",
+    "dependencies": [
+      "cn"
+    ]
+  },
+  {
+    "name": "label",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/label.json",
+    "dependencies": [
+      "cn",
+      "radix-ui"
+    ]
+  },
+  {
+    "name": "dialog",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/dialog.json",
+    "dependencies": [
+      "cn",
+      "radix-ui"
+    ]
+  },
+  {
+    "name": "sheet",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/sheet.json",
+    "dependencies": [
+      "cn",
+      "radix-ui"
+    ]
+  },
+  {
+    "name": "select",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/select.json",
+    "dependencies": [
+      "cn",
+      "radix-ui"
+    ]
+  },
+  {
+    "name": "dropdown-menu",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/dropdown-menu.json",
+    "dependencies": [
+      "cn",
+      "radix-ui"
+    ]
+  },
+  {
+    "name": "tabs",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/tabs.json",
+    "dependencies": [
+      "cn",
+      "radix-ui"
+    ]
+  },
+  {
+    "name": "switch",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/switch.json",
+    "dependencies": [
+      "cn",
+      "radix-ui"
+    ]
+  },
+  {
+    "name": "table",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/table.json",
+    "dependencies": [
+      "cn"
+    ]
+  },
+  {
+    "name": "separator",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/separator.json",
+    "dependencies": [
+      "cn",
+      "radix-ui"
+    ]
+  },
+  {
+    "name": "checkbox",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/checkbox.json",
+    "dependencies": [
+      "cn",
+      "radix-ui"
+    ]
+  },
+  {
+    "name": "tooltip",
+    "source": "https://ui.shadcn.com/r/styles/new-york-v4/tooltip.json",
+    "dependencies": [
+      "cn",
+      "radix-ui"
+    ]
+  }
+]

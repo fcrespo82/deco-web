@@ -1,3 +1,4 @@
+import { Mac } from "../Mac";
 import type { ComponentChildren } from "preact";
 import { useState } from "preact/hooks";
 import { Network, Pencil, Plus, Trash, TriangleAlert } from "lucide-preact";
@@ -214,7 +215,7 @@ function CellDetail({
   return (
     <Card class="animate-fade-in" aria-live="polite">
       <div class="flex items-center gap-2">
-        <span class="font-mono text-[15px] font-semibold">{cell.ip}</span>
+        <span class="font-mono text-[18px] font-semibold">{cell.ip}</span>
         <span class="flex-1" />
         <Badge>{STATUS_LABEL[cell.status]}</Badge>
       </div>
@@ -224,7 +225,7 @@ function CellDetail({
           ["Faixa", range ? `${range.name} (${range.label})` : "fora do plano"],
           ...(range?.types.length ? [["Espera", range.types.map((t) => INVENTORY_TYPE_LABEL[t] ?? t).join(", ")] as [string, string]] : []),
           ...(!client && cell.name ? [["Dispositivo", cell.name] as [string, string]] : []),
-          ...(!client && cell.mac ? [["MAC", cell.mac, "font-mono text-[12.5px]"] as [string, string, string]] : []),
+          ...(!client && cell.mac ? [["MAC", <Mac value={cell.mac} />, "font-mono text-[12.5px]"] as [string, ComponentChildren, string]] : []),
           ...(cell.anomalies.length ? [["Atenção", <span class="text-warn">{cell.anomalies.map((a) => ANOMALY_LABEL[a] ?? a).join(", ")}</span>] as [string, ComponentChildren]] : []),
         ]}
       />
@@ -236,7 +237,7 @@ function CellDetail({
             <div class="truncate text-[13.5px] font-medium">{client.device?.alias ?? client.name}</div>
             <div class="flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
               {client.device ? (type ? INVENTORY_TYPE_LABEL[type] : "sem tipo") : <Badge tone="warn">sem cadastro</Badge>}
-              <span class="whitespace-nowrap font-mono">{client.mac}</span>
+              <span class="whitespace-nowrap font-mono"><Mac value={client.mac} /></span>
             </div>
           </div>
           <Button size="sm" variant="ghost" onClick={() => openClient(client.mac)}>
@@ -379,7 +380,7 @@ export function IpPlan() {
                       {r.types.length > 0 && <div class="mt-0.5 pl-5 text-[12px] text-muted">espera: {r.types.map((t) => INVENTORY_TYPE_LABEL[t] ?? t).join(", ")}</div>}
                       {r.notes && <div class="pl-5 text-[12px] text-muted">{r.notes}</div>}
                     </td>
-                    <td data-label="Endereços" class="font-mono text-[12.5px]">
+                    <td data-label="Endereços" class="font-mono text-[14px] font-medium">
                       {r.label}
                     </td>
                     <td data-label="Tipo">
@@ -393,7 +394,7 @@ export function IpPlan() {
                         <div class="h-full rounded-full transition-all" style={{ width: `${used}%`, background: colorOf.get(r.id) }} />
                       </div>
                     </td>
-                    <td data-label="Próximo livre" class="font-mono text-[12.5px]">
+                    <td data-label="Próximo livre" class="font-mono text-[14px] font-medium">
                       {r.suggestion ?? <span class="text-muted">cheia</span>}
                     </td>
                     <td class="cell-actions">
@@ -419,7 +420,7 @@ export function IpPlan() {
           <SectionTitle>Mapa do /24</SectionTitle>
           <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
             <Card class="p-3 sm:p-4">
-              <div class="mx-auto grid max-w-[760px] gap-[2px] sm:gap-[3px]" role="grid" aria-label="Endereços da rede" style={{ gridTemplateColumns: "repeat(16, minmax(0, 1fr))" }}>
+              <div class="ip-grid mx-auto grid max-w-[1024px] gap-1" role="grid" aria-label="Endereços da rede">
                 {data.cells.map((c) => {
                   const range = c.rangeId ? rangeOf.get(c.rangeId) : undefined;
                   const title = [c.ip, STATUS_LABEL[c.status], range && `${range.name} (${range.label})`, c.name, ...c.anomalies.map((a) => `⚠ ${ANOMALY_LABEL[a]}`)]

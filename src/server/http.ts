@@ -1,3 +1,6 @@
+import {registerEquipmentArtworkRoutes} from "./equipment-artwork-routes.js";
+import { registerMapLayoutRoutes } from "./map-layout-routes.js";
+import { registerSwitchRoutes } from "./switch-routes.js";
 /**
  * API REST (Fastify) + arquivos estáticos da SPA.
  *
@@ -196,6 +199,9 @@ export async function buildServer(opts: HttpOptions): Promise<FastifyInstance> {
   // Sem identidade de usuário (senha única da UI): registra o IP de origem.
   const actorOf = (req: FastifyRequest) => `${authRequired ? "ui" : "ui-aberta"}@${req.ip}`;
   registerDataRoutes(server, app, actorOf);
+  registerSwitchRoutes(server, app, actorOf);
+  registerMapLayoutRoutes(server, app, actorOf);
+  registerEquipmentArtworkRoutes(server, app, actorOf);
   registerOpsRoutes(server, app, actorOf);
   registerSystemRoutes(server, app, actorOf);
   registerImageRoutes(server, app, actorOf, { fetch: opts.fetch });

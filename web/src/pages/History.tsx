@@ -1,3 +1,4 @@
+import { Mac } from "../Mac";
 import { useStored } from "../lib/preferences";
 import type { ComponentType } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
@@ -134,9 +135,9 @@ function Events() {
                       {c ? <DeviceArt category={categoryOf(c)} size="sm" online={c.online} deviceId={c.device?.id} class="!size-7" /> : null}
                       <span class="min-w-0">
                         <span class="block text-[13px]">
-                          <span class="font-medium">{e.name ?? (e.mac ? e.mac : "Rede")}</span> <span class="text-muted">{(EVENT_LABEL[e.type] ?? e.type).toLowerCase()}</span>
+                          <span class="font-medium"><Mac value={e.name ?? e.mac ?? "Rede"} /></span> <span class="text-muted">{(EVENT_LABEL[e.type] ?? e.type).toLowerCase()}</span>
                         </span>
-                        {detail && <span class="block truncate font-mono text-[11.5px] text-muted">{detail}</span>}
+                        {detail && <span class="block truncate font-mono text-[11.5px] text-muted"><Mac value={detail} /></span>}
                       </span>
                       <span class="ml-auto shrink-0 text-[11px] text-muted max-sm:hidden">{ago(e.at, now)}</span>
                     </RowButton>
@@ -159,6 +160,7 @@ function Events() {
 }
 
 const ACTION_LABEL: Record<string, string> = {
+  "layout.move": "Moveu nó do mapa", "layout.import": "Importou posições do mapa", "layout.reset": "Restaurou posições do mapa", "layout.reset_node": "Restaurou posição de um nó", "topology.update": "Atualizou cabeamento", "switch.create": "Cadastrou switch", "switch.update": "Atualizou switch", "switch.delete": "Removeu switch",
   "device.create": "Cadastrou dispositivo",
   "device.update": "Editou dispositivo",
   "device.delete": "Excluiu dispositivo",
@@ -223,7 +225,7 @@ function Audit() {
                 )}
               </td>
               <td data-label="Alvo" class={a.action.startsWith("reservation.") ? "font-mono text-[12.5px]" : ""}>
-                {target(a)}
+                <Mac value={target(a)} />
               </td>
               <td data-label="Quem" class="font-mono text-[12px] text-muted">
                 {a.actor}

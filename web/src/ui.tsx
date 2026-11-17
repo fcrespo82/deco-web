@@ -1,3 +1,7 @@
+import {Button as ShadcnButton} from "./components/ui/button";
+import {Badge as ShadcnBadge} from "./components/ui/badge";
+import {Card as ShadcnCard} from "./components/ui/card";
+import {Dialog as DialogRoot,DialogContent,DialogHeader,DialogTitle,DialogDescription,DialogFooter} from "./components/ui/dialog";
 /** Componentes visuais básicos, todos sobre os tokens de styles.css. */
 import type { ButtonHTMLAttributes, ComponentChildren, HTMLAttributes } from "preact";
 import { useEffect, useRef } from "preact/hooks";
@@ -42,10 +46,10 @@ type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "size" | "loadi
 
 export function Button({ variant, size, loading, icon, class: klass, children, disabled, type = "button", ...rest }: ButtonProps) {
   return (
-    <button type={type} disabled={disabled || loading} class={buttonClass({ variant, size }, klass as string)} {...rest}>
+    <ShadcnButton type={type} disabled={disabled || loading} className={buttonClass({ variant, size }, klass as string)} {...rest}>
       {loading ? <LoaderCircle class="size-4 animate-spin" /> : icon}
       {children}
-    </button>
+    </ShadcnButton>
   );
 }
 
@@ -151,9 +155,9 @@ const BADGE: Record<Tone, string> = {
 
 export function Badge({ tone = "", children, title, class: klass }: { tone?: Tone; children: ComponentChildren; title?: string; class?: string }) {
   return (
-    <span title={title} class={cx("hud-badge inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-px text-[12px] font-medium", BADGE[tone], klass)}>
+    <ShadcnBadge title={title} className={cx("hud-badge inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-px text-[12px] font-medium", BADGE[tone], klass)}>
       {children}
-    </span>
+    </ShadcnBadge>
   );
 }
 
@@ -173,11 +177,7 @@ export const Spinner = ({ class: klass }: { class?: string }) => <LoaderCircle c
 // --- blocos -------------------------------------------------------------
 
 export function Card({ children, class: klass, ...rest }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div class={cx("hud-panel min-w-0 p-4", klass as string)} {...rest}>
-      {children}
-    </div>
-  );
+ return <ShadcnCard className={cx("hud-panel min-w-0 gap-0 border-line bg-surface p-4 text-fg shadow-card",klass as string)} {...rest}>{children}</ShadcnCard>;
 }
 
 export function SectionTitle({ children, actions, class: klass }: { children: ComponentChildren; actions?: ComponentChildren; class?: string }) {
@@ -335,39 +335,13 @@ export function FilterChips<T extends string>({ options, value, onChange, label 
 
 // --- diálogo --------------------------------------------------------------
 
-/** Diálogo nativo (<dialog>): foco preso, Esc fecha; folha de baixo no celular. */
+/** Diálogo shadcn/Radix: foco preso, Escape e clique externo fecham. */
 export function Dialog({ title, subtitle, onClose, children, footer }: { title: ComponentChildren; subtitle?: ComponentChildren; onClose: () => void; children: ComponentChildren; footer?: ComponentChildren }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current!;
-    if (!dialog.open) dialog.showModal();
-    const onCancel = (e: Event) => {
-      e.preventDefault();
-      onClose();
-    };
-    dialog.addEventListener("cancel", onCancel);
-    return () => dialog.removeEventListener("cancel", onCancel);
-  }, [onClose]);
-
-  return (
-    <dialog ref={ref} class="sheet" aria-labelledby="dialog-title" onClick={(e) => e.target === ref.current && onClose()}>
-      <div class="flex max-h-[inherit] flex-col overflow-hidden rounded-t-2xl border border-line bg-surface shadow-pop sm:rounded-2xl">
-        <header class="flex items-start gap-3 border-b border-line px-5 py-4 sm:px-6">
-          <div class="min-w-0 flex-1">
-            <h3 id="dialog-title" class="text-[16px] font-semibold tracking-tight [overflow-wrap:anywhere]">
-              {title}
-            </h3>
-            {subtitle && <div class="mt-0.5 text-[12.5px] text-muted">{subtitle}</div>}
-          </div>
-          <IconButton label="Fechar" onClick={onClose} class="-mr-2 -mt-1">
-            <X class="size-4" />
-          </IconButton>
-        </header>
-        <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
-        {footer && <footer class="flex flex-wrap items-center gap-3 border-t border-line bg-surface-2/40 px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6 [&>button]:min-w-24">{footer}</footer>}
-      </div>
-    </dialog>
-  );
+ return <DialogRoot open onOpenChange={open=>{if(!open)onClose();}}><DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden border-line bg-surface p-0 text-fg sm:max-w-2xl">
+  <DialogHeader className="shrink-0 border-b border-line px-6 py-4 pr-12"><DialogTitle>{title}</DialogTitle>{subtitle?<DialogDescription>{subtitle}</DialogDescription>:<DialogDescription className="sr-only">{title}</DialogDescription>}</DialogHeader>
+  <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+  {footer&&<DialogFooter className="shrink-0 flex-wrap justify-start border-t border-line bg-surface-2/40 px-6 py-4">{footer}</DialogFooter>}
+ </DialogContent></DialogRoot>;
 }
 
 // --- avisos -----------------------------------------------------------------

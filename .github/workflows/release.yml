@@ -25,6 +25,9 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - run: npm run test:shadcn
+      - run: sudo apt-get update && sudo apt-get install -y python3-bs4 python3-yaml
+      - run: npm run test:collectors
 
       - name: Confere que a tag bate com o package.json
         run: |

@@ -1,3 +1,5 @@
+import { DevicePortsEditor } from "./DevicePortsEditor";
+import { Mac } from "./Mac";
 import { parseManagementUrl } from "../../src/db/errors";
 /**
  * Edição de um dispositivo do inventário: apelido, dono, tipo, tags, notas,
@@ -67,6 +69,7 @@ export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vend
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<{ alias: string; owner: string; type: string; tags: string; notes: string; managementUrl: string; approved: boolean } | null>(null);
+  const [portsMac,setPortsMac]=useState<string|null>(null);
   const [mergeInto, setMergeInto] = useState("");
 
   const device: DeviceView | null =
@@ -180,6 +183,7 @@ export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vend
   const macRows =
     device?.macs ?? (unassigned ? [unassigned] : macs.map((m) => ({ mac: m, online: false, ip: null, band: null, nodeName: null, decoName: null, lastSeen: null })));
 
+  if(portsMac)return <DevicePortsEditor nodeId={`client:${portsMac}`} name={form?.alias||device?.alias||suggestedName||portsMac} onClose={()=>setPortsMac(null)}/>;
   return (
     <Dialog
       title={title}
@@ -257,10 +261,11 @@ export function DeviceEditor({ mac, deviceId, suggestedName, suggestedType, vend
             {macRows.map((m) => (
               <li class="flex flex-wrap items-center gap-2 rounded-lg border border-line px-3 py-2">
                 <Dot tone={m.online ? "ok" : "off"} />
-                <span class="font-mono text-[12.5px]">{m.mac}</span>
+                <span class="font-mono text-[12.5px]"><Mac value={m.mac} /></span>
                 <span class="min-w-0 flex-1 text-[12px] text-muted">
                   {[m.decoName, m.ip, m.band && BAND_LABEL[m.band], m.nodeName, !m.online && m.lastSeen ? `visto ${ago(m.lastSeen)}` : null].filter(Boolean).join(" · ")}
                 </span>
+                <Button size="sm" onClick={()=>setPortsMac(m.mac)}>Portas físicas…</Button>
                 {device && device.macs.length > 1 && (
                   <Button size="sm" variant="ghost" icon={<Unlink class="size-3.5" />} disabled={busy} onClick={() => regroup(() => api.detachMac(device.id, m.mac), `${m.mac} separado`, false)}>
                     Separar

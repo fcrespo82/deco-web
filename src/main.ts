@@ -42,6 +42,7 @@ const server = await buildServer({ app, uiPassword, metricsToken });
 await server.listen({ host: config.http.bind, port: config.http.port });
 log.info(`HTTP ouvindo em http://${config.http.bind}:${config.http.port}`);
 app.poller.start();
+app.switches.start();
 
 /** Tempo máximo esperando o poll em andamento fazer logout no Deco. */
 const SHUTDOWN_GRACE_MS = 60_000;

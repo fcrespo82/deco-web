@@ -173,6 +173,7 @@ export function DeviceArt({
   online = true,
   vendor,
   deviceId,
+  preferIcon = false,
   class: klass,
 }: {
   category: Category;
@@ -181,13 +182,15 @@ export function DeviceArt({
   vendor?: string | null;
   /** Dispositivo do inventário, para usar a foto dele (tela Aparência). */
   deviceId?: number | null;
+  /** Show the category icon even when a category photo is configured. */
+  preferIcon?: boolean;
   class?: string;
 }) {
   const meta = CATEGORY[category];
   const Icon = meta.icon;
   const mark = size !== "sm" ? vendorMark(vendor ?? null) : null;
   const { images, device } = useArtImages();
-  const photo = device(category, deviceId);
+  const photo = preferIcon ? null : device(category, deviceId);
   const own = photo && deviceId != null && images?.devices[String(deviceId)] === photo.src;
   return (
     <span

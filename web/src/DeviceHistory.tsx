@@ -1,3 +1,4 @@
+import { Mac } from "./Mac";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { api, type EventView } from "./api";
 import { useQuery } from "./lib/query";
@@ -36,8 +37,8 @@ export function DeviceHistory({macs}: {macs: string[]}) {
     {first.data && !rows.length && <p class="text-muted">Nenhum evento registrado para este dispositivo.</p>}
     <ol class="device-timeline divide-y divide-line">{rows.map(e=><li key={e.id} class="py-3">
       <div class="flex flex-wrap justify-between gap-2"><strong class="text-sm">{EVENT_LABEL[e.type]??e.type}</strong><time class="text-xs text-muted">{dateTime(e.at)}</time></div>
-      <p class="break-words text-sm text-muted">{eventDetail(e.type,e.data)}</p>
-      {macs.length>1 && <span class="font-mono text-xs text-muted">{e.mac}</span>}
+      <p class="break-words text-sm text-muted"><Mac value={eventDetail(e.type,e.data)} /></p>
+      {macs.length>1 && <span class="font-mono text-xs text-muted"><Mac value={e.mac} /></span>}
     </li>)}</ol>
     {cursor && <Button onClick={more} disabled={loading}>{loading?"Carregando…":"Carregar mais"}</Button>}
   </div>;

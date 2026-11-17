@@ -1,3 +1,4 @@
+import { Mac } from "./Mac";
 /**
  * Criar, mudar ou remover a reserva de DHCP de um aparelho. Sempre em duas
  * etapas: escolher → confirmar (antes/depois). Só a confirmação escreve no
@@ -125,7 +126,7 @@ export function ReservationDialog({ mac, name, current, currentIp, mode = "edit"
     );
 
   return (
-    <Dialog title={`${title}: ${name}`} subtitle={<span class="font-mono">{mac}</span>} onClose={close} footer={footer}>
+    <Dialog title={`${title}: ${name}`} subtitle={<span class="font-mono"><Mac value={mac} /></span>} onClose={close} footer={footer}>
       {step === "choose" && (
         <form
           id="res-form"

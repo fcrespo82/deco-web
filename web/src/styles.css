@@ -1,4 +1,11 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is([data-color-mode="dark"] *));
+@theme inline {
+ --color-background:var(--surface);--color-foreground:var(--text);--color-card:var(--surface);--color-card-foreground:var(--text);--color-popover:var(--surface);--color-popover-foreground:var(--text);--color-primary:var(--accent);--color-primary-foreground:var(--accent-text);--color-secondary:var(--surface-2);--color-secondary-foreground:var(--text);--color-muted-foreground:var(--muted);--color-accent-foreground:var(--accent-text);--color-destructive:var(--bad);--color-border:var(--line);--color-input:var(--line);--color-ring:var(--accent);
+}
+[hidden]{display:none!important}
+
 
 /*
  * Tokens de cor: paleta em data-theme e luminosidade em data-color-mode.
@@ -204,9 +211,13 @@
   .bars i:nth-child(3) { height: 12px; }
 
   /* Grade do /24 no plano de IPs. */
+  .ip-grid { grid-template-columns:repeat(8,minmax(0,1fr)); }
+  @media(min-width:640px){.ip-grid{grid-template-columns:repeat(12,minmax(0,1fr));}}
+  @media(min-width:1280px){.ip-grid{grid-template-columns:repeat(16,minmax(0,1fr));}}
   .ip-cell {
     @apply relative flex aspect-square min-w-0 cursor-pointer items-center justify-center rounded-[5px] border
-      border-line bg-surface p-0 text-[11px] font-medium tabular-nums text-muted transition-transform;
+      border-line bg-surface p-0 text-[15px] font-semibold tabular-nums text-fg transition-transform;
+    min-height:36px;
     box-shadow: inset 0 4px 0 var(--range, transparent);
   }
   .ip-cell:hover { outline: 2px solid var(--text); outline-offset: 0; z-index: 1; }
@@ -223,7 +234,7 @@
       leading-[13px] text-bg;
   }
   @media (max-width: 767px) {
-    .ip-cell { @apply rounded-[3px] text-[9px]; box-shadow: inset 0 3px 0 var(--range, transparent); }
+    .ip-cell { @apply rounded-[3px] text-[14px]; box-shadow: inset 0 3px 0 var(--range, transparent); }
     .ip-cell.has-anomaly::after { @apply -top-[3px] -right-[3px] size-[9px] text-[7px] leading-[9px]; }
   }
 
@@ -508,3 +519,48 @@
 .topo-edge-label rect {rx:var(--theme-badge-radius);ry:var(--theme-badge-radius);stroke-width:var(--theme-border-width);}
 .theme-svg-tooltip {rx:var(--theme-control-radius);ry:var(--theme-control-radius);}
 .topo-photo-pedestal {rx:var(--theme-icon-radius);ry:var(--theme-icon-radius);}
+
+/* Static decorative effects, shared by the editor preview, map and TV. */
+:root[data-gradients="true"] :is(.theme-effect-panel,.hero-glow,.tv-card) {
+  background-color:var(--surface);
+  background-image:linear-gradient(135deg,color-mix(in srgb,var(--hero-from) 78%,var(--accent)),var(--surface) 62%,var(--hero-to));
+}
+:root[data-gradients="false"] .theme-effect-panel {background:var(--surface);}
+:root[data-glow="true"] :is(.theme-effect-panel,.hero-glow,.tv-card) {
+  box-shadow:var(--shadow-card),0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent),0 0 22px color-mix(in srgb,var(--accent) 22%,transparent);
+}
+
+/* Keep a compact live preview alongside edits, including on narrow screens. */
+.theme-editor-layout {display:flex;flex-direction:column;gap:20px;align-items:stretch;}
+.theme-editor-preview {position:sticky;top:72px;z-index:20;order:-1;min-width:0;max-height:42dvh;overflow:auto;overscroll-behavior:contain;border-radius:var(--theme-card-radius);background:var(--surface);box-shadow:var(--shadow-pop);}
+.theme-editor-preview>.hud-panel {padding:12px;}
+.theme-preview-heading {display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;}
+.theme-preview-effect {padding:10px;margin:8px 6px 14px;}
+.theme-preview-icons {margin-bottom:12px;}
+.theme-preview-categories {display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;}
+.theme-editor-preview .theme-preview-extra {display:none;}
+.theme-editor-preview.is-expanded .theme-preview-extra {display:block;}
+@media(min-width:1100px){
+ .theme-editor-layout {display:grid;grid-template-columns:minmax(0,1fr) 380px;align-items:start;}
+ .theme-editor-preview {order:initial;top:80px;max-height:calc(100dvh - 112px);box-shadow:none;}
+ .theme-editor-preview>.hud-panel {padding:16px;}
+ .theme-preview-expand {display:none;}
+ .theme-editor-preview .theme-preview-extra {display:block;}
+ .theme-preview-effect {margin-bottom:20px;}
+}
+@media(max-width:440px){.theme-preview-categories{grid-template-columns:repeat(3,minmax(0,1fr));}.theme-editor-preview{max-height:46dvh;}.theme-preview-effect p+p{display:none;}}
+
+/* JointJS uses the existing theme tokens; its viewport retains shared map coordinates. */
+.joint-network-map{position:relative;overflow:hidden;touch-action:none;cursor:grab}
+.joint-network-map svg{display:block;overflow:visible}
+.joint-network-map [magnet="true"]{cursor:crosshair}
+.joint-network-map .available-magnet{stroke:var(--ok)!important;stroke-width:3!important}
+.joint-network-map .joint-element{cursor:grab}
+.joint-network-map .joint-link [joint-selector="line"]{cursor:pointer}
+.equipment-calibration{cursor:crosshair;background-color:#d1d5db;background-image:linear-gradient(45deg,#9ca3af 25%,transparent 25%),linear-gradient(-45deg,#9ca3af 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#9ca3af 75%),linear-gradient(-45deg,transparent 75%,#9ca3af 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0}
+
+/* The same map stays mounted while expanded, preserving zoom and edits. */
+.map-fullscreen{position:fixed;inset:0;z-index:45;background:var(--bg);padding:8px}
+.map-is-fullscreen .page-view{animation:none}
+.map-fullscreen .hero-glow{margin:0;border-radius:8px}
+.map-fullscreen .topology svg{max-height:calc(100dvh - 260px)!important}

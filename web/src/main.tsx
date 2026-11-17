@@ -1,14 +1,13 @@
+import {Devices,Addressing,Infrastructure} from "./pages/Sections";
+import {sectionLocation} from "./lib/section-routes";
 import { render } from "preact";
 import type { ComponentType } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import {
   Bell,
-  Boxes,
-  Clock,
   DatabaseBackup,
   Ellipsis,
   LayoutDashboard,
-  Lock,
   LogOut,
   MonitorSmartphone,
   Network,
@@ -34,12 +33,7 @@ import { Settings } from "./pages/Settings";
 import { THEMES, usePreferences } from "./lib/preferences";
 import { Casa } from "./pages/Casa";
 import { Backup } from "./pages/Backup";
-import { Clients } from "./pages/Clients";
-import { History } from "./pages/History";
-import { Inventory } from "./pages/Inventory";
-import { IpPlan } from "./pages/IpPlan";
 import { Overview } from "./pages/Overview";
-import { Reservations } from "./pages/Reservations";
 import { Tv } from "./pages/Tv";
 import { ModeBadge, RefreshButton, StatusBanners, StatusPill } from "./StatusBar";
 import { Button, cx, Dialog, IconButton, Toaster } from "./ui";
@@ -60,17 +54,15 @@ interface Route {
 const ROUTES: Route[] = [
   { path: "", label: "Visão geral", short: "Início", icon: LayoutDashboard, page: Overview, tab: true, key: "v" },
   { path: "casa", label: "Casa", icon: House, page: Casa, key: "k" },
-  { path: "clientes", label: "Clientes", icon: MonitorSmartphone, page: Clients, tab: true, key: "c" },
-  { path: "reservas", label: "Reservas", icon: Lock, page: Reservations, tab: true, key: "r" },
-  { path: "ips", label: "Plano de IPs", short: "IPs", icon: Network, page: IpPlan, tab: true, key: "i" },
-  { path: "inventario", label: "Inventário", icon: Boxes, page: Inventory, key: "n" },
-  { path: "historico", label: "Histórico", icon: Clock, page: History, key: "h" },
+  { path: "dispositivos", label: "Dispositivos", icon: MonitorSmartphone, page: Devices, tab: true, key: "c" },
+  { path: "enderecamento", label: "Endereçamento", short: "IPs", icon: Network, page: Addressing, tab: true, key: "i" },
+  { path: "infraestrutura", label: "Infraestrutura", short: "Rede", icon: Network, page: Infrastructure, tab: true, key: "n" },
   { path: "alertas", label: "Alertas", icon: Bell, page: Alerts, key: "a" },
   { path: "backup", label: "Backup", icon: DatabaseBackup, page: Backup, key: "b" },
   { path: "configuracoes", label: "Configurações", icon: Palette, page: Settings, key: "p" },
 ];
 
-const PALETTE_ROUTES = [...ROUTES.map(({ path, label, icon, key }) => ({ path, label, icon, key })), { path: "tv", label: "Modo TV", icon: TvIcon, key: "t" }];
+const PALETTE_ROUTES = [{path:"topologia",label:"Topologia da rede",icon:Network},{path:"reservas",label:"Reservas DHCP",icon:Network,key:"r"},{path:"historico",label:"Histórico dos dispositivos",icon:MonitorSmartphone,key:"h"},...ROUTES.map(({ path, label, icon, key }) => ({ path, label, icon, key })), { path: "tv", label: "Modo TV", icon: TvIcon, key: "t" }];
 
 function Logo({ class: klass }: { class?: string }) {
   return <img src="/favicon.svg" alt="" class={cx("size-7 rounded-lg", klass)} />;
@@ -206,7 +198,7 @@ function App() {
     );
   }
 
-  const current = ROUTES.find((r) => r.path === route) ?? ROUTES[0]!;
+  const current = ROUTES.find((r) => r.path === sectionLocation(location.hash).section) ?? ROUTES[0]!;
   const Page = current.page;
   const logout = () => api.logout().then(checkAuth);
   const inMore = !current.tab;

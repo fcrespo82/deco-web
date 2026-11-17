@@ -1,3 +1,12 @@
+import {mapMatches} from "./lib/map-search";
+import {useMapViewport} from "./lib/map-viewport";
+import {descendantPositions} from "./lib/map-geometry";
+import { MapContextMenu, mapMenuContext, type MapMenuContext } from "./MapContextMenu";
+import { modelPortCount } from "./lib/port-points";
+import { useStored } from "./lib/preferences";
+import { useQuery } from "./lib/query";
+import { api } from "./api";
+import { useNodePositions } from "./lib/node-positions";
 import { useReducedMotion } from "./lib/preferences";
 /**
  * Mapa vivo da rede: internet → gateway → satélites, com os clientes em
@@ -196,7 +205,7 @@ function build(nodes: NodeView[], clients: ClientView[]) {
     minX = Math.min(minX, p.x - p.foot);
     maxX = Math.max(maxX, p.x + p.foot);
     minY = Math.min(minY, p.y - p.foot);
-    maxY = Math.max(maxY, p.y + Math.max(p.foot, 68));
+    maxY = Math.max(maxY, p.y + Math.max(p.foot, 100));
   }
   return { placed, internet, box: { x: minX, y: minY, w: maxX - minX, h: maxY - minY } };
 }
@@ -254,6 +263,7 @@ function useWidth(ref: { current: HTMLElement | null }) {
 }
 
 export interface TopologyProps {
+  search?:string;
   nodes: NodeView[];
   clients: ClientView[];
   internet: InternetStatus | null;
@@ -264,15 +274,40 @@ export interface TopologyProps {
   highlight?: (c: ClientView) => boolean;
   /** Modo TV: ocupa a altura disponível, textos maiores, sem controles. */
   ambient?: boolean;
+  onOpenPhysical?:()=>void;
+  onEditWiring?:(id:string)=>void;
 }
 
-export function Topology({ nodes, clients, internet, selected, onSelectNode, onSelectClient, highlight, ambient }: TopologyProps) {
+export function Topology({ nodes, clients, internet, selected, onSelectNode, onSelectClient, highlight, search="", ambient, onOpenPhysical, onEditWiring }: TopologyProps) {
   const wrap = useRef<HTMLDivElement>(null);
   const width = useWidth(wrap);
-  const layout = useMemo(() => build(nodes, clients), [nodes, clients]);
+  const [grid,setGrid]=useStored("maps.mesh.grid",true,(v):v is boolean=>typeof v==="boolean");
+  const [moveChildren,setMoveChildren]=useStored("maps.mesh.moveChildren",false,(v):v is boolean=>typeof v==="boolean");
+  const positioning = useNodePositions("maps.mesh.positions",grid?20:0);
+  const [context,setContext]=useState<MapMenuContext|null>(null);
+  const cabling=useQuery("physical-topology",api.networkTopology,["switches"]);
+  const layout = useMemo(() => {
+    const base=build(nodes,clients);if(!base)return null;
+    const placed=base.placed.map(p=>{
+      const pinned=positioning.positions[`mesh:${p.node.mac}`];
+      const x=pinned?.x??p.x,y=pinned?.y??p.y,dx=x-p.x,dy=y-p.y;
+      return {...p,x,y,clients:p.clients.map(c=>({...c,x:positioning.positions[`client:${c.c.mac}`]?.x??c.x+dx,y:positioning.positions[`client:${c.c.mac}`]?.y??c.y+dy}))};
+    });
+    const byMac=new Map(placed.map(p=>[p.node.mac,p]));
+    for(const p of placed)if(p.parent)p.parent=byMac.get(p.parent.node.mac)!;
+    // Amplia o enquadramento para posições salvas, sem alterar a escala durante o gesto.
+    let minX=base.box.x,minY=base.box.y,maxX=minX+base.box.w,maxY=minY+base.box.h;
+    for(const p of base.placed){
+      const pin=positioning.savedPositions[`mesh:${p.node.mac}`];
+      if(pin){minX=Math.min(minX,pin.x-p.foot);maxX=Math.max(maxX,pin.x+p.foot);minY=Math.min(minY,pin.y-p.foot);maxY=Math.max(maxY,pin.y+p.foot);}
+    }
+    for(const [id,pin] of Object.entries(positioning.savedPositions))if(id.startsWith("client:")||id==="internet"){
+      const margin=id==="internet"?80:20;minX=Math.min(minX,pin.x-margin);maxX=Math.max(maxX,pin.x+margin);minY=Math.min(minY,pin.y-margin);maxY=Math.max(maxY,pin.y+margin);
+    }
+    return {...base,placed,box:{x:minX,y:minY,w:maxX-minX,h:maxY-minY},internet:positioning.positions.internet??base.internet};
+  }, [nodes, clients, positioning.positions]);
   const art = useArtImages();
-  const [view, setView] = useState({ k: 1, x: 0, y: 0 });
-  const drag = useRef<{ px: number; py: number; x: number; y: number; moved: boolean } | null>(null);
+  const viewport=useMapViewport(!!ambient);
   const [hover, setHover] = useState<string | null>(null);
 
   // Telas estreitas: o desenho encolhe, então os textos crescem um pouco.
@@ -283,39 +318,23 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
   const { placed, box, internet: net } = layout;
   const pad = 16;
   const W = box.w + pad * 2;
-  const vb = `${box.x - pad} ${box.y - pad} ${W} ${box.h + pad * 2}`;
+  const frame=viewport.frame({x:box.x-pad,y:box.y-pad,width:W,height:box.h+pad*2},positioning.ready);
+  const vb = `${frame.x} ${frame.y} ${frame.width} ${frame.height}`;
   const cxBox = box.x + box.w / 2;
   const cyBox = box.y + box.h / 2;
   const root = placed[0]!;
   const netOnline = internet?.ipv4Online ?? true;
   const totalDown = root.down;
   const totalUp = root.up;
-  const zoom = (f: number) => setView((v) => ({ ...v, k: Math.min(3, Math.max(0.6, v.k * f)) }));
-  const moved = view.k !== 1 || view.x !== 0 || view.y !== 0;
-
-  const onPointerDown = (e: PointerEvent) => {
-    // No toque, arrastar só depois de aproximar (senão rola a página).
-    if (e.pointerType === "mouse" ? e.button !== 0 : view.k <= 1) return;
-    drag.current = { px: e.clientX, py: e.clientY, x: view.x, y: view.y, moved: false };
-  };
-  const onPointerMove = (e: PointerEvent) => {
-    const d = drag.current;
-    if (!d) return;
-    const svg = e.currentTarget as SVGSVGElement;
-    const scale = W / svg.getBoundingClientRect().width;
-    const dx = (e.clientX - d.px) * scale;
-    const dy = (e.clientY - d.py) * scale;
-    if (Math.abs(dx) + Math.abs(dy) > 4) d.moved = true;
-    if (d.moved) setView((v) => ({ ...v, x: d.x + dx, y: d.y + dy }));
-  };
-  const endDrag = () => {
-    setTimeout(() => (drag.current = null), 0);
-  };
-  const clicked = () => !drag.current?.moved;
-  const onWheel = (e: WheelEvent) => {
-    if (!e.ctrlKey && !e.metaKey) return;
-    e.preventDefault();
-    zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1);
+  const moved=viewport.view.k!==1||viewport.view.x!==0||viewport.view.y!==0;
+  const clicked=()=>viewport.allowClick()&&positioning.allowClick();
+  const treePositions=new Map(placed.map(p=>[`mesh:${p.node.mac}`,{x:p.x,y:p.y}]));
+  const treeLinks=[{source:"internet",target:`mesh:${root.node.mac}`},...placed.filter(p=>p.parent).map(p=>({source:`mesh:${p.parent!.node.mac}`,target:`mesh:${p.node.mac}`}))];
+  const followers=(id:string)=>{
+    if(!moveChildren)return {};
+    const group=descendantPositions(id,treeLinks,treePositions),owners=new Set([id,...Object.keys(group)]);
+    for(const p of placed)if(owners.has(`mesh:${p.node.mac}`))for(const c of p.clients){const key=`client:${c.c.mac}`;if(positioning.savedPositions[key])group[key]={x:c.x,y:c.y};}
+    return group;
   };
 
   const dim = (c: ClientView) => highlight && !highlight(c);
@@ -323,19 +342,15 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
 
   return (
     <div ref={wrap} class={cx("topology relative", ambient && "h-full")}>
-      <svg
+      <svg ref={viewport.svg} {...viewport.events}
         viewBox={vb}
-        class={cx("block w-full select-none", ambient ? "h-full" : drag.current?.moved ? "cursor-grabbing" : "cursor-grab")}
-        style={{ maxHeight: ambient || width < 640 ? undefined : "80vh", "--ts": textScale, touchAction: view.k > 1 ? "none" : "pan-y" }}
+        class={cx("block w-full select-none", ambient ? "h-full" : viewport.panning ? "cursor-grabbing" : "cursor-grab")}
+        style={{ maxHeight: ambient || width < 640 ? undefined : "80vh", "--ts": textScale, touchAction:ambient?undefined:"none" }}
         role="img"
         aria-label={`Topologia: ${nodes.length} nós, ${clients.filter((c) => c.online).length} clientes online`}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerLeave={endDrag}
-        onWheel={onWheel}
+        onContextMenu={ambient?undefined:e=>setContext(mapMenuContext(e))}
         onClick={(e) => e.target === e.currentTarget && clicked() && onSelectNode(null)}
-        onDblClick={() => setView({ k: 1, x: 0, y: 0 })}
+        onDblClick={e=>{if(!(e.target as Element).closest("[data-map-node]"))viewport.reset();}}
       >
         <CategoryGradients />
         <PhotoDefs />
@@ -344,14 +359,14 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
             <stop class="network-highlight" offset="0" stop-color={`color-mix(in srgb, ${netOnline ? "var(--flow-down)" : "var(--bad)"} 60%, #ffffff)`} />
             <stop offset="1" stop-color={netOnline ? "var(--flow-down)" : "var(--bad)"} />
           </radialGradient>
-          <pattern id="topo-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+          <pattern id="topo-dots" width="20" height="20" patternUnits="userSpaceOnUse">
             <circle cx="1" cy="1" r="1" fill="var(--grid)" />
           </pattern>
         </defs>
-        <rect x={box.x - pad} y={box.y - pad} width={W} height={box.h + pad * 2} fill="url(#topo-dots)" pointer-events="none" />
+        <rect x={box.x - pad} y={box.y - pad} width={W} height={box.h + pad * 2} fill={grid?"url(#topo-dots)":"none"} pointer-events="none" />
 
         <g
-          transform={`translate(${view.x} ${view.y}) translate(${cxBox} ${cyBox}) scale(${view.k}) translate(${-cxBox} ${-cyBox})`}
+          data-map-stage transform={viewport.transform}
           class="topo-stage"
         >
           {/* Internet → gateway */}
@@ -411,7 +426,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
           )}
 
           {/* Internet */}
-          <g transform={`translate(${net.x} ${net.y})`} class={cx("topo-internet", !netOnline && "is-down")}>
+          <g data-map-node="internet" data-map-name="Internet" {...(!ambient?positioning.bind("internet",net,{minX:box.x+80,maxX:box.x+box.w-80,minY:box.y+65,maxY:box.y+box.h-65},followers("internet")): {})} style={{touchAction:"none",cursor:ambient?undefined:"grab"}} transform={`translate(${net.x} ${net.y})`} class={cx("topo-internet", !netOnline && "is-down")}>
             <circle r="34" class="topo-halo" />
             <circle r="26" fill="url(#topo-net)" />
             <Globe x={-13} y={-13} size={26} color="white" stroke-width={1.6} />
@@ -427,6 +442,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
           {/* Nós */}
           {placed.map((p) => {
             const isSel = selected === p.node.mac;
+            const portCount=cabling.data?.portCounts?.[`mesh:${p.node.mac}`]??modelPortCount(p.node.model);
             const uid = `deco-${p.node.mac.replace(/[^A-Za-z0-9]/g, "")}`;
             const select = (e: Event) => {
               e.stopPropagation();
@@ -434,9 +450,11 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
             };
             return (
               <g
+                {...(!ambient?positioning.bind(`mesh:${p.node.mac}`,p,{minX:box.x+p.foot,maxX:box.x+box.w-p.foot,minY:box.y+p.foot,maxY:box.y+box.h-p.foot},followers(`mesh:${p.node.mac}`)): {})}
+                data-map-node={`mesh:${p.node.mac}`} data-map-name={p.node.name} data-port-names={JSON.stringify(cabling.data?.portNames?.[`mesh:${p.node.mac}`]??Array.from({length:portCount??0},(_,i)=>String(i+1)))} data-port-count={portCount??undefined}
                 key={`n-${p.node.mac}`}
-                class={cx("topo-node", isSel && "is-selected", !p.node.online && "is-off")}
-                style={{ transform: `translate(${p.x}px, ${p.y}px)` }}
+                class={cx("topo-node", (isSel||!!search.trim()&&mapMatches(search,p.node.name,p.node.mac,p.node.model)) && "is-selected", !p.node.online && "is-off")}
+                style={{ transform: `translate(${p.x}px, ${p.y}px)`,touchAction:"none",cursor:ambient?undefined:"grab",transition:positioning.dragging?"none":undefined }}
                 tabIndex={0}
                 role="button"
                 aria-label={`${p.node.name}, ${p.node.online ? "online" : "offline"}, ${p.clients.length} clientes`}
@@ -446,7 +464,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
               >
                 <circle r="46" class="topo-node-hit" />
                 {p.node.online && <circle r="40" class="topo-halo" />}
-                {isSel && <circle r="50" class="topo-select" />}
+                {(isSel||!!search.trim()&&mapMatches(search,p.node.name,p.node.mac,p.node.model)) && <circle r="50" class="topo-select" />}
                 <SvgDeco model={p.node.model} online={p.node.online} active={isSel} uid={uid} art={art.deco(p.node.model)} />
                 <text y={31 + 13 * textScale} class="topo-name" text-anchor="middle">
                   {p.node.name}
@@ -455,6 +473,7 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
                   {p.node.role === "master" ? "gateway · " : ""}
                   {p.node.online ? (p.clients.length === 1 ? "1 cliente" : `${p.clients.length} clientes`) : "offline"}
                 </text>
+                {Array.from({length:portCount??0},(_,i)=><circle key={i} data-port={String(i+1)} cx={(i%12-(Math.min(12,(portCount??0)-Math.floor(i/12)*12)-1)/2)*10} cy={82+Math.floor(i/12)*10} r="4" fill="var(--surface)" stroke="var(--muted)"><title>Porta {i+1} · estado não informado</title></circle>)}
               </g>
             );
           })}
@@ -467,9 +486,11 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
               const busy = kBps >= 50;
               return (
                 <g
+                  {...(!ambient?positioning.bind(`client:${c.mac}`,{x,y},{minX:box.x+20,maxX:box.x+box.w-20,minY:box.y+20,maxY:box.y+box.h-20}):{})}
+                  data-map-node={`client:${c.mac}`} data-map-name={c.device?.alias??c.name} data-port-count={cabling.data?.portCounts?.[`client:${c.mac}`]}
                   key={`c-${c.mac}`}
                   class={cx("topo-client", busy && "is-busy", dim(c) && "is-dim")}
-                  style={{ transform: `translate(${x}px, ${y}px)` }}
+                  style={{ transform: `translate(${x}px, ${y}px)`,touchAction:"none",cursor:ambient?undefined:"grab",transition:positioning.dragging?"none":undefined }}
                   tabIndex={0}
                   role="button"
                   aria-label={`${c.device?.alias ?? c.name}, ${CATEGORY[cat].label}`}
@@ -517,14 +538,19 @@ export function Topology({ nodes, clients, internet, selected, onSelectNode, onS
         </g>
       </svg>
 
-      <div class={cx("absolute right-2 top-2 flex flex-col gap-1 rounded-xl border border-line bg-surface p-1 shadow-card max-sm:hidden", ambient && "hidden")}>
-        <IconButton label="Aproximar" onClick={() => zoom(1.2)}>
+      {!ambient&&positioning.saveError&&<p role="alert" class="px-3 text-xs text-bad">{positioning.saveError}</p>}
+      {!ambient&&positioning.saving&&<p role="status" class="px-3 text-xs text-muted">Salvando posições no servidor…</p>}
+      {!ambient&&<details class="border-t border-line px-4 py-2 text-xs text-muted"><summary class="cursor-pointer py-1 font-medium">Opções do mapa mesh</summary><div class="flex flex-wrap items-center gap-4 py-3"><label class="flex items-center gap-2"><input type="checkbox" checked={grid} onChange={e=>setGrid(e.currentTarget.checked)}/>Encaixar na grade</label><label class="flex items-center gap-2"><input type="checkbox" checked={moveChildren} onChange={e=>setMoveChildren(e.currentTarget.checked)}/>Mover filhos juntos</label><button type="button" class="text-accent underline" onClick={()=>{positioning.reset();viewport.reset();}}>Restaurar posições</button></div><p class="pb-2">Arraste os nós para organizar. Clique direito para editar equipamentos.</p></details>}
+      {context&&!ambient&&<MapContextMenu context={context} mode="mesh" onEditWiring={onEditWiring} onResetPosition={positioning.resetNode} onClose={()=>setContext(null)} onPlaced={()=>onOpenPhysical?.()}/>}
+      <div class={cx("flex items-center gap-1 px-3 pb-3", ambient && "hidden")}>
+        <span class="mr-2 text-xs tabular-nums text-muted">{Math.round(viewport.view.k*100)}%</span>
+        <IconButton label="Aproximar" onClick={() => viewport.zoom(1.2)}>
           <Plus class="size-4" />
         </IconButton>
-        <IconButton label="Afastar" onClick={() => zoom(1 / 1.2)}>
+        <IconButton label="Afastar" onClick={() => viewport.zoom(1 / 1.2)}>
           <Minus class="size-4" />
         </IconButton>
-        <IconButton label="Ajustar à tela" onClick={() => setView({ k: 1, x: 0, y: 0 })} disabled={!moved}>
+        <IconButton label="Ajustar à tela" onClick={viewport.reset} disabled={!moved}>
           <Maximize class="size-4" />
         </IconButton>
       </div>

@@ -14,7 +14,7 @@ network_check
 update_os
 
 msg_info "Installing dependencies"
-$STD apt install -y sqlite3 openssl
+$STD apt install -y sqlite3 openssl python3 python3-bs4 python3-yaml
 msg_ok "Installed dependencies"
 
 NODE_VERSION="22" setup_nodejs

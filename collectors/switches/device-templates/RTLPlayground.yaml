@@ -1,0 +1,56 @@
+model: "RTLPlayground"
+manufacturer: "logicog"
+
+login:
+  required: true
+  url: "/login"
+  method: "POST"
+  referer_path: "/login.html"
+  post_data:
+    pwd: "{{password}}"
+
+# Global Device Information is served via JSON in /information.json
+device_info:
+  url: "/information.json"
+  format: "json"
+  mappings:
+    mac: "mac_address"
+    ip: "ip_address"
+    firmware: "sw_ver"
+    model: "hw_ver"
+
+# Port Link Settings, Speeds and Tx/Rx statistical counters are all served via JSON in /status.json
+ports:
+  url: "/status.json"
+  format: "json"
+  mapping:
+    port: "portNum"
+    admin_state: "enabled"
+    link: "link"
+    tx_packets: "txG"
+    rx_packets: "rxG"
+    tx_bytes: "txB"
+    rx_bytes: "rxB"
+
+# statistics is handled directly in ports block above, no separate Stats fetch required
+statistics:
+  url: "/status.json"
+
+# Jumbo Frame configuration is served via /mtu.json
+jumbo_frame:
+  url: "/mtu.json"
+  format: "json"
+
+# MAC Address Table is served via /l2.json
+mac_table:
+  url: "/l2.json"
+  format: "json"
+  page_parameter: "idx"
+  perpage_value: "3"
+  mapping:
+    mac: "mac"
+    port: "port"
+    type: "type"
+    vlan: "vlan"
+
+# Config backup path

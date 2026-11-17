@@ -1,0 +1,7 @@
+import {describe,it,expect,vi} from 'vitest';
+import {dia,shapes} from '@joint/core';
+import {finishMapDrag,releaseMapPointer} from '../web/src/network/drag-persistence.js';
+describe('persistência do arraste JointJS',()=>{
+ it('pointerup não apaga o gesto antes de mouseup, e salva os centros uma única vez',()=>{const graph=new dia.Graph({}, {cellNamespace:shapes});const root=new shapes.standard.Rectangle({id:'infra:a',position:{x:10,y:20},size:{width:224,height:100}}),child=new shapes.standard.Rectangle({id:'client:b',position:{x:80,y:150},size:{width:224,height:80}});graph.addCells([root,child]);const runtime={graph,gesture:{id:'infra:a',start:{x:10,y:20},followers:{'client:b':{x:80,y:150}}},pan:{}};root.position(110,220);child.position(180,350);const save=vi.fn();releaseMapPointer(runtime);expect(runtime.gesture).not.toBeNull();expect(runtime.pan).toBeNull();expect(finishMapDrag(runtime,save)).toBe(true);expect(save).toHaveBeenCalledWith({'infra:a':{x:222,y:270},'client:b':{x:292,y:390}});finishMapDrag(runtime,save);expect(save).toHaveBeenCalledTimes(1);});
+ it('não grava clique sem deslocamento',()=>{const graph=new dia.Graph({}, {cellNamespace:shapes});graph.addCell(new shapes.standard.Rectangle({id:'internet',position:{x:10,y:20}}));const save=vi.fn();expect(finishMapDrag({graph,gesture:{id:'internet',start:{x:10,y:20},followers:{}}},save)).toBe(false);expect(save).not.toHaveBeenCalled();});
+});

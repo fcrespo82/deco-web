@@ -22,7 +22,7 @@ mkdir -p "${OUT}/${NAME}"
 cp -r dist "${OUT}/${NAME}/dist"
 mkdir -p "${OUT}/${NAME}/web"
 cp -r web/dist "${OUT}/${NAME}/web/dist"
-cp -r fixtures oui proxmox "${OUT}/${NAME}/"
+cp -r collectors fixtures oui proxmox "${OUT}/${NAME}/"
 cp package.json package-lock.json README.md LICENSE THIRD_PARTY_NOTICES.md "${OUT}/${NAME}/"
 echo "${VERSION}" > "${OUT}/${NAME}/VERSION"
 

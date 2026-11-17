@@ -11,6 +11,8 @@ import { clientLabel } from "../ClientSheet";
 import { openClient } from "../lib/ui-state";
 import { Button, cx, Segmented } from "../ui";
 
+import { mergePresenceBars } from "../lib/presence";
+
 const fmtTime = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 const fmtDay = new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit" });
 const fmtFull = new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -39,12 +41,21 @@ export function Presence({ data, clients, hours }: { data: PresenceView; clients
   const rows = useMemo<Row[]>(() => {
     const byMac = new Map(clients.map((c) => [c.mac, c]));
     const needle = q.trim().toLowerCase();
-    const out: Row[] = [];
+    const groups = new Map<string, { clients: ClientView[]; bars: Row["bars"] }>();
     for (const d of data.devices) {
       const c = byMac.get(d.mac);
       if (!c) continue;
-      if (needle && ![clientLabel(c), c.name, c.ip, c.mac, c.vendor].join(" ").toLowerCase().includes(needle)) continue;
-      const bars = d.intervals.map(([a, b]) => ({ a: Date.parse(a), b: b ? Date.parse(b) : to, open: b === null }));
+      const key = c.device ? `device:${c.device.id}` : `mac:${c.mac}`;
+      const group = groups.get(key) ?? { clients: [], bars: [] };
+      group.clients.push(c);
+      group.bars.push(...d.intervals.map(([a, b]) => ({ a: Date.parse(a), b: b ? Date.parse(b) : to, open: b === null })));
+      groups.set(key, group);
+    }
+    const out: Row[] = [];
+    for (const group of groups.values()) {
+      if (needle && !group.clients.some(c => [clientLabel(c), c.name, c.ip, c.mac, c.vendor].join(" ").toLowerCase().includes(needle))) continue;
+      const c = group.clients.find(c => c.online) ?? group.clients[0]!;
+      const bars = mergePresenceBars(group.bars);
       const share = bars.reduce((s, x) => s + (x.b - x.a), 0) / total;
       out.push({ c, bars, share });
     }
@@ -102,7 +113,8 @@ export function Presence({ data, clients, hours }: { data: PresenceView; clients
             return (
               <button
                 type="button"
-                onClick={() => openClient(c.mac)}
+                key={c.device ? `device:${c.device.id}` : c.mac}
+                onClick={() => openClient(c.mac, "history")}
                 class="group grid w-full grid-cols-[minmax(120px,30%)_1fr_44px] items-center border-b border-line/60 text-left last:border-0 hover:bg-surface-2/60 sm:grid-cols-[220px_1fr_52px]"
               >
                 <span class="flex min-w-0 items-center gap-2 px-3 py-1.5">

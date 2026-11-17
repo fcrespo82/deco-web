@@ -1,3 +1,4 @@
+import { Mac } from "../Mac";
 import { useStored } from "../lib/preferences";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { ArrowDownUp, Bubbles as BubblesIcon, LayoutGrid, Lock, MonitorSmartphone, Search, Table2, X } from "lucide-preact";
@@ -313,7 +314,7 @@ export function Clients() {
                     )}
                   </td>
                   <td data-label="MAC" class="whitespace-nowrap font-mono text-[12.5px]">
-                    {c.mac}
+                    <Mac value={c.mac} />
                   </td>
                   <td data-label="IP" class="whitespace-nowrap font-mono text-[12.5px]">
                     {c.ip ?? c.reservation?.ip ?? "—"}
